@@ -25,7 +25,7 @@ content manager (local)  ──Sync data──►  public-site/data  ──git p
 4. **Before the first commit**, in the content manager:
    - Delete or unpublish **Sample Expeditioner** (it was only for previewing the layout), then press **Sync data**.
    - Glance through `public-site/data/` to confirm it holds only what players should see.
-5. **Push the folder** (in a terminal opened in this folder; replace the URL with your repository's):
+5. **Push the folder.** *(Done: the repository is `git@github.com:Josephkhland/NowhereExpeditions.git`, pushed over SSH with `~/.ssh/id_ed25519`, so no password or browser sign-in is needed.)* For reference, the steps were:
 
    ```powershell
    git init
@@ -33,7 +33,7 @@ content manager (local)  ──Sync data──►  public-site/data  ──git p
    git status            # confirm content.db and site-export/ are NOT listed
    git commit -m "Initial commit"
    git branch -M main    # the deploy workflow publishes from "main"
-   git remote add origin https://github.com/<user>/<repo>.git
+   git remote add origin git@github.com:Josephkhland/NowhereExpeditions.git
    git push -u origin main
    ```
 
@@ -62,7 +62,7 @@ Because `content.db` stays out of Git, it isn't backed up by the repository. Cop
 ## Troubleshooting
 
 - **`git` is not recognized:** `E:\Git\cmd` must be on PATH (it is on the user PATH). Programs started before it was added, including VS Code and open terminals, need a restart to see it.
-- **Push asks for a password, or authentication fails:** GitHub no longer accepts account passwords for Git. Update Git for Windows (step 1), then push again and sign in through the browser window.
+- **Push asks for a password, or authentication fails:** the remote uses SSH, so check the key still works with `ssh -T git@github.com` (it should greet you by name). HTTPS remotes need an up-to-date Git for Windows (step 1), because GitHub no longer accepts account passwords.
 
 - **The Action didn't run:** it only runs for pushes to `main` that change `public-site/` (or the workflow file). Use **Run workflow** for a manual deploy.
 - **"Branch main is not allowed to deploy to github-pages":** the repository's default branch has a different name. Rename it to `main`, or change `branches: [main]` in the workflow.
