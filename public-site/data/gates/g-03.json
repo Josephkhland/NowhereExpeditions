@@ -1,0 +1,14 @@
+{
+  "id": "g-03",
+  "designation": "G-03",
+  "name": "The Silt Choir",
+  "status": "active",
+  "discoveredAt": "",
+  "overview": "Initial survey indicates repeated harmonic patterns and shifting corridor geometry.",
+  "environment": "A drowned industrial corridor threaded with shifting stone and low echoing tonal distortions.",
+  "knownTraits": [],
+  "knownHazards": [
+    "Water pressure shifts, unstable footing, and distortion within enclosed sound spaces."
+  ],
+  "knownLocations": []
+}

@@ -1,0 +1,15 @@
+{
+  "id": "g-03-observation-01",
+  "expeditionId": "e-17",
+  "gateId": "g-03",
+  "title": "Harbor Ring Anomaly",
+  "submittedBy": null,
+  "submittedAt": "2026-09-12",
+  "outcome": "unknown",
+  "summary": "Surveyors recorded repeating low-frequency resonance near the dock edge and a cycle of altered water depth before the shift in sound pressure.",
+  "discoveries": [],
+  "hazards": [],
+  "recoveredItems": [],
+  "casualties": [],
+  "notes": "The lens pattern around the gate margin repeated with a three-minute rhythm. Audio readings were strongest along the harbor ring and did not correlate cleanly with weather shifts."
+}

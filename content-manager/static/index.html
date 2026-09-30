@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#193a34" />
+  <title>Campaign Content Manager</title>
+  <link rel="stylesheet" href="/static/manager.css" />
+  <script src="/static/manager.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Campaign Content Manager home">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span><strong>Nowhere</strong><small>CONTENT DESK</small></span>
+      </a>
+      <div class="side-label">CAMPAIGN DATA</div>
+      <nav class="primary-nav" aria-label="Campaign data">
+        <button type="button" class="nav-item" data-view="island"><span class="nav-symbol">I</span>Island Sheet</button>
+        <button type="button" class="nav-item" data-view="characters"><span class="nav-symbol">P</span>Characters<span class="nav-count" id="characters-count">0</span></button>
+        <button type="button" class="nav-item" data-view="gates"><span class="nav-symbol">G</span>Gates<span class="nav-count" id="gates-count">0</span></button>
+        <button type="button" class="nav-item" data-view="expeditions"><span class="nav-symbol">E</span>Expeditions<span class="nav-count" id="expeditions-count">0</span></button>
+        <button type="button" class="nav-item" data-view="reports"><span class="nav-symbol">R</span>Expedition Reports<span class="nav-count" id="reports-count">0</span></button>
+        <button type="button" class="nav-item" data-view="rules"><span class="nav-symbol">C</span>Rules<span class="nav-count" id="rules-count">0</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="side-label">STATIC SITE</div>
+      <p class="sidebar-note">Local workspace only<br />SQLite-backed content</p>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">NOWHERE EXPEDITIONS / LOCAL WORKSPACE</div>
+          <h1 id="page-title">Island Sheet</h1>
+        </div>
+        <div class="top-actions">
+          <label class="search-control" id="search-wrap" hidden>
+            <span class="sr-only">Filter entries</span>
+            <input id="collection-search" type="search" placeholder="Filter entries" autocomplete="off" />
+          </label>
+          <details class="workflow-guide">
+            <summary class="workflow-toggle" aria-label="Publishing workflow" aria-controls="workflow-details" title="Publishing workflow"><span aria-hidden="true">?</span></summary>
+            <section class="workflow-popover" id="workflow-details" aria-label="Publishing workflow instructions">
+              <div class="workflow-popover-heading"><span class="eyebrow">CONTENT TO SITE</span><h2>Publishing workflow</h2></div>
+              <ol class="workflow-steps">
+                <li><strong>Save your edits.</strong><span>Save writes changes to the local SQLite database. It does not update the site files. Only records marked <strong>Published</strong> are written to the site.</span></li>
+                <li><strong>Sync data.</strong><span>Replaces only <code>public-site/data</code> with the manager's current Island, Character, Gate, Expedition, Report, and Rule data. Unmanaged files inside that folder are removed; site pages and assets stay unchanged.</span></li>
+                <li><strong>Export the full site.</strong><span>Builds a complete replacement folder at <code>site-export/</code>, including site pages, styles, scripts, assets, and current data. It leaves <code>public-site/</code> untouched; copy the generated folder contents when you are ready to replace the site.</span></li>
+                <li><strong>Import site data.</strong><span>Replaces SQLite content with the current <code>public-site/data</code>. Unexported manager changes are discarded.</span></li>
+              </ol>
+            </section>
+          </details>
+          <button type="button" class="button button-secondary" id="sync-button" title="Replace only public-site/data from the local manager"><span aria-hidden="true">⟳</span> Sync data</button>
+          <button type="button" class="button button-secondary" id="import-button" title="Replace manager data with the current public-site JSON"><span aria-hidden="true">↙</span> Import site data</button>
+          <button type="button" class="button button-primary" id="export-button"><span aria-hidden="true">↗</span> Export to site</button>
+        </div>
+      </header>
+      <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+      <section id="work-area" class="work-area" aria-live="polite"></section>
+      <footer class="workspace-footer"><span>Changes are stored locally in SQLite.</span><span id="database-indicator">Initialising local database</span></footer>
+    </main>
+  </div>
+</body>
+</html>

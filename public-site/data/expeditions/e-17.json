@@ -1,0 +1,20 @@
+{
+  "id": "e-17",
+  "designation": "E-17",
+  "title": "Saltglass Survey",
+  "gateId": "g-03",
+  "type": "exploration",
+  "objective": "Map the outer approaches and identify any new Gate effects on the harbor margin.",
+  "briefing": "",
+  "status": "underway",
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "organizerId": null,
+  "participantIds": [],
+  "crewCount": 0,
+  "crewMin": null,
+  "crewMax": null,
+  "requirements": [
+    "Volunteers and trained route runners with research support."
+  ]
+}

@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+content.db
+content.db-shm
+content.db-wal

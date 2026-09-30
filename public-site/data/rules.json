@@ -1,0 +1,97 @@
+[
+  {
+    "id": "exploration-over-plot",
+    "category": "Campaign",
+    "title": "Exploration comes before a fixed plot",
+    "summary": "The campaign presents places, situations, mysteries, hazards, factions, and opportunities rather than a predetermined sequence of events.",
+    "details": "Player decisions determine which leads receive attention and how discoveries change the shared world. The site records opportunities and known situations without assuming what the crew will do next.",
+    "tags": [
+      "exploration",
+      "campaign structure"
+    ]
+  },
+  {
+    "id": "island-as-shared-character",
+    "category": "Island",
+    "title": "The Island is a shared campaign character",
+    "summary": "The Island has capabilities, aspects, stress, consequences, facilities, projects, and conditions that matter to play.",
+    "details": "Capabilities such as Industry, Research, Commerce, Security, Medicine, and Infrastructure describe what the settlement can do in the fiction. They are public-facing tools, not a substitute for other campaign procedures.",
+    "tags": [
+      "Island",
+      "capabilities",
+      "shared resources"
+    ]
+  },
+  {
+    "id": "island-projects",
+    "category": "Island",
+    "title": "Island projects change the settlement when completed",
+    "summary": "Projects advance on progress tracks; filling a track completes the project.",
+    "details": "A completed project records its result on the Island Sheet. Depending on the project, that result may create a facility, improve a capability, or add or remove a condition.",
+    "tags": [
+      "Island",
+      "projects",
+      "progress"
+    ]
+  },
+  {
+    "id": "island-stress-and-consequences",
+    "category": "Island",
+    "title": "Island stress and consequences",
+    "summary": "When all Island stress boxes are marked, a consequence absorbs further stress.",
+    "details": "A consequence's severity determines how much stress it can absorb: Low absorbs 2, Moderate 4, High 6, and Critical 8. Current marked stress and active consequences are recorded on the Island Sheet.",
+    "tags": [
+      "Island",
+      "stress",
+      "consequences"
+    ]
+  },
+  {
+    "id": "knowledge-is-progression",
+    "category": "Information",
+    "title": "Knowledge is progress",
+    "summary": "Discoveries and verified information are rewards in their own right.",
+    "details": "Field reports, maps, observations, artifact research, and environmental findings can expand what Expeditioners know. Only information discovered and established in play belongs in the public record.",
+    "tags": [
+      "discovery",
+      "reports",
+      "progression"
+    ]
+  },
+  {
+    "id": "persistent-world",
+    "category": "Campaign",
+    "title": "Expeditions change a persistent world",
+    "summary": "Expedition outcomes can permanently affect the Island and the campaign record.",
+    "details": "The Island, Gate archive, expedition board, and reports represent the current known state of a world shared by different crews. Records should be updated when new information or consequences are established.",
+    "tags": [
+      "shared world",
+      "consequences",
+      "records"
+    ]
+  },
+  {
+    "id": "player-chosen-expeditions",
+    "category": "Expeditions",
+    "title": "Players choose expedition priorities",
+    "summary": "Players decide which Gates, mysteries, threats, and Island projects to pursue.",
+    "details": "Nowhere Expeditions uses a West Marches structure. Available opportunities are presented for the players to choose from; no expedition is mandatory and there is no fixed route through the campaign.",
+    "tags": [
+      "West Marches",
+      "player agency",
+      "choices"
+    ]
+  },
+  {
+    "id": "unknown-remains-unknown",
+    "category": "Information",
+    "title": "Unknown information stays marked as unknown",
+    "summary": "Unverified details and unexplored mysteries are not filled in with guesses.",
+    "details": "Use clear markers such as UNKNOWN, UNCLASSIFIED, NO DATA, or NOT YET SURVEYED when the campaign record does not establish an answer. Secret GM information is not published on player-facing pages.",
+    "tags": [
+      "public knowledge",
+      "secrets",
+      "unknown"
+    ]
+  }
+]

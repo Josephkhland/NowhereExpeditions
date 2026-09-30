@@ -1,0 +1,14 @@
+{
+  "id": "g-07",
+  "designation": "G-07",
+  "name": "Glass Verge",
+  "status": "active",
+  "discoveredAt": "",
+  "overview": "The Gate is stable enough for observation but still not fully mapped.",
+  "environment": "Shattered crystalline terrain and narrow elevated routes around a broken watch platform.",
+  "knownTraits": [],
+  "knownHazards": [
+    "Abrupt thermal changes, brittle structures, and visibility loss in local weather."
+  ],
+  "knownLocations": []
+}
