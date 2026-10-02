@@ -1,0 +1,26 @@
+{
+  "id": "g-24",
+  "type": "gate-record",
+  "title": "The Brass Tide",
+  "subtitle": "",
+  "summary": "",
+  "content": "Discovered by harbor watchmen during the September storm. See [[storm-opens-new-gate]] for the first public report.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "tags": [],
+  "participantIds": [],
+  "details": {
+    "designation": "G-24",
+    "gateStatus": "active",
+    "discoveredAt": "2026-09-22",
+    "environment": "A shoreline where the sea is liquid metal and the sand hums.",
+    "knownTraits": [],
+    "knownHazards": [
+      "Molten surf",
+      "Magnetic pull on iron gear"
+    ],
+    "knownLocations": []
+  }
+}

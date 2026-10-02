@@ -1,0 +1,14 @@
+{
+  "id": "harpoon-pistol",
+  "name": "Harpoon Pistol",
+  "category": "weapon",
+  "description": "Single-shot, cable-tethered. Licensed by the Watch.",
+  "price": 60,
+  "weight": 2,
+  "availability": "restricted",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null
+}

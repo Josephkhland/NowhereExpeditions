@@ -1,0 +1,14 @@
+{
+  "id": "padded-coat",
+  "name": "Padded Coat",
+  "category": "armor",
+  "description": "Layered canvas that turns a glancing blow.",
+  "price": 25,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null
+}

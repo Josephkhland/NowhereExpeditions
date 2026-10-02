@@ -1,0 +1,22 @@
+{
+  "id": "j-dock-repairs",
+  "designation": "",
+  "title": "Reinforce the Deep Docks",
+  "type": "outpost",
+  "status": "in-progress",
+  "summary": "Help Outpost engineers brace the damaged dockworks before the next storm.",
+  "objective": "Advance the Harbor Reinforcement project.",
+  "briefing": "",
+  "postedBy": "Outpost Works",
+  "organizerId": null,
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "crewCount": 1,
+  "crewMin": null,
+  "crewMax": null,
+  "participantIds": [
+    "mara-lind"
+  ],
+  "requirements": [],
+  "sessionRecordId": null
+}

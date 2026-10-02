@@ -1,0 +1,24 @@
+{
+  "id": "j-find-teodor",
+  "designation": "",
+  "title": "Find Teodor Quell",
+  "type": "recovery",
+  "status": "open",
+  "summary": "Search the Lantern Reef margin for the missing Watch veteran.",
+  "objective": "",
+  "briefing": "Last seen entering [[g-12]]. See [[lantern-reef-watch]].",
+  "postedBy": "Harbor Watch",
+  "organizerId": null,
+  "scheduledAt": "2026-10-04T20:00",
+  "expectedDuration": "",
+  "crewCount": 1,
+  "crewMin": 2,
+  "crewMax": 4,
+  "participantIds": [
+    "ilse-markov"
+  ],
+  "requirements": [
+    "Diving rig recommended"
+  ],
+  "sessionRecordId": null
+}

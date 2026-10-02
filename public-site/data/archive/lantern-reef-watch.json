@@ -1,0 +1,21 @@
+{
+  "id": "lantern-reef-watch",
+  "type": "session-record",
+  "title": "Lantern Reef Watch",
+  "subtitle": "",
+  "summary": "The watch was abandoned when Teodor went ahead alone.",
+  "content": "Ilse recorded the lights of [[g-12]] for two hours before Teodor entered the margin. He has not returned. The Watch lists him as missing.",
+  "author": "Records Office",
+  "publishedAt": "2026-09-19",
+  "eventDate": "",
+  "image": null,
+  "tags": [],
+  "participantIds": [
+    "teodor-quell",
+    "ilse-markov"
+  ],
+  "details": {
+    "sessionDate": "2026-09-19",
+    "outcome": "aborted"
+  }
+}

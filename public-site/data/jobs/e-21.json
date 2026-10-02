@@ -1,0 +1,27 @@
+{
+  "id": "e-21",
+  "designation": "",
+  "title": "Return to the Sunken Archive",
+  "type": "expedition",
+  "status": "open",
+  "summary": "Reach the sealed structure discovered during the previous expedition and determine whether an entrance can be established.",
+  "objective": "Open or bypass the sealed door in the Central Row.",
+  "briefing": "Read [[the-first-descent]] before signing on. The door's inscriptions may relate to [[the-karthian-flood-myth]].\n\n- Bring light that does not depend on time passing\n- Expect disorientation",
+  "postedBy": "Survey Office",
+  "organizerId": "mara-lind",
+  "scheduledAt": "2026-10-10T19:00",
+  "expectedDuration": "3 hours",
+  "crewCount": 3,
+  "crewMin": 3,
+  "crewMax": 5,
+  "participantIds": [
+    "mara-lind",
+    "ilse-markov",
+    "oren-vask"
+  ],
+  "requirements": [
+    "At least one climber",
+    "Survey kit"
+  ],
+  "sessionRecordId": null
+}

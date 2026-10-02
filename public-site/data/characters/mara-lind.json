@@ -1,0 +1,132 @@
+{
+  "id": "mara-lind",
+  "name": "Mara Lind",
+  "type": "player",
+  "status": "active",
+  "portrait": null,
+  "summary": "Former harbor pilot who reads currents the way others read maps.",
+  "playerName": "Alex",
+  "sheet": {
+    "aspects": {
+      "highConcept": "Harbor Pilot Who Never Lost a Hull",
+      "trouble": "My Brother Went Through G-03 and Never Came Back",
+      "other": [
+        "Reads the Water Like a Map",
+        "Owes the Ledger Hall a Favor"
+      ]
+    },
+    "skills": [
+      {
+        "name": "Notice",
+        "rating": 4
+      },
+      {
+        "name": "Athletics",
+        "rating": 3
+      },
+      {
+        "name": "Drive",
+        "rating": 3
+      },
+      {
+        "name": "Will",
+        "rating": 2
+      },
+      {
+        "name": "Investigate",
+        "rating": 2
+      },
+      {
+        "name": "Rapport",
+        "rating": 2
+      },
+      {
+        "name": "Physique",
+        "rating": 1
+      },
+      {
+        "name": "Lore",
+        "rating": 1
+      },
+      {
+        "name": "Contacts",
+        "rating": 1
+      },
+      {
+        "name": "Stealth",
+        "rating": 1
+      }
+    ],
+    "stunts": [
+      {
+        "name": "Tide Sense",
+        "description": "Because I grew up on the docks, I get +2 to Notice when reading water, weather, or tides."
+      }
+    ],
+    "refresh": 3,
+    "fatePoints": 3,
+    "stress": [
+      {
+        "name": "Physical",
+        "boxes": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Mental",
+        "boxes": [
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "label": "Mild",
+        "shift": 2,
+        "aspect": ""
+      },
+      {
+        "label": "Moderate",
+        "shift": 4,
+        "aspect": ""
+      },
+      {
+        "label": "Severe",
+        "shift": 6,
+        "aspect": ""
+      }
+    ],
+    "extras": ""
+  },
+  "stash": [
+    {
+      "gearId": "rope",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "lantern",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "tide-chart",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "diving-rig",
+      "quantity": 1,
+      "broughtIntoAction": false
+    },
+    {
+      "gearId": "rations",
+      "quantity": 3,
+      "broughtIntoAction": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "tide-chart",
+  "name": "Tide Chart",
+  "category": "utility",
+  "description": "This month's harbor tides, annotated by the Survey Office.",
+  "price": 6,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null
+}

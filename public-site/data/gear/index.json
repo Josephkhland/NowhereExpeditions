@@ -1,1 +1,20 @@
-[]
+[
+  "climbing-spikes.json",
+  "crowbar.json",
+  "diving-rig.json",
+  "echo-bell.json",
+  "field-dressing.json",
+  "hand-axe.json",
+  "harpoon-pistol.json",
+  "lantern.json",
+  "med-kit.json",
+  "padded-coat.json",
+  "rations.json",
+  "rope.json",
+  "ruin-plate.json",
+  "signal-flare.json",
+  "stimulant-vial.json",
+  "survey-kit.json",
+  "tide-chart.json",
+  "toolroll.json"
+]

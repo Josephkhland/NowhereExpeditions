@@ -1,0 +1,11 @@
+{
+  "id": "varga",
+  "name": "Quartermaster Varga",
+  "type": "npc",
+  "status": "active",
+  "portrait": null,
+  "summary": "Runs the Outpost supply depot and posts most recovery work on the Job Board.",
+  "playerName": "",
+  "sheet": null,
+  "stash": []
+}
