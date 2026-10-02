@@ -1475,6 +1475,87 @@ a.entry-item { display: block; }
 .archive-newspaper .archive-body { font-family: Georgia, "Times New Roman", serif; }
 
 .session-record-link { align-self: flex-start; font-size: 0.8rem; }
+
+/* ---------- Archive Explore mode ---------- */
+
+.detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+
+.explore-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  color: var(--accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.explore-link svg { width: 1.1rem; height: 1.1rem; }
+.explore-link:hover,
+.explore-link:focus-visible { border-color: var(--accent-2); color: var(--accent-2); }
+
+.explore { display: flex; flex-direction: column; gap: 1rem; }
+.explore-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.6rem 1.5rem; }
+.explore-head .back-link { flex-basis: 100%; margin: 0; }
+.explore-title h2 { margin: 0.2rem 0 0; font-family: Georgia, "Times New Roman", serif; font-weight: 500; }
+.explore-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.explore-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  background: rgba(9, 14, 16, 0.8);
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.explore-toggle:has(input:checked) { border-color: var(--line-strong); color: var(--text); }
+.explore-toggle input { accent-color: var(--accent-2); }
+.explore-toggle svg,
+.explore-legend svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+
+.explore-canvas {
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at center, rgba(122, 215, 209, 0.07), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(112, 151, 167, 0.05), rgba(112, 151, 167, 0.05) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, rgba(112, 151, 167, 0.05), rgba(112, 151, 167, 0.05) 1px, transparent 1px, transparent 32px),
+    var(--panel);
+  overflow: hidden;
+}
+
+.lore-graph { display: block; width: 100%; height: auto; }
+.lore-edge { stroke: #8ea3a8; stroke-width: 1.6; opacity: 0.7; }
+
+.lore-label {
+  fill: var(--text);
+  font-size: 12px;
+  paint-order: stroke;
+  stroke: #0d1517;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.lore-center-label { font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+.lore-initials { fill: var(--text); font-size: 10px; font-weight: 700; }
+.lore-empty { fill: var(--muted); font-size: 13px; }
+.lore-node { cursor: pointer; outline: none; }
+.lore-node .lore-shape { transition: stroke 0.15s ease, stroke-width 0.15s ease; }
+.lore-node:hover .lore-shape,
+.lore-node:focus-visible .lore-shape { stroke: var(--accent-2); stroke-width: 4; }
+.lore-node:hover .lore-label,
+.lore-node:focus-visible .lore-label { fill: var(--accent-2); }
+
+.explore-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; color: var(--muted); font-size: 0.78rem; }
+.explore-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.explore-legend span svg[viewBox="0 0 28 8"] { width: 1.75rem; height: 0.5rem; }
+.explore-more { margin: -0.4rem 0 0; font-size: 0.85rem; }
+.explore-list li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; }
 .job-summary { margin: 0; color: var(--text); }
 
 /* ---------- Marketplace ---------- */
