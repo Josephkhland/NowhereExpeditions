@@ -1,0 +1,23 @@
+{
+  "id": "j-reef-watch",
+  "designation": "",
+  "title": "Lantern Reef Watch",
+  "type": "investigation",
+  "status": "failed",
+  "summary": "Observe the lights at the Lantern Reef margin for one night.",
+  "objective": "",
+  "briefing": "",
+  "postedBy": "Harbor Watch",
+  "organizerId": null,
+  "scheduledAt": "2026-09-19T21:00",
+  "expectedDuration": "",
+  "crewCount": 2,
+  "crewMin": null,
+  "crewMax": null,
+  "participantIds": [
+    "teodor-quell",
+    "ilse-markov"
+  ],
+  "requirements": [],
+  "sessionRecordId": "lantern-reef-watch"
+}

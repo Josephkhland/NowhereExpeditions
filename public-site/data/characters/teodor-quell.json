@@ -1,0 +1,22 @@
+{
+  "id": "teodor-quell",
+  "name": "Teodor Quell",
+  "type": "player",
+  "status": "missing",
+  "portrait": null,
+  "summary": "Watch veteran last seen entering the Lantern Reef margin alone.",
+  "playerName": "Riley",
+  "sheet": null,
+  "stash": [
+    {
+      "gearId": "harpoon-pistol",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "ruin-plate",
+      "quantity": 1,
+      "broughtIntoAction": true
+    }
+  ]
+}

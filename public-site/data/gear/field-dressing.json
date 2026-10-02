@@ -1,0 +1,14 @@
+{
+  "id": "field-dressing",
+  "name": "Field Dressing",
+  "category": "medical",
+  "description": "Clean linen and antiseptic for one wound.",
+  "price": 8,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null
+}

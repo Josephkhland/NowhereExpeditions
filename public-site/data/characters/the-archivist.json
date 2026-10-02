@@ -1,0 +1,11 @@
+{
+  "id": "the-archivist",
+  "name": "The Archivist",
+  "type": "npc",
+  "status": "active",
+  "portrait": null,
+  "summary": "Keeper of the Records Office. Nobody remembers their name; they remember everyone's.",
+  "playerName": "",
+  "sheet": null,
+  "stash": []
+}

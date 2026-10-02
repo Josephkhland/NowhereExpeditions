@@ -1,0 +1,22 @@
+{
+  "id": "the-first-descent",
+  "type": "session-record",
+  "title": "The First Descent",
+  "subtitle": "",
+  "summary": "The crew reached the Central Row of the Hollow Orchard and found a sealed door.",
+  "content": "We entered [[g-21]] at low tide. Inside, no time seemed to pass; our watches disagreed by an hour on the way out.\n\n## Findings\n- A sealed stone door at the end of the Central Row\n- Inscriptions that resemble those in [[the-karthian-flood-myth]]\n\n## Losses\n- One lantern, left burning by the door",
+  "author": "Records Office",
+  "publishedAt": "2026-09-05",
+  "eventDate": "",
+  "image": null,
+  "tags": [],
+  "participantIds": [
+    "mara-lind",
+    "oren-vask",
+    "ilse-markov"
+  ],
+  "details": {
+    "sessionDate": "2026-09-05",
+    "outcome": "partial"
+  }
+}

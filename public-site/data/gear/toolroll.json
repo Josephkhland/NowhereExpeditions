@@ -1,0 +1,14 @@
+{
+  "id": "toolroll",
+  "name": "Mechanic's Toolroll",
+  "category": "tool",
+  "description": "Wrenches and drivers sized for Outpost machinery.",
+  "price": 35,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null
+}

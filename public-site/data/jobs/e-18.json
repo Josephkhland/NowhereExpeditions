@@ -1,0 +1,22 @@
+{
+  "id": "e-18",
+  "designation": "E-18",
+  "title": "Glass Ledger Recovery",
+  "type": "recovery",
+  "status": "open",
+  "summary": "",
+  "objective": "Prepare for the recovery of material caches linked to the oldest industrial ruins.",
+  "briefing": "",
+  "postedBy": "",
+  "organizerId": null,
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "crewCount": 0,
+  "crewMin": null,
+  "crewMax": null,
+  "participantIds": [],
+  "requirements": [
+    "Small specialist team with security and research support."
+  ],
+  "sessionRecordId": null
+}

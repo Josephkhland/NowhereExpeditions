@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketplace | Nowhere Expeditions</title>
+    <meta name="description" content="Equipment and prices posted at the Outpost Marketplace." />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="site.js" defer></script>
+  </head>
+  <body data-page="marketplace">
+    <header class="site-header">
+      <div class="wrapper topbar">
+        <div class="brand" aria-label="Nowhere Expeditions home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Nowhere Expeditions</span>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="nav-link" href="index.html">Overview</a>
+          <a class="nav-link" href="outpost.html">Outpost</a>
+          <a class="nav-link" href="jobs.html">Job Board</a>
+          <a class="nav-link" href="archive.html">Archive</a>
+          <a class="nav-link active" href="marketplace.html">Marketplace</a>
+          <a class="nav-link" href="characters.html">Characters</a>
+          <a class="nav-link" href="rules.html">Rules</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell wrapper">
+      <section aria-labelledby="marketplace-head">
+        <div class="section-header">
+          <span class="kicker">Trade Notice</span>
+          <h1 id="marketplace-head">Marketplace</h1>
+          <p class="page-subtitle">Equipment currently offered by Outpost traders, with posted prices and weights.</p>
+        </div>
+        <div id="marketplace" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrapper">
+        <span>Nowhere Expeditions</span>
+        <span>Marketplace • posted prices • equipment catalogue</span>
+      </div>
+    </footer>
+  </body>
+</html>

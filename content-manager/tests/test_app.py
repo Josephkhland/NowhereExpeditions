@@ -1,5 +1,6 @@
 import base64
 import json
+import sqlite3
 import sys
 import threading
 import tempfile
@@ -26,6 +27,10 @@ def read_json(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+GATE_DETAILS = {"designation": "G-03", "gateStatus": "active", "discoveredAt": "", "environment": "A drowned corridor.",
+                "knownTraits": [], "knownHazards": ["Pressure shifts"], "knownLocations": []}
+
+
 class ContentStoreTests(unittest.TestCase):
     """The fixture site holds public data exactly as Sync/Export writes it."""
 
@@ -40,9 +45,9 @@ class ContentStoreTests(unittest.TestCase):
         (self.site_dir / "index.html").write_text('<link rel="stylesheet" href="styles.css"><script src="site.js"></script>', encoding="utf-8")
         (self.site_dir / "styles.css").write_text("body { color: green; }", encoding="utf-8")
         (self.site_dir / "site.js").write_text("document.documentElement.dataset.ready = 'true';", encoding="utf-8")
-        (self.site_dir / "assets" / "images" / "island.txt").write_text("static asset", encoding="utf-8")
-        write_json(self.data_dir / "island.json", {
-            "name": "Test Island",
+        (self.site_dir / "assets" / "images" / "outpost.txt").write_text("static asset", encoding="utf-8")
+        write_json(self.data_dir / "outpost.json", {
+            "name": "Test Outpost",
             "highConcept": "A fixture",
             "stress": {"current": 1, "max": 6},
             "capabilities": [],
@@ -51,35 +56,40 @@ class ContentStoreTests(unittest.TestCase):
             "activeProjects": [],
             "conditions": [],
         })
+        write_json(self.data_dir / "gear" / "index.json", ["rope.json"])
+        write_json(self.data_dir / "gear" / "rope.json", {
+            "id": "rope", "name": "Rope", "category": "exploration", "description": "Thirty metres.", "price": 10,
+            "weight": 1, "availability": "common", "image": None, "tags": [], "featured": False, "promoLabel": "", "discount": None,
+        })
         write_json(self.data_dir / "characters" / "index.json", [])
-        write_json(self.data_dir / "gates" / "index.json", ["g-03.json"])
-        write_json(self.data_dir / "gates" / "g-03.json", {
-            "id": "g-03", "designation": "G-03", "name": "Silt Choir", "status": "active", "discoveredAt": "",
-            "overview": "Harmonic patterns.", "environment": "A drowned corridor.",
-            "knownTraits": [], "knownHazards": ["Pressure shifts"], "knownLocations": [],
+        entry = {"subtitle": "", "summary": "", "author": "", "publishedAt": "", "eventDate": "", "image": None, "tags": [],
+                 "participantIds": []}
+        write_json(self.data_dir / "archive" / "index.json", ["g-03.json", "gate-note.json", "route-note.json"])
+        write_json(self.data_dir / "archive" / "g-03.json", {
+            **entry, "id": "g-03", "type": "gate-record", "title": "Silt Choir", "content": "Harmonic patterns.",
+            "details": GATE_DETAILS,
         })
-        expedition = {
-            "briefing": "", "type": "exploration", "scheduledAt": "", "expectedDuration": "", "organizerId": None,
-            "participantIds": [], "crewCount": 0, "crewMin": None, "crewMax": None, "requirements": [],
+        session = {"sessionDate": "2026-09-12", "outcome": "unknown"}
+        write_json(self.data_dir / "archive" / "gate-note.json", {
+            **entry, "id": "gate-note", "type": "session-record", "title": "Gate Note", "summary": "A short note",
+            "content": "Observed near [[g-03|the Silt Choir]].", "details": session,
+        })
+        write_json(self.data_dir / "archive" / "route-note.json", {
+            **entry, "id": "route-note", "type": "session-record", "title": "Route Note", "summary": "Routes held.",
+            "content": "Details.", "details": session,
+        })
+        job = {
+            "summary": "", "briefing": "", "type": "expedition", "scheduledAt": "", "expectedDuration": "", "organizerId": None,
+            "postedBy": "", "participantIds": [], "crewCount": 0, "crewMin": None, "crewMax": None, "requirements": [],
         }
-        write_json(self.data_dir / "expeditions" / "index.json", ["e-16.json", "e-17.json"])
-        write_json(self.data_dir / "expeditions" / "e-16.json", {
-            **expedition, "id": "e-16", "designation": "E-16", "title": "Harbor Watch", "gateId": "g-03",
-            "objective": "Watch the harbor ring.", "status": "completed",
+        write_json(self.data_dir / "jobs" / "index.json", ["e-16.json", "e-17.json"])
+        write_json(self.data_dir / "jobs" / "e-16.json", {
+            **job, "id": "e-16", "designation": "E-16", "title": "Harbor Watch", "objective": "Watch the harbor ring.",
+            "status": "completed", "sessionRecordId": "gate-note",
         })
-        write_json(self.data_dir / "expeditions" / "e-17.json", {
-            **expedition, "id": "e-17", "designation": "E-17", "title": "Saltglass Survey", "gateId": None,
-            "objective": "Map the approaches.", "status": "recruiting",
-        })
-        report = {"submittedBy": None, "outcome": "unknown", "discoveries": [], "hazards": [], "recoveredItems": [], "casualties": []}
-        write_json(self.data_dir / "reports" / "index.json", ["gate-note.json", "route-note.json"])
-        write_json(self.data_dir / "reports" / "gate-note.json", {
-            **report, "id": "gate-note", "expeditionId": "e-16", "gateId": "g-03", "title": "Gate Note",
-            "submittedAt": "2026-09-12", "summary": "A short note", "notes": "Observed near the harbor.",
-        })
-        write_json(self.data_dir / "reports" / "route-note.json", {
-            **report, "id": "route-note", "expeditionId": "e-17", "gateId": None, "title": "Route Note",
-            "submittedAt": "", "summary": "Routes held.", "notes": "Details.",
+        write_json(self.data_dir / "jobs" / "e-17.json", {
+            **job, "id": "e-17", "designation": "E-17", "title": "Saltglass Survey", "objective": "Map the approaches.",
+            "status": "open", "sessionRecordId": None,
         })
         write_json(self.data_dir / "rules.json", [{
             "id": "persistent-world",
@@ -101,6 +111,9 @@ class ContentStoreTests(unittest.TestCase):
 
     def add_character(self, name: str, **fields) -> str:
         return self.store.save_record("characters", None, {"name": name, "published": True, **fields})["id"]
+
+    def add_gear(self, name: str, **fields) -> str:
+        return self.store.save_record("gear", None, {"name": name, "price": 10, "weight": 1, "published": True, **fields})["id"]
 
     def serve(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), create_handler(self.store))
@@ -129,130 +142,180 @@ class ContentStoreTests(unittest.TestCase):
 
     def test_initial_import_loads_public_data(self) -> None:
         state = self.store.state()
-        self.assertEqual(state["island"]["name"], "Test Island")
+        self.assertEqual(state["outpost"]["name"], "Test Outpost")
         self.assertEqual(state["rules"][0]["id"], "persistent-world")
         self.assertTrue(state["rules"][0]["published"])
-        self.assertEqual(self.record("gates", "g-03")["knownHazards"], ["Pressure shifts"])
-        self.assertEqual(self.record("expeditions", "e-16")["gateId"], "g-03")
-        self.assertNotIn("crewCount", self.record("expeditions", "e-16"), "crew count is derived on export")
-        report = self.record("reports", "gate-note")
-        self.assertEqual(report["expeditionId"], "e-16")
-        self.assertNotIn("gateId", report, "a report's Gate is derived on export")
-        self.assertTrue(all(record["published"] for name in ("gates", "expeditions", "reports") for record in state[name]))
+        gate = self.record("archive", "g-03")
+        self.assertEqual((gate["type"], gate["details"]["knownHazards"]), ("gate-record", ["Pressure shifts"]))
+        job = self.record("jobs", "e-16")
+        self.assertEqual(job["sessionRecordId"], "gate-note")
+        self.assertNotIn("crewCount", job, "crew count is derived on export")
+        self.assertEqual(self.record("gear", "rope")["price"], 10)
+        self.assertTrue(all(record["published"] for name in ("archive", "jobs", "gear") for record in state[name]))
 
-    def test_export_then_import_round_trips_new_format(self) -> None:
-        varga = self.add_character("Varga", type="npc", summary="Quartermaster.")
-        self.store.save_record("expeditions", "e-17", {**self.record("expeditions", "e-17"), "gateId": "g-03",
-                                                       "organizerId": varga, "participantIds": [varga]})
+    def test_export_then_import_round_trips(self) -> None:
+        varga = self.add_character("Varga", type="npc", summary="Quartermaster.", stash=[{"gearId": "rope", "quantity": 2}])
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "sessionRecordId": "route-note",
+                                                "organizerId": varga, "participantIds": [varga]})
+        self.store.save_record("archive", "route-note", {**self.record("archive", "route-note"), "participantIds": [varga]})
         self.store.sync_site_data()
         self.store.import_site()
-        expedition = self.record("expeditions", "e-17")
-        self.assertEqual(expedition["gateId"], "g-03")
-        self.assertEqual(expedition["participantIds"], [varga])
-        self.assertEqual(self.record("characters", varga)["summary"], "Quartermaster.")
-        self.assertEqual(self.record("reports", "route-note")["expeditionId"], "e-17")
-        self.assertNotIn("gateId", self.record("reports", "route-note"))
+        job = self.record("jobs", "e-17")
+        self.assertEqual((job["sessionRecordId"], job["participantIds"]), ("route-note", [varga]))
+        self.assertEqual(self.record("archive", "route-note")["participantIds"], [varga])
+        self.assertEqual(self.record("characters", varga)["stash"], [{"gearId": "rope", "quantity": 2, "broughtIntoAction": False}])
 
     # --- CRUD and references ---
 
-    def test_crud_for_all_content_types_and_participant_order(self) -> None:
-        varga = self.add_character("Varga", type="npc", status="active")
+    def test_crud_for_all_content_types(self) -> None:
+        varga = self.add_character("Varga", type="npc")
         mara = self.add_character("Mara Lind", playerName="Alex")
         oren = self.add_character("Oren")
-        self.assertEqual(varga, "varga")
-        gate = self.store.save_record("gates", None, {
-            "designation": "Gate 017", "name": "The Sunken Archive", "status": "dormant",
-            "knownTraits": "Tidal time\n\nEchoes", "published": True,
+        gate = self.store.save_record("archive", None, {
+            "type": "gate-record", "title": "The Sunken Archive", "content": "Tidal ruins.",
+            "details": {"designation": "Gate 017", "gateStatus": "dormant", "knownTraits": "Tidal time\n\nEchoes"},
+            "participantIds": [mara], "published": True,
         })["id"]
         self.assertEqual(gate, "gate-017")
-        self.assertEqual(self.record("gates", gate)["knownTraits"], ["Tidal time", "Echoes"])
-        expedition = self.store.save_record("expeditions", None, {
-            "title": "Return to the Sunken Archive", "designation": "017-C", "gateId": gate, "type": "exploration",
-            "status": "recruiting", "scheduledAt": "2026-10-03T19:00", "organizerId": varga,
-            "participantIds": [oren, mara, oren], "crewMin": "2", "crewMax": 5, "published": True,
+        saved_gate = self.record("archive", gate)
+        self.assertEqual(saved_gate["details"]["knownTraits"], ["Tidal time", "Echoes"])
+        self.assertEqual(saved_gate["participantIds"], [], "only Session Records keep participants")
+        session = self.store.save_record("archive", None, {
+            "type": "session-record", "title": "The First Descent", "content": "We reached [[gate-017]].",
+            "participantIds": [oren, mara, oren], "details": {"sessionDate": "2026-10-03", "outcome": "partial"}, "published": True,
         })["id"]
-        saved = self.record("expeditions", expedition)
+        self.assertEqual(self.record("archive", session)["participantIds"], [oren, mara])
+        for entry_type in ("newspaper", "history", "folklore"):
+            with self.subTest(entry_type=entry_type):
+                entry = self.store.save_record("archive", None, {"type": entry_type, "title": f"A {entry_type}",
+                                                                 "details": GATE_DETAILS, "published": True})["id"]
+                self.assertEqual(self.record("archive", entry)["details"], {}, "Gate metadata is not kept on other types")
+        job = self.store.save_record("jobs", None, {
+            "title": "Return to the Sunken Archive", "designation": "017-C", "type": "expedition", "status": "open",
+            "scheduledAt": "2026-10-03T19:00", "organizerId": varga, "participantIds": [oren, mara, oren],
+            "crewMin": "2", "crewMax": 5, "sessionRecordId": session, "published": True,
+        })["id"]
+        saved = self.record("jobs", job)
         self.assertEqual(saved["participantIds"], [oren, mara])
-        self.assertEqual((saved["crewMin"], saved["crewMax"]), (2, 5))
-        report = self.store.save_record("reports", None, {
-            "title": "Sealed structure found", "expeditionId": expedition, "gateId": gate, "submittedBy": mara,
-            "outcome": "partial", "discoveries": ["A sealed door"], "published": True,
-        })["id"]
-        self.assertNotIn("gateId", self.record("reports", report), "a report's Gate is derived from its Expedition, never stored")
+        self.assertEqual((saved["crewMin"], saved["crewMax"], saved["sessionRecordId"]), (2, 5, session))
+        for job_type in ("recovery", "investigation", "escort", "bounty", "outpost", "other"):
+            self.store.save_record("jobs", job, {**saved, "type": job_type, "status": "failed", "published": True})
+            self.assertEqual(self.record("jobs", job)["type"], job_type)
 
-        self.store.save_record("characters", mara, {"name": "Mara Lind", "status": "missing", "published": True})
-        self.assertEqual(self.record("characters", mara)["status"], "missing")
+        lantern = self.add_gear("Lantern", category="exploration", featured=True, promoLabel="new",
+                                discount={"active": True, "salePrice": 8})
+        saved_gear = self.record("gear", lantern)
+        self.assertEqual((saved_gear["promoLabel"], saved_gear["discount"]), ("NEW", {"active": True, "salePrice": 8}))
 
-        self.store.delete_record("reports", report)
-        self.store.delete_record("expeditions", expedition)
-        self.store.delete_record("gates", gate)
+        self.store.delete_record("jobs", job)
+        self.store.delete_record("archive", session)
+        self.store.delete_record("archive", gate)
+        self.store.delete_record("gear", lantern)
         self.store.delete_record("characters", mara)
         self.assertNotIn(mara, [item["id"] for item in self.store.state()["characters"]])
 
     def test_invalid_references_and_values_are_rejected(self) -> None:
-        with self.assertRaisesRegex(ManagerError, "Unknown gate"):
-            self.store.save_record("expeditions", None, {"title": "X", "gateId": "nope"})
+        with self.assertRaisesRegex(ManagerError, "Unknown archive entry"):
+            self.store.save_record("jobs", None, {"title": "X", "sessionRecordId": "nope"})
+        with self.assertRaisesRegex(ManagerError, "type session-record"):
+            self.store.save_record("jobs", None, {"title": "X", "sessionRecordId": "g-03"})
         with self.assertRaisesRegex(ManagerError, "Unknown participant"):
-            self.store.save_record("expeditions", None, {"title": "X", "participantIds": ["ghost"]})
+            self.store.save_record("jobs", None, {"title": "X", "participantIds": ["ghost"]})
         with self.assertRaisesRegex(ManagerError, "status must be one of"):
-            self.store.save_record("gates", None, {"designation": "G-1", "name": "X", "status": "haunted"})
+            self.store.save_record("jobs", None, {"title": "X", "status": "underway"})
         with self.assertRaisesRegex(ManagerError, "Minimum crew"):
-            self.store.save_record("expeditions", None, {"title": "X", "crewMin": 5, "crewMax": 2})
-        with self.assertRaisesRegex(ManagerError, "must belong to an Expedition"):
-            self.store.save_record("reports", None, {"title": "Orphan"})
-        with self.assertRaisesRegex(ManagerError, "already uses the designation"):
-            self.store.save_record("gates", None, {"designation": "g_03", "name": "Duplicate Gate"})
+            self.store.save_record("jobs", None, {"title": "X", "crewMin": 5, "crewMax": 2})
+        with self.assertRaisesRegex(ManagerError, "gateStatus must be one of"):
+            self.store.save_record("archive", None, {"type": "gate-record", "title": "X", "details": {"designation": "G-1", "gateStatus": "haunted"}})
+        with self.assertRaisesRegex(ManagerError, "already uses the Gate designation"):
+            self.store.save_record("archive", None, {"type": "gate-record", "title": "Dup", "details": {"designation": "g_03"}})
+        with self.assertRaisesRegex(ManagerError, "type must be one of"):
+            self.store.save_record("archive", None, {"type": "creature", "title": "X"})
+        with self.assertRaisesRegex(ManagerError, "sale price must be lower"):
+            self.add_gear("Bad deal", discount={"active": True, "salePrice": 12})
+        with self.assertRaisesRegex(ManagerError, "Unknown Gear in stash"):
+            self.add_character("X", stash=[{"gearId": "ghost-gear"}])
+        with self.assertRaisesRegex(ManagerError, "Stash quantity"):
+            self.add_character("X", stash=[{"gearId": "rope", "quantity": 0}])
 
     def test_referenced_records_cannot_be_deleted(self) -> None:
-        varga = self.add_character("Varga")
-        self.store.save_record("expeditions", "e-17", {**self.record("expeditions", "e-17"), "gateId": "g-03", "participantIds": [varga]})
+        varga = self.add_character("Varga", stash=[{"gearId": "rope"}])
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "participantIds": [varga]})
         with self.assertRaisesRegex(ManagerError, "Saltglass Survey.*participant"):
             self.store.delete_record("characters", varga)
-        with self.assertRaisesRegex(ManagerError, "E-17 · Saltglass Survey.*gateId"):
-            self.store.delete_record("gates", "g-03")
-        with self.assertRaisesRegex(ManagerError, "Route Note"):
-            self.store.delete_record("expeditions", "e-17")
-        self.assertEqual(len(self.store.state()["gates"]), 1)
+        with self.assertRaisesRegex(ManagerError, "Harbor Watch.*sessionRecordId"):
+            self.store.delete_record("archive", "gate-note")
+        with self.assertRaisesRegex(ManagerError, "Varga.*stash"):
+            self.store.delete_record("gear", "rope")
+        with self.assertRaisesRegex(ManagerError, "uses this entry as its Session Record"):
+            self.store.save_record("archive", "gate-note", {**self.record("archive", "gate-note"), "type": "history"})
+
+    # --- character stash ---
+
+    def test_stash_references_gear_and_merges_duplicates(self) -> None:
+        lantern = self.add_gear("Lantern")
+        mara = self.add_character("Mara", stash=[
+            {"gearId": "rope", "quantity": 1}, {"gearId": lantern, "broughtIntoAction": True}, {"gearId": "rope", "quantity": 2},
+        ])
+        oren = self.add_character("Oren", stash=[{"gearId": lantern, "broughtIntoAction": False}])
+        self.assertEqual(self.record("characters", mara)["stash"], [
+            {"gearId": "rope", "quantity": 3, "broughtIntoAction": False},
+            {"gearId": lantern, "quantity": 1, "broughtIntoAction": True},
+        ])
+        self.assertFalse(self.record("characters", oren)["stash"][0]["broughtIntoAction"], "stash state is per character")
+        self.store.save_record("characters", mara, {**self.record("characters", mara), "stash": [{"gearId": "rope", "quantity": 3}]})
+        self.assertEqual(len(self.record("characters", mara)["stash"]), 1)
+        self.assertIn(lantern, [gear["id"] for gear in self.store.state()["gear"]], "removing from a stash keeps the Gear")
+        self.store.delete_record("characters", mara)
+        self.store.delete_record("characters", oren)
+        self.store.delete_record("gear", lantern)
 
     # --- publishing ---
 
     def test_unpublished_records_are_left_out_and_references_to_them_dropped(self) -> None:
         secret = self.store.save_record("characters", None, {"name": "Hidden Patron", "published": False})["id"]
-        crew = self.add_character("Crew Member")
-        self.store.save_record("gates", None, {"designation": "G-99", "name": "Secret Gate", "published": False})
-        self.store.save_record("expeditions", "e-17", {**self.record("expeditions", "e-17"), "gateId": "g-99",
-                                                       "organizerId": secret, "participantIds": [secret, crew]})
-        hidden_expedition = self.store.save_record("expeditions", None, {"title": "Black op", "published": False})["id"]
-        self.store.save_record("reports", None, {"title": "Classified", "expeditionId": hidden_expedition, "published": True})
+        hidden_gear = self.add_gear("Prototype", published=False)
+        crew = self.add_character("Crew Member", stash=[{"gearId": "rope"}, {"gearId": hidden_gear}])
+        hidden_session = self.store.save_record("archive", None, {
+            "type": "session-record", "title": "Black op", "participantIds": [secret, crew], "published": False})["id"]
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "organizerId": secret,
+                                                "participantIds": [secret, crew], "sessionRecordId": hidden_session,
+                                                "briefing": f"See [[{hidden_session}]] and [[g-03]]."})
+        self.store.save_record("archive", "route-note", {**self.record("archive", "route-note"),
+                                                         "content": f"Cf. [[{hidden_session}|the incident]].",
+                                                         "participantIds": [secret, crew]})
         self.store.save_record("rules", "persistent-world", {**self.record("rules", "persistent-world"), "published": False})
 
         counts = self.store.export_site()
         data = self.export_dir / "data"
         self.assertEqual(read_json(data / "characters" / "index.json"), [f"{crew}.json"])
-        self.assertEqual(read_json(data / "gates" / "index.json"), ["g-03.json"])
-        self.assertEqual(read_json(data / "expeditions" / "index.json"), ["e-16.json", "e-17.json"])
-        self.assertEqual(read_json(data / "reports" / "index.json"), ["gate-note.json", "route-note.json"])
+        self.assertEqual(read_json(data / "gear" / "index.json"), ["rope.json"])
+        self.assertNotIn(f"{hidden_session}.json", read_json(data / "archive" / "index.json"))
         self.assertEqual(read_json(data / "rules.json"), [])
-        expedition = read_json(data / "expeditions" / "e-17.json")
-        self.assertIsNone(expedition["gateId"])
-        self.assertIsNone(expedition["organizerId"])
-        self.assertEqual(expedition["participantIds"], [crew])
-        self.assertEqual(expedition["crewCount"], 2)
-        self.assertNotIn("published", expedition)
-        self.assertEqual(counts["unpublished"], 5)
+        job = read_json(data / "jobs" / "e-17.json")
+        self.assertIsNone(job["organizerId"])
+        self.assertIsNone(job["sessionRecordId"])
+        self.assertEqual(job["participantIds"], [crew])
+        self.assertEqual(job["crewCount"], 2)
+        self.assertEqual(job["briefing"], "See [record unavailable] and [[g-03]].")
+        self.assertNotIn("published", job)
+        self.assertEqual(read_json(data / "archive" / "route-note.json")["content"], "Cf. the incident.")
+        self.assertEqual(read_json(data / "archive" / "route-note.json")["participantIds"], [crew])
+        self.assertEqual(read_json(data / "characters" / f"{crew}.json")["stash"], [{"gearId": "rope", "quantity": 1, "broughtIntoAction": False}])
+        self.assertEqual(counts["unpublished"], 4)
 
     def test_new_records_default_to_unpublished(self) -> None:
         record_id = self.store.save_record("characters", None, {"name": "Draft"})["id"]
         self.assertFalse(self.record("characters", record_id)["published"])
 
-    def test_report_gate_is_derived_from_expedition_on_export(self) -> None:
-        self.store.save_record("expeditions", "e-17", {**self.record("expeditions", "e-17"), "gateId": "g-03"})
+    def test_public_fields_never_include_manager_only_data(self) -> None:
         self.store.export_site()
-        report = read_json(self.export_dir / "data" / "reports" / "route-note.json")
-        self.assertEqual(report["expeditionId"], "e-17")
-        self.assertEqual(report["gateId"], "g-03")
-        self.assertEqual(set(report), {"id", "expeditionId", "gateId", "title", "submittedBy", "submittedAt", "outcome",
-                                       "summary", "discoveries", "hazards", "recoveredItems", "casualties", "notes"})
+        gate = read_json(self.export_dir / "data" / "archive" / "g-03.json")
+        self.assertEqual(set(gate), {"id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt",
+                                     "eventDate", "image", "tags", "participantIds", "details"})
+        self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
+                         {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
+                          "featured", "promoLabel", "discount"})
 
     # --- character sheets ---
 
@@ -293,7 +356,7 @@ class ContentStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ManagerError, "Refresh"):
             self.add_character("X", sheet={"refresh": ""})
 
-    # --- portraits ---
+    # --- images ---
 
     def test_portrait_upload_is_exported_only_with_published_character(self) -> None:
         data_url = "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode()
@@ -312,6 +375,17 @@ class ContentStoreTests(unittest.TestCase):
         self.store.delete_record("characters", varga)
         self.assertIsNone(self.store.media(path.removeprefix("data/portraits/")))
 
+    def test_archive_and_gear_images_are_exported(self) -> None:
+        data_url = "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode()
+        path = self.store.save_media({"filename": "Lantern.png", "dataUrl": data_url, "kind": "image"})["path"]
+        self.assertTrue(path.startswith("data/images/lantern-"))
+        lantern = self.add_gear("Lantern", image=path)
+        self.store.save_record("archive", "g-03", {**self.record("archive", "g-03"), "image": path})
+        self.store.export_site()
+        self.assertEqual((self.export_dir / path).read_bytes(), PNG_BYTES)
+        self.store.delete_record("gear", lantern)
+        self.assertIsNotNone(self.store.media(path.removeprefix("data/images/")), "still used by the Gate Record")
+
     def test_non_image_upload_is_rejected(self) -> None:
         with self.assertRaisesRegex(ManagerError, "PNG, JPEG"):
             self.store.save_media({"filename": "x.txt", "dataUrl": "data:text/plain;base64,aGk="})
@@ -320,9 +394,9 @@ class ContentStoreTests(unittest.TestCase):
 
     def test_export_builds_complete_replaceable_site_folder_without_touching_source(self) -> None:
         # data/ is regenerated: files the manager did not write are not exported.
-        stale_gate = self.data_dir / "gates" / "g-99.json"
+        stale_entry = self.data_dir / "archive" / "g-99.json"
         unmanaged_file = self.data_dir / "notes.json"
-        write_json(stale_gate, {"designation": "G-99", "name": "Stale gate"})
+        write_json(stale_entry, {"type": "gate-record", "title": "Stale gate"})
         write_json(unmanaged_file, [{"designation": "G-99"}])
 
         result = self.store.export_site()
@@ -330,15 +404,15 @@ class ContentStoreTests(unittest.TestCase):
 
         self.assertEqual(Path(str(result["destination"])), exported_site)
         self.assertEqual(result["siteFiles"], len([path for path in exported_site.rglob("*") if path.is_file()]))
-        for relative_path in ("index.html", "styles.css", "site.js", "assets/images/island.txt"):
+        for relative_path in ("index.html", "styles.css", "site.js", "assets/images/outpost.txt"):
             with self.subTest(static_file=relative_path):
                 self.assertEqual((exported_site / relative_path).read_bytes(), (self.site_dir / relative_path).read_bytes())
-        self.assertEqual(read_json(exported_site / "data/gates/index.json"), ["g-03.json"])
+        self.assertEqual(read_json(exported_site / "data/archive/index.json"), ["g-03.json", "gate-note.json", "route-note.json"])
         self.assertEqual(read_json(exported_site / "data/characters/index.json"), [])
-        self.assertTrue((exported_site / "data/island.json").is_file())
-        self.assertFalse((exported_site / "data/gates/g-99.json").exists())
+        self.assertTrue((exported_site / "data/outpost.json").is_file())
+        self.assertFalse((exported_site / "data/archive/g-99.json").exists())
         self.assertFalse((exported_site / "data/notes.json").exists())
-        self.assertTrue(stale_gate.exists())
+        self.assertTrue(stale_entry.exists())
         self.assertTrue(unmanaged_file.exists())
 
         (exported_site / "old-deployment-file.txt").write_text("old", encoding="utf-8")
@@ -355,9 +429,9 @@ class ContentStoreTests(unittest.TestCase):
         finally:
             stop()
         self.assertEqual(Path(result["destination"]), self.data_dir)
-        self.assertEqual((result["gates"], result["expeditions"], result["reports"]), (1, 2, 2))
+        self.assertEqual((result["archive"], result["jobs"], result["gear"]), (3, 2, 1))
         self.assertFalse(unmanaged_file.exists())
-        self.assertTrue((self.data_dir / "gates" / "g-03.json").is_file())
+        self.assertTrue((self.data_dir / "archive" / "g-03.json").is_file())
         self.assertEqual(read_json(self.data_dir / "rules.json")[0]["id"], "persistent-world")
         self.assertEqual((self.site_dir / "index.html").read_bytes(), page_before)
 
@@ -365,29 +439,143 @@ class ContentStoreTests(unittest.TestCase):
         send, stop = self.serve()
         try:
             character = send("/api/characters", {"data": {"name": "Varga", "type": "npc", "published": True}})["id"]
-            gate = send("/api/gates", {"data": {"designation": "Gate 017", "name": "Archive", "published": True}})["id"]
-            expedition = send("/api/expeditions", {"data": {
-                "title": "First Descent", "gateId": gate, "organizerId": character, "participantIds": [character], "published": True,
+            session = send("/api/archive", {"data": {"type": "session-record", "title": "Descent log", "published": True}})["id"]
+            job = send("/api/jobs", {"data": {
+                "title": "First Descent", "organizerId": character, "participantIds": [character], "published": True,
             }})["id"]
-            send(f"/api/expeditions/{expedition}", {"data": {
-                "title": "First Descent", "gateId": gate, "organizerId": character, "participantIds": [], "status": "completed", "published": True,
+            send(f"/api/jobs/{job}", {"data": {
+                "title": "First Descent", "organizerId": character, "participantIds": [], "status": "completed",
+                "sessionRecordId": session, "published": True,
             }}, "PUT")
-            report = send("/api/reports", {"data": {"title": "Descent log", "expeditionId": expedition, "published": True}})["id"]
             with self.assertRaises(HTTPError) as blocked:
-                send(f"/api/gates/{gate}", method="DELETE")
+                send(f"/api/archive/{session}", method="DELETE")
             self.assertIn("First Descent", json.loads(blocked.exception.read())["error"])
 
             state = send("/api/state", method="GET")
-            self.assertEqual(next(item for item in state["expeditions"] if item["id"] == expedition)["status"], "completed")
-            send(f"/api/reports/{report}", method="DELETE")
-            send(f"/api/expeditions/{expedition}", method="DELETE")
-            send(f"/api/gates/{gate}", method="DELETE")
+            self.assertEqual(next(item for item in state["jobs"] if item["id"] == job)["status"], "completed")
+            send("/api/outpost", {"data": {**state["outpost"], "name": "The Outpost"}})
+            self.assertEqual(send("/api/state", method="GET")["outpost"]["name"], "The Outpost")
+            send(f"/api/jobs/{job}", method="DELETE")
+            send(f"/api/archive/{session}", method="DELETE")
             send(f"/api/characters/{character}", method="DELETE")
-            rule = send("/api/rules", {"data": {"title": "Choose a route", "category": "Expeditions", "published": True}})["id"]
+            rule = send("/api/rules", {"data": {"title": "Choose a route", "category": "Jobs", "published": True}})["id"]
             send("/api/export", {})
             self.assertIn(rule, [item["id"] for item in read_json(self.export_dir / "data" / "rules.json")])
         finally:
             stop()
+
+
+class LegacyMigrationTests(unittest.TestCase):
+    """A schema v3 database (Island, Gates, Expeditions, Reports) is converted in place on startup."""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.data_dir = self.root / "public-site" / "data"
+        self.data_dir.mkdir(parents=True)
+        self.database = self.root / "content.db"
+        connection = sqlite3.connect(self.database)
+        connection.executescript("""
+            CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE island_state (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL);
+            CREATE TABLE rules (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            CREATE TABLE characters (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            CREATE TABLE gates (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            CREATE TABLE expeditions (id TEXT PRIMARY KEY, gate_id TEXT REFERENCES gates(id), organizer_id TEXT REFERENCES characters(id), data TEXT NOT NULL);
+            CREATE TABLE expedition_participants (expedition_id TEXT NOT NULL, character_id TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY (expedition_id, character_id));
+            CREATE TABLE expedition_reports (id TEXT PRIMARY KEY, expedition_id TEXT NOT NULL REFERENCES expeditions(id), submitted_by TEXT REFERENCES characters(id), data TEXT NOT NULL);
+            CREATE TABLE media (filename TEXT PRIMARY KEY, content_type TEXT NOT NULL, content BLOB NOT NULL);
+        """)
+        rows = {
+            "metadata": [("initialized", "1")],
+            "island_state": [(1, json.dumps({"name": "The Island", "highConcept": "An island settlement",
+                                             "capabilities": [{"name": "Industry", "detail": "The Island's ability to build."}]}))],
+            "rules": [("island-projects", json.dumps({"id": "island-projects", "category": "Island", "title": "Island projects",
+                                                      "summary": "See the Island Sheet and the Gate archive.", "tags": ["Island"]}))],
+            "characters": [("mara", json.dumps({"name": "Mara", "type": "player", "status": "active", "published": True}))],
+            "gates": [("g-03", json.dumps({"published": True, "designation": "G-03", "name": "The Silt Choir", "status": "dormant",
+                                           "discoveredAt": "2026-01-02", "overview": "Harmonic patterns.", "environment": "Drowned.",
+                                           "knownTraits": ["Echoes"], "knownHazards": ["Pressure"], "knownLocations": ["Ring"]}))],
+            "expeditions": [
+                ("e-17", "g-03", "mara", json.dumps({"published": True, "designation": "E-17", "title": "Saltglass Survey",
+                                                    "type": "exploration", "status": "underway", "objective": "Map it.",
+                                                    "briefing": "Bring rope.", "scheduledAt": "2026-09-10T19:00",
+                                                    "requirements": ["Divers"], "crewMin": 2, "crewMax": 4})),
+                ("e-18", None, None, json.dumps({"published": False, "title": "Rescue", "type": "rescue", "status": "recruiting"})),
+            ],
+            "expedition_participants": [("e-17", "mara", 0)],
+            "expedition_reports": [
+                ("late", "e-17", None, json.dumps({"published": True, "title": "Late notes", "submittedAt": "2026-09-18",
+                                                  "outcome": "unknown", "summary": "Later.", "notes": "More."})),
+                ("early", "e-17", "mara", json.dumps({"published": True, "title": "Early notes", "submittedAt": "2026-09-12",
+                                                     "outcome": "partial", "summary": "Sooner.", "notes": "Found a door.",
+                                                     "discoveries": ["A door"], "hazards": [], "recoveredItems": [], "casualties": []})),
+            ],
+        }
+        for table, values in rows.items():
+            for value in values:
+                connection.execute(f"INSERT INTO {table} VALUES ({', '.join('?' for _ in value)})", value)
+        connection.commit()
+        connection.close()
+        self.store = ContentStore(self.database, self.data_dir, self.root / "site-export")
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def record(self, collection: str, record_id: str) -> dict:
+        return next(item for item in self.store.state()[collection] if item["id"] == record_id)
+
+    def test_gates_reports_and_expeditions_are_converted(self) -> None:
+        gate = self.record("archive", "g-03")
+        self.assertEqual((gate["type"], gate["title"], gate["published"]), ("gate-record", "The Silt Choir", True))
+        self.assertEqual(gate["details"], {"designation": "G-03", "gateStatus": "dormant", "discoveredAt": "2026-01-02",
+                                           "environment": "Drowned.", "knownTraits": ["Echoes"], "knownHazards": ["Pressure"],
+                                           "knownLocations": ["Ring"]})
+        self.assertIn("Harmonic patterns.", gate["content"])
+        self.assertIn("[E-17 · Saltglass Survey](jobs.html#e-17) — session records: [[early]], [[late]]", gate["content"])
+
+        early = self.record("archive", "early")
+        self.assertEqual((early["type"], early["author"], early["publishedAt"]), ("session-record", "Mara", "2026-09-12"))
+        self.assertEqual(early["details"], {"sessionDate": "2026-09-10", "outcome": "partial"})
+        self.assertEqual(early["participantIds"], ["mara"])
+        self.assertIn("## Discoveries\n- A door", early["content"])
+
+        job = self.record("jobs", "e-17")
+        self.assertEqual((job["type"], job["status"], job["sessionRecordId"]), ("expedition", "in-progress", "early"))
+        self.assertEqual((job["organizerId"], job["participantIds"], job["crewMax"]), ("mara", ["mara"], 4))
+        self.assertEqual(job["briefing"], "Bring rope.\n\nGate: [[g-03]]\n\nFurther session records: [[late]]")
+        self.assertEqual(job["legacy"]["gateId"], "g-03")
+        rescue = self.record("jobs", "e-18")
+        self.assertEqual((rescue["type"], rescue["status"], rescue["published"]), ("other", "open", False))
+        self.assertTrue(any("rescue" in line for line in self.store.migration_report))
+
+    def test_outpost_and_rules_terminology_and_source_preservation(self) -> None:
+        state = self.store.state()
+        self.assertEqual(state["outpost"]["name"], "The Outpost")
+        self.assertEqual(state["outpost"]["capabilities"][0]["detail"], "The Outpost's ability to build.")
+        rule = state["rules"][0]
+        self.assertEqual((rule["id"], rule["category"], rule["tags"]), ("island-projects", "Outpost", ["Outpost"]))
+        self.assertEqual(rule["summary"], "See the Outpost Sheet and the Archive.")
+
+        connection = sqlite3.connect(self.database)
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        sources = {row[0] for row in connection.execute("SELECT source FROM legacy_records")}
+        connection.close()
+        self.assertFalse(tables & {"gates", "expeditions", "expedition_reports", "island_state"})
+        self.assertEqual(sources, {"gates", "expeditions", "expedition_reports", "island_state", "expedition_participants"})
+        self.assertTrue((self.root / "content.v3-backup.db").is_file())
+
+    def test_migrated_records_keep_provenance_after_editing_and_export_cleanly(self) -> None:
+        job = self.record("jobs", "e-17")
+        self.store.save_record("jobs", "e-17", {**job, "summary": "Edited."})
+        self.assertEqual(self.record("jobs", "e-17")["legacy"]["source"], "expeditions")
+        self.store.export_site()
+        exported = read_json(self.root / "site-export" / "data" / "jobs" / "e-17.json")
+        self.assertNotIn("legacy", exported)
+        self.assertEqual(exported["sessionRecordId"], "early")
+        # Reopening the migrated database does not migrate twice.
+        reopened = ContentStore(self.database, self.data_dir, self.root / "site-export")
+        self.assertEqual(reopened.migration_report, [])
 
 
 if __name__ == "__main__":

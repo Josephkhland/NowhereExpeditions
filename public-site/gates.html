@@ -3,45 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gate Archive | Nowhere Expeditions</title>
-    <meta name="description" content="Gate Archive for the Nowhere Expeditions campaign." />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="site.js" defer></script>
+    <title>The Gate Archive has moved | Nowhere Expeditions</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="archive.html" />
+    <script>
+      // Gate IDs became Gate Record IDs unchanged.
+      window.location.replace("archive.html" + window.location.hash);
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=archive.html" /></noscript>
   </head>
-  <body data-page="gates">
-    <header class="site-header">
-      <div class="wrapper topbar">
-        <div class="brand" aria-label="Nowhere Expeditions home">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span>Nowhere Expeditions</span>
-        </div>
-        <nav class="main-nav" aria-label="Main navigation">
-          <a class="nav-link" href="index.html">Overview</a>
-          <a class="nav-link" href="island.html">Island</a>
-          <a class="nav-link" href="expeditions.html">Expedition Board</a>
-          <a class="nav-link active" href="gates.html">Gate Archive</a>
-          <a class="nav-link" href="characters.html">Characters</a>
-          <a class="nav-link" href="rules.html">Rules</a>
-        </nav>
-      </div>
-    </header>
-
-    <main class="page-shell wrapper">
-      <section aria-labelledby="gate-head">
-        <div class="section-header">
-          <span class="kicker">Archive</span>
-          <h1 id="gate-head">Gate Archive</h1>
-          <p class="page-subtitle">What the Island currently knows about each Gate, and the expeditions sent through it. Sparse entries remain intentionally incomplete.</p>
-        </div>
-        <div id="gate-archive" aria-live="polite"></div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <div class="wrapper">
-        <span>Nowhere Expeditions</span>
-        <span>Gate archive • known observations • public record</span>
-      </div>
-    </footer>
+  <body>
+    <p>The Gate Archive is now <a href="archive.html">archive.html</a>.</p>
   </body>
 </html>

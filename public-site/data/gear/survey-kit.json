@@ -1,0 +1,17 @@
+{
+  "id": "survey-kit",
+  "name": "Survey Kit",
+  "category": "exploration",
+  "description": "Compass, chalk, measuring tape, and a waterproof field ledger.",
+  "price": 40,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": true,
+  "promoLabel": "DISCOUNT",
+  "discount": {
+    "active": true,
+    "salePrice": 32
+  }
+}

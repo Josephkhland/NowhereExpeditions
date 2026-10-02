@@ -1,0 +1,11 @@
+{
+  "id": "doctor-hale",
+  "name": "Doctor Enna Hale",
+  "type": "npc",
+  "status": "active",
+  "portrait": null,
+  "summary": "Head of the Field Infirmary. Keeps a list of every injury that came back from a Gate.",
+  "playerName": "",
+  "sheet": null,
+  "stash": []
+}

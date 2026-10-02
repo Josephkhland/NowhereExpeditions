@@ -1,9 +1,10 @@
-const state = { characters: [], gates: [], expeditions: [], reports: [], rules: [], island: {} };
-let activeView = "island";
+const state = { gear: [], characters: [], archive: [], jobs: [], rules: [], outpost: {} };
+let activeView = "outpost";
 let selectedId = null;
 let draft = false;
 let filterText = "";
-let activeIslandTab = "profile";
+let listFilters = {};
+let activeOutpostTab = "profile";
 let noticeTimer;
 
 const escapeHtml = (value = "") => String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -12,6 +13,21 @@ const escapeHtml = (value = "") => String(value ?? "").replace(/[&<>"']/g, (char
 
 const listText = (value) => Array.isArray(value) ? value.join("\n") : (value || "");
 const capitalize = (value = "") => value.charAt(0).toUpperCase() + value.slice(1);
+const humanize = (value = "") => capitalize(String(value).replace(/-/g, " "));
+
+const JOB_TYPES = ["expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other"];
+const JOB_STATUSES = ["open", "scheduled", "in-progress", "completed", "failed", "cancelled"];
+const ARCHIVE_TYPES = [["gate-record", "Gate Record"], ["session-record", "Session Record"], ["newspaper", "Newspaper"],
+  ["history", "History"], ["folklore", "Folklore"]];
+const archiveTypeLabel = (type) => (ARCHIVE_TYPES.find(([key]) => key === type) || [type, humanize(type)])[1];
+const GEAR_CATEGORIES = ["weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special"];
+const GEAR_AVAILABILITY = ["common", "restricted", "rare", "unavailable"];
+const PROMO_LABELS = ["DISCOUNT", "NEW", "LIMITED", "FEATURED"];
+const CURRENCY = "coins";
+// Same icons as the public site: a coin for prices, a dumbbell for weight.
+const COIN_ICON = '<svg class="coin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1.5"/><path d="M12 8.5l1.1 2.4 2.4 1.1-2.4 1.1L12 15.5l-1.1-2.4L8.5 12l2.4-1.1z" fill="rgba(255, 255, 255, 0.55)"/></svg>';
+const WEIGHT_ICON = '<svg class="weight-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M1 10h1.5V8H1zM2.5 5h3v14h-3zM5.5 7.5h2.5v9H5.5zM8 10.75h8v2.5H8zM16 7.5h2.5v9H16zM18.5 5h3v14h-3zM21.5 8H23v2h-1.5zM21.5 14H23v2h-1.5zM1 14h1.5v2H1z" fill="currentColor"/></svg>';
+const weightText = (value) => `<span class="weight" title="Weight">${WEIGHT_ICON}<span class="sr-only">Weight </span>${escapeHtml(value ?? "—")}</span>`;
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -38,13 +54,27 @@ const findRecord = (key, id) => state[key].find((record) => record.id === id);
 const characterLabel = (character) => character
   ? `${character.name || "Unnamed"} (${character.type === "npc" ? "NPC" : "PC"}${character.status && character.status !== "active" ? `, ${character.status}` : ""})`
   : "";
-const gateLabel = (gate) => gate ? [gate.designation, gate.name].filter(Boolean).join(" · ") : "";
-const expeditionLabel = (expedition) => expedition ? [expedition.designation, expedition.title].filter(Boolean).join(" · ") : "";
-const reportGateId = (report) => findRecord("expeditions", report.expeditionId)?.gateId;
-const reportGateText = (expeditionId) => {
-  if (!expeditionId) return "Choose an Expedition";
-  return gateLabel(findRecord("gates", findRecord("expeditions", expeditionId)?.gateId)) || "No Gate on this Expedition";
+const jobLabel = (job) => job ? [job.designation, job.title].filter(Boolean).join(" · ") : "";
+const archiveLabel = (entry) => {
+  if (!entry) return "";
+  const designation = entry.type === "gate-record" ? entry.details?.designation : "";
+  return [designation, entry.title].filter(Boolean).join(" · ");
 };
+const sessionRecordLabel = (entry) => [entry.details?.sessionDate, entry.title].filter(Boolean).join(" · ");
+const gearLabel = (gear) => gear ? gear.name || gear.id : "";
+
+// Authored text links to Archive entries as [[entry-id]] or [[entry-id|link text]].
+const ARCHIVE_LINK = /\[\[([a-z0-9-]+)(?:\|([^\]\n]+))?\]\]/g;
+function linkCheck(texts) {
+  const ids = [...new Set([...texts.join("\n").matchAll(ARCHIVE_LINK)].map((match) => match[1]))];
+  if (!ids.length) return "";
+  const rows = ids.map((id) => {
+    const entry = findRecord("archive", id);
+    if (!entry) return `<code>[[${escapeHtml(id)}]]</code> <span class="link-state link-missing">No such Archive entry</span>`;
+    return `${referenceLink("archive", entry, archiveLabel(entry))} <span class="link-state ${entry.published ? "" : "link-hidden"}">${entry.published ? archiveTypeLabel(entry.type) : "Unpublished — shown to players as plain text"}</span>`;
+  });
+  return relatedBlock("Archive links in this record", rows, "");
+}
 
 function referenceLink(key, record, label) {
   if (!record) return "";
@@ -62,7 +92,7 @@ function relatedBlock(title, rows, emptyText) {
 function field(label, name, value, options = {}) {
   const className = options.full ? "field full" : "field";
   const type = options.type || "text";
-  return `<div class="${className}"><label for="field-${name}">${label}</label><input id="field-${name}" name="${name}" type="${type}" value="${escapeHtml(value)}" ${options.required ? "required" : ""} ${options.min !== undefined ? `min="${options.min}"` : ""} ${options.readOnly ? "readonly" : ""} ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""} />${options.help ? `<span class="helper">${options.help}</span>` : ""}</div>`;
+  return `<div class="${className}"><label for="field-${name}">${label}</label><input id="field-${name}" name="${name}" type="${type}" value="${escapeHtml(value)}" ${options.required ? "required" : ""} ${options.min !== undefined ? `min="${options.min}"` : ""} ${options.readOnly ? "readonly" : ""} ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""} ${options.list ? `list="${options.list}"` : ""} />${options.help ? `<span class="helper">${options.help}</span>` : ""}</div>`;
 }
 
 function textarea(label, name, value, options = {}) {
@@ -80,6 +110,7 @@ const enumChoices = (values) => values.map((value) => [value, capitalize(value)]
 
 function referenceSelect(label, name, value, key, labelFor, options = {}) {
   const choices = [...state[key]]
+    .filter(options.filter || (() => true))
     .map((record) => [record.id, `${labelFor(record)}${record.published ? "" : " — unpublished"}`])
     .sort((left, right) => left[1].localeCompare(right[1]));
   if (value && !choices.some(([id]) => id === value)) choices.unshift([value, `Missing record: ${value}`]);
@@ -102,29 +133,34 @@ function participantPicker(selectedIds) {
     <span class="helper">Crew count on the board is the number of participants. Include the organizer here if they are going.</span></div>`;
 }
 
-function portraitSource(path) {
+const MEDIA_PREFIXES = ["data/portraits/", "data/images/"];
+
+function imageSource(path) {
   if (!path) return "";
-  if (path.startsWith("data/portraits/")) return `/api/media/${encodeURIComponent(path.slice("data/portraits/".length))}`;
+  const prefix = MEDIA_PREFIXES.find((item) => path.startsWith(item));
+  if (prefix) return `/api/media/${encodeURIComponent(path.slice(prefix.length))}`;
   return /^https?:\/\//.test(path) ? path : "";
 }
 
-function portraitPreview(path) {
-  const source = portraitSource(path);
-  if (source) return `<img src="${escapeHtml(source)}" alt="Portrait preview" />`;
-  return `<span>${path ? "Preview unavailable for site paths" : "No portrait"}</span>`;
+function imagePreview(path, emptyText = "No image") {
+  const source = imageSource(path);
+  if (source) return `<img src="${escapeHtml(source)}" alt="Image preview" />`;
+  return `<span>${path ? "Preview unavailable for site paths" : escapeHtml(emptyText)}</span>`;
 }
 
-function portraitField(value) {
-  return `<div class="field full"><label for="field-portrait">Portrait</label>
+// One image control per form. `kind` decides the published folder: portraits/ for characters, images/ otherwise.
+function imageField(label, name, value, kind = "image") {
+  const folder = kind === "portrait" ? "data/portraits/" : "data/images/";
+  return `<div class="field full"><label for="field-${name}">${label}</label>
     <div class="portrait-editor">
-      <div class="portrait-preview" id="portrait-preview">${portraitPreview(value)}</div>
+      <div class="portrait-preview" id="image-preview">${imagePreview(value, `No ${label.toLowerCase()}`)}</div>
       <div class="portrait-controls">
-        <input id="field-portrait" name="portrait" type="text" value="${escapeHtml(value || "")}" placeholder="Upload an image, or enter a site path / URL" />
+        <input id="field-${name}" name="${name}" type="text" value="${escapeHtml(value || "")}" data-image-field placeholder="Upload an image, or enter a site path / URL" />
         <div class="portrait-actions">
-          <label class="button button-secondary">Upload image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-portrait-upload hidden /></label>
-          <button type="button" class="button button-secondary" data-action="clear-portrait">Remove</button>
+          <label class="button button-secondary">Upload image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-upload="${kind}" hidden /></label>
+          <button type="button" class="button button-secondary" data-action="clear-image">Remove</button>
         </div>
-        <span class="helper">Uploaded images are stored in SQLite and published to <code>data/portraits/</code> with the character.</span>
+        <span class="helper">Uploaded images are stored in SQLite and published to <code>${folder}</code> with the record.</span>
       </div>
     </div></div>`;
 }
@@ -250,6 +286,7 @@ function readSheet(form) {
 
 const SHEET_FILE_FORMAT = "nowhere-expeditions/fate-sheet";
 let sheetBeforeImport;
+let stashBeforeImport;
 
 // Accepts the editable HTML sheet from the public site (or its JSON). Nothing in the file is executed.
 function parseSheetFile(text) {
@@ -265,7 +302,7 @@ function parseSheetFile(text) {
     envelope = null;
   }
   if (!envelope || envelope.format !== SHEET_FILE_FORMAT || !envelope.sheet || typeof envelope.sheet !== "object") {
-    throw new Error("That file is not a Nowhere Expeditions character sheet. Use the file downloaded from the character's public page.");
+    throw new Error("That file is not a Nowhere Expeditions character sheet. Use the file saved with Save file on the character's editable sheet.");
   }
   return envelope;
 }
@@ -349,6 +386,23 @@ function describeSheetChanges(before, after) {
   return changes;
 }
 
+function describeStashChanges(before, after) {
+  const changes = [];
+  const name = (id) => gearLabel(findRecord("gear", id)) || id;
+  const old = new Map(before.map((item) => [item.gearId, item]));
+  const now = new Map(after.map((item) => [item.gearId, item]));
+  now.forEach((item, id) => {
+    const previous = old.get(id);
+    if (!previous) changes.push(`Stash: added ${name(id)} × ${item.quantity}${item.broughtIntoAction ? " (in action)" : ""}`);
+    else {
+      if (previous.quantity !== item.quantity) changes.push(`Stash: ${name(id)} quantity ${previous.quantity} → ${item.quantity}`);
+      if (previous.broughtIntoAction !== item.broughtIntoAction) changes.push(`Stash: ${name(id)} ${item.broughtIntoAction ? "brought into action" : "stored"}`);
+    }
+  });
+  old.forEach((item, id) => { if (!now.has(id)) changes.push(`Stash: removed ${name(id)}`); });
+  return changes;
+}
+
 async function importSheetFile(input) {
   const file = input.files?.[0];
   if (!file) return;
@@ -357,11 +411,43 @@ async function importSheetFile(input) {
   const currentName = form.querySelector('[name="name"]').value.trim() || "this character";
   if (envelope.characterId && envelope.characterId !== form.dataset.editingId
     && !confirm(`This sheet file belongs to “${envelope.characterName || envelope.characterId}”. Import it into ${currentName} anyway?`)) return;
+  // Players create characters on a blank sheet; those files are meant for a new record (+ New).
+  if (envelope.newCharacter && form.dataset.editingId
+    && !confirm(`This is a new-character file for “${envelope.characterName || "an unnamed character"}”. Import it over the existing character ${currentName}? To add it as a new character, press + New first.`)) return;
+
+  const identityChanges = [];
+  if (envelope.newCharacter) {
+    const fill = (name, value, label) => {
+      const control = form.querySelector(`[name="${name}"]`);
+      if (value && !control.value.trim()) {
+        control.value = value;
+        identityChanges.push(`${label}: ${value}`);
+      }
+    };
+    fill("name", String(envelope.characterName || "").trim(), "Name");
+    fill("playerName", String(envelope.playerName || "").trim(), "Player name");
+    form.querySelector('[name="type"]').value = "player";
+  }
 
   const before = readSheet(form);
   document.getElementById("sheet-editor").innerHTML = sheetEditor({ ...normalizeImportedSheet(envelope.sheet), public: before ? before.public : true });
-  const changes = describeSheetChanges(before, readSheet(form));
+  const changes = [...identityChanges, ...describeSheetChanges(before, readSheet(form))];
   sheetBeforeImport = before;
+  stashBeforeImport = null;
+  if (Array.isArray(envelope.stash)) {
+    // Version 1 files have no stash; only files that carry one replace it.
+    const stashBefore = readStash(form) || [];
+    const imported = envelope.stash.filter((item) => item && typeof item.gearId === "string").map((item) => ({
+      gearId: item.gearId,
+      quantity: Math.max(1, Math.min(999, Math.round(Number(item.quantity)) || 1)),
+      broughtIntoAction: Boolean(item.broughtIntoAction)
+    }));
+    const known = imported.filter((item) => findRecord("gear", item.gearId));
+    imported.filter((item) => !findRecord("gear", item.gearId)).forEach((item) => changes.push(`Skipped unknown Gear “${item.gearId}” from the file`));
+    changes.push(...describeStashChanges(stashBefore, known));
+    stashBeforeImport = stashBefore;
+    rerenderStash(known);
+  }
   const note = document.getElementById("sheet-import-note");
   const savedAt = envelope.savedAt ? new Date(envelope.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
   note.innerHTML = `<div class="import-note">
@@ -377,6 +463,79 @@ async function importSheetFile(input) {
 const linesToArray = (value) => String(value || "").split("\n").map((line) => line.trim()).filter(Boolean);
 const formText = (formData, name) => String(formData.get(name) || "").trim();
 
+/* ---------- Character stash: Gear owned by a character ---------- */
+
+// The editor keeps the working stash in its rows; the Marketplace tab only adds references to Gear.
+let stashView = { tab: "stash", query: "", category: "" };
+
+const priceText = (value) => `<span class="coins">${COIN_ICON}${Number(value) || 0}<span class="sr-only"> ${CURRENCY}</span></span>`;
+
+function readStash(root = document) {
+  const editor = root.querySelector("[data-stash]");
+  if (!editor) return null;
+  return [...editor.querySelectorAll("[data-stash-row]")].map((row) => ({
+    gearId: row.dataset.gearId,
+    quantity: Math.max(1, Math.min(999, Math.round(Number(row.querySelector("[data-stash-quantity]").value)) || 1)),
+    broughtIntoAction: row.querySelector("[data-stash-action]").checked
+  }));
+}
+
+function stashEditor(stash) {
+  const owned = new Map(stash.map((item) => [item.gearId, item]));
+  const rows = stash.map((item) => {
+    const gear = findRecord("gear", item.gearId);
+    return `<tr data-stash-row data-gear-id="${escapeHtml(item.gearId)}">
+      <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`}
+        ${gear && !gear.published ? '<span class="record-draft">Unpublished</span>' : ""}</td>
+      <td>${escapeHtml(humanize(gear?.category || ""))}</td>
+      <td class="numeric">${weightText(gear?.weight)}</td>
+      <td><input type="number" min="1" max="999" value="${item.quantity}" data-stash-quantity aria-label="Quantity of ${escapeHtml(gearLabel(gear) || item.gearId)}" /></td>
+      <td><label class="stash-check"><input type="checkbox" data-stash-action ${item.broughtIntoAction ? "checked" : ""} /><span>In action</span></label></td>
+      <td><button class="remove-record" type="button" data-action="remove-stash-item" aria-label="Remove ${escapeHtml(gearLabel(gear) || item.gearId)} from the stash" title="Remove from stash">×</button></td>
+    </tr>`;
+  }).join("");
+  const query = stashView.query.trim().toLowerCase();
+  const catalogue = [...state.gear]
+    .filter((gear) => !stashView.category || gear.category === stashView.category)
+    .filter((gear) => !query || [gear.name, gear.category, gear.description, ...(gear.tags || [])].join(" ").toLowerCase().includes(query))
+    .sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name));
+  const market = catalogue.map((gear) => {
+    const item = owned.get(gear.id);
+    return `<li class="market-row">
+      <span><strong>${escapeHtml(gear.name)}</strong> <span class="helper">${escapeHtml(humanize(gear.category))} · ${priceText(gear.price)} · ${weightText(gear.weight)}${gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}${gear.published ? "" : " · unpublished"}</span></span>
+      <button type="button" class="button button-secondary" data-action="add-stash-item" data-gear-id="${escapeHtml(gear.id)}">${item ? `In stash (${item.quantity}) · +1` : "+ Add"}</button>
+    </li>`;
+  }).join("");
+  const tab = (key, label) => `<button type="button" class="outpost-tab" role="tab" data-stash-tab="${key}" aria-selected="${stashView.tab === key}">${label}</button>`;
+  return `<div class="stash-editor" data-stash>
+    <div class="outpost-tabs" role="tablist" aria-label="Inventory">${tab("stash", `My Stash (${stash.length})`)}${tab("market", "Marketplace")}</div>
+    <div class="stash-panel" ${stashView.tab === "stash" ? "" : "hidden"}>
+      ${stash.length ? `<table class="stash-table"><thead><tr><th>Gear</th><th>Category</th><th class="numeric">Weight</th><th>Qty</th><th>Brought into action</th><th><span class="sr-only">Remove</span></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<p class="nested-empty">The stash is empty. Add Gear from the Marketplace tab.</p>'}
+      <p class="helper">Removing an entry only removes it from this character; the Gear stays in the Marketplace. No Load limit is enforced yet.</p>
+    </div>
+    <div class="stash-panel" ${stashView.tab === "market" ? "" : "hidden"}>
+      <div class="stash-market-filters">
+        <input type="search" data-stash-query value="${escapeHtml(stashView.query)}" placeholder="Search Gear" aria-label="Search Gear" />
+        <select data-stash-category aria-label="Gear category"><option value="">All categories</option>${GEAR_CATEGORIES.map((category) => `<option value="${category}" ${stashView.category === category ? "selected" : ""}>${humanize(category)}</option>`).join("")}</select>
+      </div>
+      ${market ? `<ul class="market-list">${market}</ul>` : `<p class="nested-empty">${state.gear.length ? "No Gear matches." : "No Gear yet. Create it in Marketplace / Gear."}</p>`}
+      <p class="helper">Adding Gear here does not charge the character anything; handle purchases at the table.</p>
+    </div>
+  </div>`;
+}
+
+function rerenderStash(stash) {
+  const editor = document.querySelector("[data-stash]");
+  const focusedQuery = document.activeElement?.matches("[data-stash-query]");
+  editor.outerHTML = stashEditor(stash);
+  if (focusedQuery) {
+    const input = document.querySelector("[data-stash-query]");
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+}
+
 /* ---------- Content type definitions ---------- */
 
 const collections = {
@@ -390,7 +549,7 @@ const collections = {
       ${field("Player name", "playerName", record.playerName || "", { help: "Mostly relevant for player characters." })}
       ${selectField("Type", "type", record.type || "player", [["player", "Player character"], ["npc", "NPC"]])}
       ${selectField("Status", "status", record.status || "active", enumChoices(["active", "inactive", "missing", "deceased"]))}
-      ${portraitField(record.portrait)}
+      ${imageField("Portrait", "portrait", record.portrait, "portrait")}
       ${textarea("Public summary", "summary", record.summary || "", { full: true, help: "A short, player-facing description." })}
       <div class="form-section">Fate Core character sheet</div>
       <div class="field full sheet-import-bar">
@@ -398,65 +557,39 @@ const collections = {
         <span class="helper">Load a sheet file a player saved from the public site. You can review the changes before saving.</span>
       </div>
       <div class="field full" id="sheet-import-note" hidden></div>
-      <div class="field full" id="sheet-editor">${sheetEditor(record.sheet)}</div>`,
+      <div class="field full" id="sheet-editor">${sheetEditor(record.sheet)}</div>
+      <div class="form-section">Inventory</div>
+      <div class="field full">${stashEditor(record.stash || [])}</div>`,
     related: (record) => {
-      const history = state.expeditions.filter((expedition) => expedition.organizerId === record.id || expedition.participantIds.includes(record.id));
-      const reports = state.reports.filter((report) => report.submittedBy === record.id);
+      const jobs = state.jobs.filter((job) => job.organizerId === record.id || job.participantIds.includes(record.id));
+      const sessions = state.archive.filter((entry) => entry.participantIds.includes(record.id));
       return `<div class="form-section">Derived history</div>
-        ${relatedBlock("Expeditions", history.map((expedition) => `${referenceLink("expeditions", expedition, expeditionLabel(expedition))} <span class="helper">${expedition.organizerId === record.id ? "organizer" : "participant"} · ${expedition.status}</span>`), "Not part of any expedition yet.")}
-        ${relatedBlock("Reports submitted", reports.map((report) => referenceLink("reports", report, report.title)), "No reports submitted.")}`;
+        ${relatedBlock("Jobs", jobs.map((job) => `${referenceLink("jobs", job, jobLabel(job))} <span class="helper">${job.organizerId === record.id ? "organizer" : "crew"} · ${job.status}</span>`), "Not part of any job yet.")}
+        ${relatedBlock("Session Records", sessions.map((entry) => referenceLink("archive", entry, sessionRecordLabel(entry))), "Not listed in any Session Record.")}`;
     },
     read: (formData, form) => ({
       name: formText(formData, "name"), playerName: formText(formData, "playerName"),
       type: formText(formData, "type"), status: formText(formData, "status"),
       portrait: formText(formData, "portrait"), summary: formText(formData, "summary"),
-      sheet: readSheet(form)
+      sheet: readSheet(form), stash: readStash(form) || []
     })
   },
-  gates: {
-    title: "Gates", panel: "GATE ARCHIVE", singular: "Gate",
-    name: (record) => record.name,
-    meta: (record) => [record.designation, record.status],
-    idHelp: "Generated from the designation when left blank; used in public page links.",
-    fields: (record) => `
-      ${field("Designation", "designation", record.designation || "", { required: true, placeholder: "Gate 017" })}
-      ${field("Name", "name", record.name || "", { required: true })}
-      ${selectField("Status", "status", record.status || "active", enumChoices(["active", "dormant", "collapsed", "lost"]))}
-      ${field("Discovered", "discoveredAt", record.discoveredAt || "", { type: "date" })}
-      ${textarea("Overview", "overview", record.overview || "", { full: true, help: "What the Island currently knows. Keep GM-only truths out of this record." })}
-      ${textarea("Environment", "environment", record.environment || "", { full: true })}
-      <div class="form-section">Known information</div>
-      ${textarea("Known traits", "knownTraits", listText(record.knownTraits), { help: "One per line." })}
-      ${textarea("Known hazards", "knownHazards", listText(record.knownHazards), { help: "One per line." })}
-      ${textarea("Known locations", "knownLocations", listText(record.knownLocations), { full: true, help: "One per line. Only locations the Expeditioners have found or heard of." })}`,
-    related: (record) => {
-      const expeditions = state.expeditions.filter((expedition) => expedition.gateId === record.id);
-      const reports = state.reports.filter((report) => reportGateId(report) === record.id);
-      return `<div class="form-section">Derived history</div>
-        ${relatedBlock("Expeditions to this Gate", expeditions.map((expedition) => `${referenceLink("expeditions", expedition, expeditionLabel(expedition))} <span class="helper">${expedition.status}</span>`), "No expeditions reference this Gate yet.")}
-        ${relatedBlock("Reports from those expeditions", reports.map((report) => `${referenceLink("reports", report, report.title)} <span class="helper">${escapeHtml(expeditionLabel(findRecord("expeditions", report.expeditionId)))}</span>`), "None.")}`;
-    },
-    read: (formData) => ({
-      designation: formText(formData, "designation"), name: formText(formData, "name"),
-      status: formText(formData, "status"), discoveredAt: formText(formData, "discoveredAt"),
-      overview: formText(formData, "overview"), environment: formText(formData, "environment"),
-      knownTraits: linesToArray(formData.get("knownTraits")), knownHazards: linesToArray(formData.get("knownHazards")),
-      knownLocations: linesToArray(formData.get("knownLocations"))
-    })
-  },
-  expeditions: {
-    title: "Expeditions", panel: "EXPEDITION BOARD", singular: "Expedition",
+  jobs: {
+    title: "Job Board", panel: "JOB LISTINGS", singular: "Job",
     name: (record) => record.title,
-    meta: (record) => [record.designation || gateLabel(findRecord("gates", record.gateId)) || record.type, record.status],
+    meta: (record) => [humanize(record.type), record.status],
+    filters: [["status", "All statuses", JOB_STATUSES.map((value) => [value, humanize(value)])],
+              ["type", "All types", JOB_TYPES.map((value) => [value, humanize(value)])]],
     idHelp: "Generated from the designation (or title) when left blank; used in public page links.",
     fields: (record) => `
       ${field("Title", "title", record.title || "", { required: true, full: true })}
-      ${field("Designation", "designation", record.designation || "", { placeholder: "017-C", help: "Optional short code shown in Gate histories." })}
-      ${referenceSelect("Gate", "gateId", record.gateId, "gates", gateLabel, { emptyLabel: "— No Gate —" })}
-      ${selectField("Type", "type", record.type || "exploration", enumChoices(["exploration", "recovery", "research", "rescue", "other"]))}
-      ${selectField("Status", "status", record.status || "recruiting", enumChoices(["recruiting", "scheduled", "underway", "completed", "cancelled"]))}
+      ${selectField("Type", "type", record.type || "expedition", JOB_TYPES.map((value) => [value, humanize(value)]))}
+      ${selectField("Status", "status", record.status || "open", JOB_STATUSES.map((value) => [value, humanize(value)]))}
+      ${field("Designation", "designation", record.designation || "", { placeholder: "E-20", help: "Optional short code." })}
+      ${field("Posted by", "postedBy", record.postedBy || "", { placeholder: "e.g. Harbor Authority", help: "Optional. The in-world client or notice issuer." })}
+      ${textarea("Summary", "summary", record.summary || "", { full: true, help: "One or two sentences for the Job Board card. The objective is used when this is empty." })}
       ${textarea("Objective", "objective", record.objective || "", { full: true })}
-      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, help: "Optional. Do not repeat Gate details here; the public page links to the Gate." })}
+      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, rows: 7, help: "Optional. Link lore with [[archive-id]] or [[archive-id|link text]]." })}
       <div class="form-section">Schedule and crew</div>
       ${field("Scheduled", "scheduledAt", record.scheduledAt || "", { type: "datetime-local" })}
       ${field("Expected duration", "expectedDuration", record.expectedDuration || "", { placeholder: "e.g. 3 hours" })}
@@ -464,49 +597,125 @@ const collections = {
       ${field("Maximum crew", "crewMax", record.crewMax ?? "", { type: "number", min: 0 })}
       ${referenceSelect("Organizer", "organizerId", record.organizerId, "characters", characterLabel, { full: true })}
       ${participantPicker(record.participantIds || [])}
-      ${textarea("Requirements", "requirements", listText(record.requirements), { full: true, help: "Optional. One per line." })}`,
-    related: (record) => {
-      const reports = state.reports.filter((report) => report.expeditionId === record.id);
-      return `<div class="form-section">Derived history</div>
-        ${relatedBlock("Expedition reports", reports.map((report) => `${referenceLink("reports", report, report.title)} <span class="helper">${report.outcome}</span>`), "No reports filed yet.")}`;
-    },
+      ${textarea("Requirements", "requirements", listText(record.requirements), { full: true, help: "Optional. One per line." })}
+      <div class="form-section">After play</div>
+      ${referenceSelect("Session Record", "sessionRecordId", record.sessionRecordId, "archive", sessionRecordLabel, {
+        full: true, emptyLabel: "— No Session Record yet —", filter: (entry) => entry.type === "session-record",
+        help: "What happened when this Job was played. Create the record in the Archive first." })}`,
+    related: (record) => linkCheck([record.summary, record.objective, record.briefing]) + legacyNote(record),
     read: (formData, form) => ({
       title: formText(formData, "title"), designation: formText(formData, "designation"),
-      gateId: formText(formData, "gateId") || null, type: formText(formData, "type"), status: formText(formData, "status"),
-      objective: formText(formData, "objective"), briefing: formText(formData, "briefing"),
+      type: formText(formData, "type"), status: formText(formData, "status"), postedBy: formText(formData, "postedBy"),
+      summary: formText(formData, "summary"), objective: formText(formData, "objective"), briefing: formText(formData, "briefing"),
       scheduledAt: formText(formData, "scheduledAt"), expectedDuration: formText(formData, "expectedDuration"),
       crewMin: formText(formData, "crewMin"), crewMax: formText(formData, "crewMax"),
       organizerId: formText(formData, "organizerId") || null,
       participantIds: [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value),
-      requirements: linesToArray(formData.get("requirements"))
+      requirements: linesToArray(formData.get("requirements")),
+      sessionRecordId: formText(formData, "sessionRecordId") || null
     })
   },
-  reports: {
-    title: "Expedition Reports", panel: "FIELD REPORTS", singular: "Report",
+  archive: {
+    title: "Archive", panel: "ARCHIVE ENTRIES", singular: "Archive entry",
     name: (record) => record.title,
-    meta: (record) => [expeditionLabel(findRecord("expeditions", record.expeditionId)) || "Unassigned", record.submittedAt || "Undated"],
-    idHelp: "Generated from the title when left blank.",
-    fields: (record) => `
-      ${field("Title", "title", record.title || "", { required: true, full: true })}
-      ${referenceSelect("Expedition", "expeditionId", record.expeditionId, "expeditions", expeditionLabel, { emptyLabel: "— Choose an Expedition —", required: true })}
-      <div class="field"><span class="field-label">Gate</span><span class="derived-value" id="report-gate">${escapeHtml(reportGateText(record.expeditionId))}</span><span class="helper">Taken from the Expedition.</span></div>
-      ${referenceSelect("Submitted by", "submittedBy", record.submittedBy, "characters", characterLabel)}
-      ${field("Submitted", "submittedAt", record.submittedAt || "", { type: "date" })}
-      ${selectField("Outcome", "outcome", record.outcome || "unknown", enumChoices(["success", "partial", "failed", "aborted", "unknown"]))}
-      ${textarea("Summary", "summary", record.summary || "", { full: true })}
-      <div class="form-section">Findings</div>
-      ${textarea("Discoveries", "discoveries", listText(record.discoveries), { help: "One per line." })}
-      ${textarea("Hazards encountered", "hazards", listText(record.hazards), { help: "One per line." })}
-      ${textarea("Recovered items", "recoveredItems", listText(record.recoveredItems), { help: "One per line." })}
-      ${textarea("Casualties", "casualties", listText(record.casualties), { help: "One per line." })}
-      ${textarea("Notes", "notes", record.notes || "", { full: true, rows: 7 })}`,
+    meta: (record) => [archiveTypeLabel(record.type), record.type === "gate-record" ? record.details?.designation : record.publishedAt || record.details?.sessionDate],
+    filters: [["type", "All types", ARCHIVE_TYPES]],
+    idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (archive.html#id) and the target of [[id]] links.",
+    fields: (record) => {
+      const type = record.type || listFilters.archive?.type || "history";
+      const details = record.details || {};
+      const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
+      return `
+      ${selectField("Type", "type", type, ARCHIVE_TYPES, { help: "Gate and Session Records have extra fields below." })}
+      ${field("Title", "title", record.title || "", { required: true })}
+      ${field("Subtitle", "subtitle", record.subtitle || "", { full: true })}
+      ${textarea("Summary", "summary", record.summary || "", { full: true, help: "Optional teaser shown in Archive listings." })}
+      ${textarea("Content", "content", record.content || "", { full: true, rows: 12, help: "Paragraphs separated by blank lines. ## Heading, - list item, **bold**, *italic*. Link entries with [[archive-id]] or [[archive-id|link text]]; other pages with [text](jobs.html#id)." })}
+      ${field("Author", "author", record.author || "", { placeholder: "e.g. Harbor Gazette" })}
+      ${field("Published", "publishedAt", record.publishedAt || "", { type: "date", help: "When the document appeared in the world." })}
+      ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
+      ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
+      ${imageField("Image", "image", record.image)}
+      ${section("gate-record", `
+        <div class="form-section">Gate Record</div>
+        ${field("Designation", "gateDesignation", details.designation || "", { placeholder: "G-17", help: "Required for Gate Records." })}
+        ${selectField("Gate status", "gateStatus", details.gateStatus || "active", enumChoices(["active", "dormant", "collapsed", "lost"]))}
+        ${field("Discovered", "discoveredAt", details.discoveredAt || "", { type: "date" })}
+        ${textarea("Environment", "environment", details.environment || "", { full: true, help: "What the Outpost currently knows. Keep GM-only truths out of this record." })}
+        ${textarea("Known traits", "knownTraits", listText(details.knownTraits), { help: "One per line." })}
+        ${textarea("Known hazards", "knownHazards", listText(details.knownHazards), { help: "One per line." })}
+        ${textarea("Known locations", "knownLocations", listText(details.knownLocations), { full: true, help: "One per line. Only locations the Expeditioners have found or heard of." })}`)}
+      ${section("session-record", `
+        <div class="form-section">Session Record</div>
+        ${field("Session date", "sessionDate", details.sessionDate || "", { type: "date" })}
+        ${selectField("Outcome", "outcome", details.outcome || "unknown", enumChoices(["success", "partial", "failed", "aborted", "unknown"]))}
+        ${participantPicker(record.participantIds || [])}`)}`;
+    },
+    related: (record) => {
+      const jobs = state.jobs.filter((job) => job.sessionRecordId === record.id);
+      const linkedFrom = [...state.archive, ...state.jobs].filter((other) => other.id !== record.id
+        && [other.content, other.summary, other.briefing, other.objective].join("\n").includes(`[[${record.id}`));
+      return `<div class="form-section">Derived references</div>
+        ${record.type === "session-record" ? relatedBlock("Session Record of", jobs.map((job) => referenceLink("jobs", job, jobLabel(job))), "No Job points at this record yet.") : ""}
+        ${relatedBlock("Linked from", linkedFrom.map((other) => state.archive.includes(other) ? referenceLink("archive", other, archiveLabel(other)) : referenceLink("jobs", other, jobLabel(other))), "No other record links here.")}
+        ${linkCheck([record.summary, record.content])}${legacyNote(record)}`;
+    },
+    read: (formData, form) => {
+      const type = formText(formData, "type");
+      const details = type === "gate-record" ? {
+        designation: formText(formData, "gateDesignation"), gateStatus: formText(formData, "gateStatus"),
+        discoveredAt: formText(formData, "discoveredAt"), environment: formText(formData, "environment"),
+        knownTraits: linesToArray(formData.get("knownTraits")), knownHazards: linesToArray(formData.get("knownHazards")),
+        knownLocations: linesToArray(formData.get("knownLocations"))
+      } : type === "session-record" ? { sessionDate: formText(formData, "sessionDate"), outcome: formText(formData, "outcome") } : {};
+      return {
+        type, title: formText(formData, "title"), subtitle: formText(formData, "subtitle"),
+        summary: formText(formData, "summary"), content: formText(formData, "content"), author: formText(formData, "author"),
+        publishedAt: formText(formData, "publishedAt"), eventDate: formText(formData, "eventDate"),
+        image: formText(formData, "image"), tags: linesToArray(formData.get("tags")), details,
+        participantIds: type === "session-record" ? [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value) : []
+      };
+    }
+  },
+  gear: {
+    title: "Marketplace / Gear", panel: "GEAR CATALOGUE", singular: "Gear",
+    name: (record) => record.name,
+    meta: (record) => [humanize(record.category), record.featured ? "Featured" : "", record.availability],
+    filters: [["category", "All categories", GEAR_CATEGORIES.map((value) => [value, humanize(value)])],
+              ["availability", "Any availability", GEAR_AVAILABILITY.map((value) => [value, humanize(value)])]],
+    idHelp: "Generated from the name when left blank. Character stashes reference this ID.",
+    fields: (record) => {
+      const discount = record.discount || {};
+      return `
+      ${field("Name", "name", record.name || "", { required: true })}
+      ${selectField("Category", "category", record.category || "tool", GEAR_CATEGORIES.map((value) => [value, humanize(value)]))}
+      ${field(`${COIN_ICON} Price (${CURRENCY})`, "price", record.price ?? 0, { type: "number", min: 0 })}
+      ${field(`${WEIGHT_ICON} Weight`, "weight", record.weight ?? 0, { type: "number", min: 0, help: "Counts toward a future Load limit when brought into action." })}
+      ${selectField("Availability", "availability", record.availability || "common", GEAR_AVAILABILITY.map((value) => [value, humanize(value)]), { help: "Unavailable Gear stays listed on the public Marketplace, marked unavailable." })}
+      ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
+      ${textarea("Description", "description", record.description || "", { full: true })}
+      ${imageField("Image", "image", record.image)}
+      <div class="form-section">Promotion</div>
+      <label class="publish-toggle field full"><input type="checkbox" name="featured" ${record.featured ? "checked" : ""} /><span><strong>Featured</strong><span class="helper">Shown in the Marketplace carousel. About three featured items works best.</span></span></label>
+      ${field("Promotional label", "promoLabel", record.promoLabel || "", { placeholder: "NEW", help: `Optional, up to 24 characters. Suggestions: ${PROMO_LABELS.join(", ")}.`, list: "promo-labels" })}
+      <datalist id="promo-labels">${PROMO_LABELS.map((label) => `<option value="${label}"></option>`).join("")}</datalist>
+      <label class="publish-toggle field"><input type="checkbox" name="discountActive" ${discount.active ? "checked" : ""} /><span><strong>Discount active</strong><span class="helper">Shows the sale price with the regular price struck through.</span></span></label>
+      ${field(`${COIN_ICON} Sale price (${CURRENCY})`, "salePrice", discount.salePrice ?? "", { type: "number", min: 0 })}`;
+    },
+    related: (record) => {
+      const owners = state.characters.filter((character) => (character.stash || []).some((item) => item.gearId === record.id));
+      return `<div class="form-section">Derived references</div>
+        ${relatedBlock("In the stash of", owners.map((character) => {
+          const item = character.stash.find((entry) => entry.gearId === record.id);
+          return `${referenceLink("characters", character, character.name)} <span class="helper">× ${item.quantity}${item.broughtIntoAction ? " · in action" : ""}</span>`;
+        }), "No character owns this Gear.")}`;
+    },
     read: (formData) => ({
-      title: formText(formData, "title"), expeditionId: formText(formData, "expeditionId") || null,
-      submittedBy: formText(formData, "submittedBy") || null, submittedAt: formText(formData, "submittedAt"),
-      outcome: formText(formData, "outcome"), summary: formText(formData, "summary"),
-      discoveries: linesToArray(formData.get("discoveries")), hazards: linesToArray(formData.get("hazards")),
-      recoveredItems: linesToArray(formData.get("recoveredItems")), casualties: linesToArray(formData.get("casualties")),
-      notes: formText(formData, "notes")
+      name: formText(formData, "name"), category: formText(formData, "category"),
+      price: formText(formData, "price"), weight: formText(formData, "weight"), availability: formText(formData, "availability"),
+      tags: linesToArray(formData.get("tags")), description: formText(formData, "description"), image: formText(formData, "image"),
+      featured: formData.get("featured") === "on", promoLabel: formText(formData, "promoLabel"),
+      discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") }
     })
   },
   rules: {
@@ -515,7 +724,7 @@ const collections = {
     meta: (record) => [record.category || "Uncategorized"],
     idHelp: "Generated from the title when left blank.",
     fields: (record) => {
-      const categories = ["Campaign", "Expeditions", "Island", "Information"];
+      const categories = ["Campaign", "Jobs", "Outpost", "Information"];
       if (record.category && !categories.includes(record.category)) categories.push(record.category);
       return `
       ${field("Title", "title", record.title || "", { required: true, full: true })}
@@ -532,12 +741,18 @@ const collections = {
   }
 };
 
+function legacyNote(record) {
+  if (!record.legacy) return "";
+  const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report" }[record.legacy.source] || record.legacy.source;
+  return `<div class="field full"><span class="helper">Migrated from a v3 ${escapeHtml(source)}. The original record is kept in the database's legacy_records table.</span></div>`;
+}
+
 /* ---------- Rendering ---------- */
 
 async function loadState() {
   const loaded = await api("/api/state");
   for (const key of Object.keys(collections)) state[key] = loaded[key] || [];
-  state.island = loaded.island || {};
+  state.outpost = loaded.outpost || {};
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
   renderContent();
@@ -552,21 +767,23 @@ function updateNavigation() {
     button.classList.toggle("active", button.dataset.view === activeView);
     button.setAttribute("aria-current", button.dataset.view === activeView ? "page" : "false");
   });
-  document.getElementById("page-title").textContent = activeView === "island" ? "Island Sheet" : collections[activeView].title;
-  document.getElementById("search-wrap").hidden = activeView === "island";
+  document.getElementById("page-title").textContent = activeView === "outpost" ? "Outpost Sheet" : collections[activeView].title;
+  document.getElementById("search-wrap").hidden = activeView === "outpost";
   document.getElementById("collection-search").value = filterText;
 }
 
 function filteredRecords(key) {
   const config = collections[key];
   const query = filterText.trim().toLowerCase();
+  const filters = listFilters[key] || {};
   return state[key]
+    .filter((record) => Object.entries(filters).every(([field, value]) => !value || record[field] === value))
     .filter((record) => !query || JSON.stringify(record).toLowerCase().includes(query))
     .sort((left, right) => String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
 }
 
 function renderContent() {
-  if (activeView === "island") renderIslandEditor();
+  if (activeView === "outpost") renderOutpostEditor();
   else renderCollection(activeView);
 }
 
@@ -588,10 +805,22 @@ function renderCollection(key) {
     <div class="collection-layout">
       <section class="record-list-panel" aria-label="${config.title} list">
         <div class="panel-head"><h2>${config.panel}</h2><button class="button button-secondary" type="button" data-action="new-record">+ New</button></div>
+        ${listFilterBar(key)}
         <div class="record-list">${listMarkup}</div>
       </section>
       <section class="editor-panel" aria-label="${config.singular} editor">${editor}</section>
     </div>`;
+}
+
+function listFilterBar(key) {
+  const config = collections[key];
+  if (!config.filters) return "";
+  const current = listFilters[key] || {};
+  return `<div class="list-filters">${config.filters.map(([fieldName, allLabel, choices]) => `
+    <select data-list-filter="${fieldName}" aria-label="Filter by ${fieldName}">
+      <option value="">${allLabel}</option>
+      ${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${current[fieldName] === value ? "selected" : ""}>${escapeHtml(text)} (${state[key].filter((record) => record[fieldName] === value).length})</option>`).join("")}
+    </select>`).join("")}</div>`;
 }
 
 function recordForm(key, record) {
@@ -619,12 +848,12 @@ function recordForm(key, record) {
     </form>`;
 }
 
-/* ---------- Island Sheet ---------- */
+/* ---------- Outpost Sheet ---------- */
 
-const islandArraySchemas = [
+const outpostArraySchemas = [
   {
     key: "capabilities", title: "Capabilities", singular: "Capability",
-    help: "Island ratings and how Expeditioners can use them.",
+    help: "Outpost ratings and how Expeditioners can use them.",
     defaultItem: { name: "", rating: "+0", summary: "", detail: "", use: "", assets: "", conditions: "" },
     fields: [
       ["name", "Name", "text"], ["rating", "Rating", "text"],
@@ -635,13 +864,13 @@ const islandArraySchemas = [
   },
   {
     key: "consequences", title: "Consequences", singular: "Consequence",
-    help: "Active Island consequences and their severity.",
+    help: "Active Outpost consequences and their severity.",
     defaultItem: { name: "", severity: "Low", detail: "" },
     fields: [["name", "Name", "text"], ["severity", "Severity", "select"], ["detail", "Details", "textarea", true]]
   },
   {
     key: "facilities", title: "Facilities", singular: "Facility",
-    help: "Completed facilities available to the Island.",
+    help: "Completed facilities available to the Outpost.",
     defaultItem: { name: "", summary: "" },
     fields: [["name", "Name", "text"], ["summary", "Description", "textarea", true]]
   },
@@ -657,29 +886,29 @@ const islandArraySchemas = [
   },
   {
     key: "conditions", title: "Persistent conditions", singular: "Condition",
-    help: "Ongoing conditions affecting the Island.",
+    help: "Ongoing conditions affecting the Outpost.",
     defaultItem: { name: "", summary: "" },
     fields: [["name", "Name", "text"], ["summary", "Description", "textarea", true]]
   }
 ];
 
-function islandNestedField(schema, index, [path, label, type, full = false], item) {
-  const id = `island-${schema.key}-${index}-${path.replace(/[^a-z0-9]+/gi, "-")}`;
+function outpostNestedField(schema, index, [path, label, type, full = false], item) {
+  const id = `outpost-${schema.key}-${index}-${path.replace(/[^a-z0-9]+/gi, "-")}`;
   const value = path.split(".").reduce((current, key) => current?.[key], item) ?? "";
   const className = full ? "nested-field full" : "nested-field";
   const required = path === "name" ? "required" : "";
   if (type === "textarea") {
-    return `<div class="${className}"><label for="${id}">${label}</label><textarea id="${id}" data-island-path="${path}" ${required}>${escapeHtml(value)}</textarea></div>`;
+    return `<div class="${className}"><label for="${id}">${label}</label><textarea id="${id}" data-outpost-path="${path}" ${required}>${escapeHtml(value)}</textarea></div>`;
   }
   if (type === "select") {
     const levels = ["Low", "Moderate", "High", "Critical"];
-    return `<div class="${className}"><label for="${id}">${label}</label><select id="${id}" data-island-path="${path}">${levels.map((level) => `<option value="${level}" ${value === level ? "selected" : ""}>${level}</option>`).join("")}</select></div>`;
+    return `<div class="${className}"><label for="${id}">${label}</label><select id="${id}" data-outpost-path="${path}">${levels.map((level) => `<option value="${level}" ${value === level ? "selected" : ""}>${level}</option>`).join("")}</select></div>`;
   }
   const numberAttributes = type === "number" ? `min="${path === "progress.max" ? "1" : "0"}" step="1"` : "";
-  return `<div class="${className}"><label for="${id}">${label}</label><input id="${id}" type="${type}" data-island-path="${path}" value="${escapeHtml(value)}" ${numberAttributes} ${required} /></div>`;
+  return `<div class="${className}"><label for="${id}">${label}</label><input id="${id}" type="${type}" data-outpost-path="${path}" value="${escapeHtml(value)}" ${numberAttributes} ${required} /></div>`;
 }
 
-function renderIslandArrayEditor(schema, items, startIndex = 0) {
+function renderOutpostArrayEditor(schema, items, startIndex = 0) {
   const cards = items.map((item, index) => {
     const recordIndex = startIndex + index;
     const recordKey = `${recordIndex}-${Math.random().toString(36).slice(2)}`;
@@ -687,17 +916,17 @@ function renderIslandArrayEditor(schema, items, startIndex = 0) {
     <article class="nested-record" data-original="${escapeHtml(JSON.stringify(item))}">
       <header class="nested-record-head">
         <span>${schema.singular} ${recordIndex + 1}</span>
-        <button class="remove-record" type="button" data-action="remove-island-record" aria-label="Remove ${schema.singular.toLowerCase()} ${recordIndex + 1}" title="Remove ${schema.singular.toLowerCase()}">×</button>
+        <button class="remove-record" type="button" data-action="remove-outpost-record" aria-label="Remove ${schema.singular.toLowerCase()} ${recordIndex + 1}" title="Remove ${schema.singular.toLowerCase()}">×</button>
       </header>
-      <div class="nested-record-grid">${schema.fields.map((fieldDefinition) => islandNestedField(schema, recordKey, fieldDefinition, item)).join("")}</div>
+      <div class="nested-record-grid">${schema.fields.map((fieldDefinition) => outpostNestedField(schema, recordKey, fieldDefinition, item)).join("")}</div>
     </article>
   `;
   }).join("");
 
   return `
-    <section class="island-panel">
-      <div class="island-panel-head"><div><h2>${schema.title}</h2><p class="island-section-caption">${schema.help}</p></div>
-        <button class="button button-secondary" type="button" data-action="add-island-record" data-array-key="${schema.key}">+ Add ${schema.singular.toLowerCase()}</button>
+    <section class="outpost-panel">
+      <div class="outpost-panel-head"><div><h2>${schema.title}</h2><p class="outpost-section-caption">${schema.help}</p></div>
+        <button class="button button-secondary" type="button" data-action="add-outpost-record" data-array-key="${schema.key}">+ Add ${schema.singular.toLowerCase()}</button>
       </div>
       <div class="nested-record-list" data-array-key="${schema.key}">${cards || `<p class="nested-empty">No ${schema.title.toLowerCase()} recorded.</p>`}</div>
     </section>`;
@@ -706,8 +935,8 @@ function renderIslandArrayEditor(schema, items, startIndex = 0) {
 function readNestedRecords(form, schema) {
   return [...form.querySelectorAll(`.nested-record-list[data-array-key="${schema.key}"] .nested-record`)].map((record) => {
     const item = JSON.parse(record.dataset.original || "{}");
-    for (const control of record.querySelectorAll("[data-island-path]")) {
-      const path = control.dataset.islandPath;
+    for (const control of record.querySelectorAll("[data-outpost-path]")) {
+      const path = control.dataset.outpostPath;
       const value = control.type === "number" ? Number(control.value) : control.value.trim();
       if (path === "completion.summary") {
         item.completion = value ? { ...(item.completion || {}), summary: value } : null;
@@ -732,50 +961,50 @@ function readNestedRecords(form, schema) {
   });
 }
 
-function renderIslandEditor() {
-  const island = state.island || {};
-  const stress = island.stress || {};
+function renderOutpostEditor() {
+  const outpost = state.outpost || {};
+  const stress = outpost.stress || {};
   const tabs = [
     ["profile", "Profile"],
     ["stress", "Stress"],
-    ...islandArraySchemas.map((schema) => [schema.key, schema.title])
+    ...outpostArraySchemas.map((schema) => [schema.key, schema.title])
   ];
-  if (!tabs.some(([key]) => key === activeIslandTab)) activeIslandTab = "profile";
+  if (!tabs.some(([key]) => key === activeOutpostTab)) activeOutpostTab = "profile";
   const renderTabPanel = (key, content) => `
-    <div id="island-panel-${key}" class="island-tab-panel" data-island-panel role="tabpanel" tabindex="0" aria-labelledby="island-tab-${key}" ${activeIslandTab === key ? "" : "hidden"}>${content}</div>`;
+    <div id="outpost-panel-${key}" class="outpost-tab-panel" data-outpost-panel role="tabpanel" tabindex="0" aria-labelledby="outpost-tab-${key}" ${activeOutpostTab === key ? "" : "hidden"}>${content}</div>`;
 
   document.getElementById("work-area").innerHTML = `
-    <form id="island-form" class="island-layout">
-      <header class="island-editor-head">
-        <div><h2>Island Sheet</h2><p>Manage profile, stress, capabilities, and current Island records.</p></div>
-        <button type="submit" class="button button-primary">Save Island Sheet</button>
+    <form id="outpost-form" class="outpost-layout">
+      <header class="outpost-editor-head">
+        <div><h2>Outpost Sheet</h2><p>Manage profile, stress, capabilities, and current Outpost records.</p></div>
+        <button type="submit" class="button button-primary">Save Outpost Sheet</button>
       </header>
-      <div class="island-tabs" role="tablist" aria-label="Island Sheet sections">
-        ${tabs.map(([key, label]) => `<button id="island-tab-${key}" class="island-tab" type="button" role="tab" data-island-tab="${key}" aria-controls="island-panel-${key}" aria-selected="${activeIslandTab === key}" tabindex="${activeIslandTab === key ? "0" : "-1"}">${label}</button>`).join("")}
+      <div class="outpost-tabs" role="tablist" aria-label="Outpost Sheet sections">
+        ${tabs.map(([key, label]) => `<button id="outpost-tab-${key}" class="outpost-tab" type="button" role="tab" data-outpost-tab="${key}" aria-controls="outpost-panel-${key}" aria-selected="${activeOutpostTab === key}" tabindex="${activeOutpostTab === key ? "0" : "-1"}">${label}</button>`).join("")}
       </div>
       ${renderTabPanel("profile", `
-        <section class="island-panel">
-          <h2>Island profile</h2>
-          <div class="island-fields">
-            ${field("Name", "name", island.name || "The Island", { required: true })}
-            ${field("High Concept", "highConcept", island.highConcept || "", { required: true })}
-            ${textarea("Trouble", "trouble", island.trouble || "", { full: true })}
-            ${textarea("Aspects", "aspects", listText(island.aspects), { full: true, help: "One aspect per line." })}
+        <section class="outpost-panel">
+          <h2>Outpost profile</h2>
+          <div class="outpost-fields">
+            ${field("Name", "name", outpost.name || "The Outpost", { required: true })}
+            ${field("High Concept", "highConcept", outpost.highConcept || "", { required: true })}
+            ${textarea("Trouble", "trouble", outpost.trouble || "", { full: true })}
+            ${textarea("Aspects", "aspects", listText(outpost.aspects), { full: true, help: "One aspect per line." })}
           </div>
         </section>
       `)}
       ${renderTabPanel("stress", `
-        <section class="island-panel">
+        <section class="outpost-panel">
           <h2>Stress track</h2>
-          <p class="island-section-caption">Set the current marked boxes and the Island’s total stress capacity.</p>
+          <p class="outpost-section-caption">Set the current marked boxes and the Outpost’s total stress capacity.</p>
           <div class="stress-fields">
             ${field("Marked stress", "stressCurrent", stress.current ?? 0, { type: "number", min: 0, required: true })}
             ${field("Maximum boxes", "stressMax", stress.max ?? 6, { type: "number", min: 1, required: true })}
           </div>
         </section>
       `)}
-      ${islandArraySchemas.map((schema) => renderTabPanel(schema.key, renderIslandArrayEditor(schema, island[schema.key] || []))).join("")}
-      <div class="island-save-note">These structured fields are saved in the public Island Sheet format. Export separately to update the static site.</div>
+      ${outpostArraySchemas.map((schema) => renderTabPanel(schema.key, renderOutpostArrayEditor(schema, outpost[schema.key] || []))).join("")}
+      <div class="outpost-save-note">These structured fields are saved in the public Outpost Sheet format. Export separately to update the static site.</div>
     </form>`;
 }
 
@@ -797,29 +1026,29 @@ async function saveRecord(form) {
   showNotice(`${config.name(data) || config.singular} saved in the local manager${data.published ? "" : " (unpublished)"}.`);
 }
 
-async function saveIsland(form) {
+async function saveOutpost(form) {
   const formData = new FormData(form);
-  const island = {
-    ...state.island,
+  const outpost = {
+    ...state.outpost,
     name: String(formData.get("name") || "").trim(),
     highConcept: String(formData.get("highConcept") || "").trim(),
     trouble: String(formData.get("trouble") || "").trim(),
     aspects: linesToArray(String(formData.get("aspects") || "")),
     stress: {
-      ...(state.island.stress || {}),
+      ...(state.outpost.stress || {}),
       current: Number(formData.get("stressCurrent")),
       max: Number(formData.get("stressMax"))
     }
   };
-  for (const schema of islandArraySchemas) {
-    island[schema.key] = readNestedRecords(form, schema);
+  for (const schema of outpostArraySchemas) {
+    outpost[schema.key] = readNestedRecords(form, schema);
   }
-  if (island.stress.current < 0 || island.stress.max < 1 || island.stress.current > island.stress.max) {
+  if (outpost.stress.current < 0 || outpost.stress.max < 1 || outpost.stress.current > outpost.stress.max) {
     throw new Error("Stress must be between zero and the maximum box count.");
   }
-  await api("/api/island", { method: "POST", body: JSON.stringify({ data: island }) });
+  await api("/api/outpost", { method: "POST", body: JSON.stringify({ data: outpost }) });
   await loadState();
-  showNotice("Island Sheet saved in the local manager.");
+  showNotice("Outpost Sheet saved in the local manager.");
 }
 
 async function deleteSelected() {
@@ -833,7 +1062,7 @@ async function deleteSelected() {
   showNotice("Record deleted from the local manager. Sync or Export to apply the change to the site.");
 }
 
-async function uploadPortrait(input) {
+async function uploadImage(input) {
   const file = input.files?.[0];
   if (!file) return;
   const dataUrl = await new Promise((resolve, reject) => {
@@ -842,13 +1071,13 @@ async function uploadPortrait(input) {
     reader.onerror = () => reject(new Error("The image could not be read."));
     reader.readAsDataURL(file);
   });
-  const result = await api("/api/media", { method: "POST", body: JSON.stringify({ filename: file.name, dataUrl }) });
-  document.getElementById("field-portrait").value = result.path;
-  document.getElementById("portrait-preview").innerHTML = portraitPreview(result.path);
-  showNotice("Portrait uploaded. Save the character to keep it.");
+  const result = await api("/api/media", { method: "POST", body: JSON.stringify({ filename: file.name, dataUrl, kind: input.dataset.imageUpload }) });
+  document.querySelector("[data-image-field]").value = result.path;
+  document.getElementById("image-preview").innerHTML = imagePreview(result.path);
+  showNotice("Image uploaded. Save the record to keep it.");
 }
 
-const publishSummary = (result) => `${result.characters} characters, ${result.gates} Gates, ${result.expeditions} expeditions, ${result.reports} reports, ${result.rules} rules${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}`;
+const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.rules} rules${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}`;
 
 async function exportToSite() {
   const result = await api("/api/export", { method: "POST", body: "{}" });
@@ -885,6 +1114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     selectedId = id;
     draft = false;
     filterText = "";
+    stashView = { tab: "stash", query: "", category: "" };
     updateNavigation();
     renderContent();
   };
@@ -903,37 +1133,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   workArea.addEventListener("click", async (event) => {
     const actionButton = event.target.closest("[data-action]");
     const action = actionButton?.dataset.action;
-    const islandTab = event.target.closest("[data-island-tab]");
-    if (islandTab) {
-      activeIslandTab = islandTab.dataset.islandTab;
-      document.querySelectorAll("[data-island-tab]").forEach((button) => {
-        const selected = button === islandTab;
+    const outpostTab = event.target.closest("[data-outpost-tab]");
+    if (outpostTab) {
+      activeOutpostTab = outpostTab.dataset.outpostTab;
+      document.querySelectorAll("[data-outpost-tab]").forEach((button) => {
+        const selected = button === outpostTab;
         button.setAttribute("aria-selected", String(selected));
         button.tabIndex = selected ? 0 : -1;
       });
-      document.querySelectorAll("[data-island-panel]").forEach((panel) => {
-        panel.hidden = panel.id !== `island-panel-${activeIslandTab}`;
+      document.querySelectorAll("[data-outpost-panel]").forEach((panel) => {
+        panel.hidden = panel.id !== `outpost-panel-${activeOutpostTab}`;
       });
       return;
     }
-    if (action === "add-island-record") {
-      const schema = islandArraySchemas.find((item) => item.key === actionButton.dataset.arrayKey);
-      const list = actionButton.closest(".island-panel").querySelector(".nested-record-list");
+    if (action === "add-outpost-record") {
+      const schema = outpostArraySchemas.find((item) => item.key === actionButton.dataset.arrayKey);
+      const list = actionButton.closest(".outpost-panel").querySelector(".nested-record-list");
       if (schema && list) {
         list.querySelector(".nested-empty")?.remove();
-        const markup = renderIslandArrayEditor(schema, [schema.defaultItem], list.querySelectorAll(".nested-record").length);
+        const markup = renderOutpostArrayEditor(schema, [schema.defaultItem], list.querySelectorAll(".nested-record").length);
         const temporary = document.createElement("div");
         temporary.innerHTML = markup;
         list.append(temporary.querySelector(".nested-record"));
       }
       return;
     }
-    if (action === "remove-island-record") {
-      const panel = actionButton.closest(".island-panel");
+    if (action === "remove-outpost-record") {
+      const panel = actionButton.closest(".outpost-panel");
       actionButton.closest(".nested-record")?.remove();
       if (!panel.querySelector(".nested-record")) {
         const list = panel.querySelector(".nested-record-list");
         list.innerHTML = `<p class="nested-empty">No ${panel.querySelector("h2").textContent.toLowerCase()} recorded.</p>`;
+      }
+      return;
+    }
+    const stashTab = event.target.closest("[data-stash-tab]");
+    if (stashTab) {
+      stashView.tab = stashTab.dataset.stashTab;
+      rerenderStash(readStash());
+      return;
+    }
+    if (action === "add-stash-item") {
+      const stash = readStash();
+      const existing = stash.find((item) => item.gearId === actionButton.dataset.gearId);
+      if (existing) existing.quantity = Math.min(999, existing.quantity + 1);
+      else stash.push({ gearId: actionButton.dataset.gearId, quantity: 1, broughtIntoAction: false });
+      rerenderStash(stash);
+      const gear = findRecord("gear", actionButton.dataset.gearId);
+      showNotice(`${gearLabel(gear)} ${existing ? `quantity is now ${existing.quantity}` : "added to the stash"}. Save the character to keep it.`);
+      return;
+    }
+    if (action === "remove-stash-item") {
+      const row = actionButton.closest("[data-stash-row]");
+      const gear = findRecord("gear", row.dataset.gearId);
+      if (confirm(`Remove ${gearLabel(gear) || row.dataset.gearId} from this character's stash? The Gear itself stays in the Marketplace.`)) {
+        rerenderStash(readStash().filter((item) => item.gearId !== row.dataset.gearId));
       }
       return;
     }
@@ -949,6 +1203,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (action === "undo-sheet-import") {
       document.getElementById("sheet-editor").innerHTML = sheetEditor(sheetBeforeImport);
+      if (stashBeforeImport) rerenderStash(stashBeforeImport);
       const note = document.getElementById("sheet-import-note");
       note.hidden = true;
       note.innerHTML = "";
@@ -982,9 +1237,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderContent();
     } else if (action === "delete-record") {
       try { await deleteSelected(); } catch (error) { showNotice(error.message, true); }
-    } else if (action === "clear-portrait") {
-      document.getElementById("field-portrait").value = "";
-      document.getElementById("portrait-preview").innerHTML = portraitPreview("");
+    } else if (action === "clear-image") {
+      document.querySelector("[data-image-field]").value = "";
+      document.getElementById("image-preview").innerHTML = imagePreview("");
     }
   });
 
@@ -1002,8 +1257,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       const count = Math.max(0, Math.min(10, Number(event.target.value) || 0));
       row.querySelector(".stress-boxes").innerHTML = stressBoxes(Array.from({ length: count }, (_, index) => marked[index] || false));
     }
-    if (event.target.id === "field-portrait") {
-      document.getElementById("portrait-preview").innerHTML = portraitPreview(event.target.value.trim());
+    if (event.target.matches("[data-image-field]")) {
+      document.getElementById("image-preview").innerHTML = imagePreview(event.target.value.trim());
+    }
+    if (event.target.matches("[data-stash-query]")) {
+      stashView.query = event.target.value;
+      rerenderStash(readStash());
     }
   });
 
@@ -1016,20 +1275,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       try { await importSheetFile(event.target); } catch (error) { showNotice(error.message, true); }
       event.target.value = "";
     }
-    if (event.target.matches("[data-portrait-upload]")) {
-      try { await uploadPortrait(event.target); } catch (error) { showNotice(error.message, true); }
+    if (event.target.matches("[data-image-upload]")) {
+      try { await uploadImage(event.target); } catch (error) { showNotice(error.message, true); }
       event.target.value = "";
     }
+    if (event.target.matches("[data-stash-category]")) {
+      stashView.category = event.target.value;
+      rerenderStash(readStash());
+    }
+    if (event.target.matches("[data-list-filter]")) {
+      listFilters[activeView] = { ...(listFilters[activeView] || {}), [event.target.dataset.listFilter]: event.target.value };
+      selectedId = null;
+      draft = false;
+      renderContent();
+      return;
+    }
     const form = event.target.closest("#record-form");
-    if (form?.dataset.collection === "reports" && event.target.name === "expeditionId") {
-      document.getElementById("report-gate").textContent = reportGateText(event.target.value);
+    if (form?.dataset.collection === "archive" && event.target.name === "type") {
+      form.querySelectorAll("[data-type-section]").forEach((section) => {
+        section.hidden = section.dataset.typeSection !== event.target.value;
+      });
     }
   });
 
   workArea.addEventListener("keydown", (event) => {
-    const currentTab = event.target.closest("[data-island-tab]");
+    const currentTab = event.target.closest("[data-outpost-tab]");
     if (!currentTab) return;
-    const tabButtons = [...document.querySelectorAll("[data-island-tab]")];
+    const tabButtons = [...document.querySelectorAll("[data-outpost-tab]")];
     const currentIndex = tabButtons.indexOf(currentTab);
     let nextIndex = null;
     if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % tabButtons.length;
@@ -1046,7 +1318,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     event.preventDefault();
     try {
       if (event.target.matches("#record-form")) await saveRecord(event.target);
-      else if (event.target.matches("#island-form")) await saveIsland(event.target);
+      else if (event.target.matches("#outpost-form")) await saveOutpost(event.target);
     } catch (error) {
       showNotice(error.message, true);
     }

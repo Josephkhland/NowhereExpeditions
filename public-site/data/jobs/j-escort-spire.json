@@ -1,0 +1,22 @@
+{
+  "id": "j-escort-spire",
+  "designation": "",
+  "title": "Escort to the Survey Spire",
+  "type": "escort",
+  "status": "scheduled",
+  "summary": "Guard Doctor Hale's medical supplies on the cliff road.",
+  "objective": "",
+  "briefing": "Background: [[infirmary-asks-for-volunteers]].",
+  "postedBy": "Field Infirmary",
+  "organizerId": "doctor-hale",
+  "scheduledAt": "2026-10-07T09:00",
+  "expectedDuration": "Half a day",
+  "crewCount": 1,
+  "crewMin": null,
+  "crewMax": 3,
+  "participantIds": [
+    "oren-vask"
+  ],
+  "requirements": [],
+  "sessionRecordId": null
+}

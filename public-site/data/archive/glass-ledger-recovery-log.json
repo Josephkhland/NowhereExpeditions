@@ -1,0 +1,21 @@
+{
+  "id": "glass-ledger-recovery-log",
+  "type": "session-record",
+  "title": "Glass Ledger Recovery",
+  "subtitle": "",
+  "summary": "Six crates of ledger glass recovered from the oldest ruin sector.",
+  "content": "Varga's crates were where the old maps said they would be. The return trip was quiet.\n\nOren kept one shard. It has not been reported to the Ledger Hall.",
+  "author": "Records Office",
+  "publishedAt": "2026-09-12",
+  "eventDate": "",
+  "image": null,
+  "tags": [],
+  "participantIds": [
+    "oren-vask",
+    "teodor-quell"
+  ],
+  "details": {
+    "sessionDate": "2026-09-12",
+    "outcome": "success"
+  }
+}
