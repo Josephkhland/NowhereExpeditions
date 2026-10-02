@@ -1,5 +1,5 @@
 {
-  "name": "The Island",
+  "name": "The Outpost",
   "highConcept": "An industrial settlement built around the remains of impossible floating ruins.",
   "trouble": "Every new Gate destabilizes the harbor and the old ruin answers back.",
   "aspects": [
@@ -12,7 +12,7 @@
       "name": "Industry",
       "rating": "+2",
       "summary": "Crafting, repairs and manufacturing for the settlement and expeditions.",
-      "detail": "Industry represents the Island's ability to build and maintain tools, equipment, structures, and practical systems in the face of unusual demands.",
+      "detail": "Industry represents the Outpost's ability to build and maintain tools, equipment, structures, and practical systems in the face of unusual demands.",
       "use": "Expeditioners can request repairs, custom tools, salvaged fabrication, and infrastructure support.",
       "assets": "Foundry yards, repair sheds, workshops, salvage crews.",
       "conditions": "Current operating pressure is visible in the strained harbor and damaged support structures."
@@ -21,7 +21,7 @@
       "name": "Research",
       "rating": "+2",
       "summary": "Gate investigation, artifact analysis, and anomalous research.",
-      "detail": "Research covers the Island's capacity to understand Gates, test artifacts, interpret environmental anomalies, and connect observations into a broader map of the campaign world.",
+      "detail": "Research covers the Outpost's capacity to understand Gates, test artifacts, interpret environmental anomalies, and connect observations into a broader map of the campaign world.",
       "use": "Players can use Research to interpret discoveries, map new locations, and understand the consequences of alien materials.",
       "assets": "Observation decks, laboratory spaces, field archives, specialist analysts.",
       "conditions": "Newly recovered artifacts and partial survey data continue to expand the public record."
@@ -30,7 +30,7 @@
       "name": "Commerce",
       "rating": "+1",
       "summary": "Trade, funding, and resource conversion for expeditions and settlement needs.",
-      "detail": "Commerce represents the Island's access to trade, financing, supply chains, and market pressure.",
+      "detail": "Commerce represents the Outpost's access to trade, financing, supply chains, and market pressure.",
       "use": "Expeditioners can secure material purchases, funding, route planning, and exchange for recovered resources.",
       "assets": "Harbor contracts, trader stores, salvage brokers, shipping lanes.",
       "conditions": "Commercial activity remains active but sensitive to the volatility of new discoveries."
@@ -56,7 +56,7 @@
     {
       "name": "Infrastructure",
       "rating": "+2",
-      "summary": "Facilities, transportation, and services that keep the Island functional.",
+      "summary": "Facilities, transportation, and services that keep the Outpost functional.",
       "detail": "Infrastructure keeps the settlement coherent: transit, power, utilities, facilities, and route stability.",
       "use": "Expeditioners rely on road and harbor routes, access to facilities, and the practical services that support expedition operations.",
       "assets": "Dockworks, transit corridors, utility networks, critical buildings.",
@@ -129,7 +129,7 @@
     },
     {
       "name": "Public Research Expansion",
-      "summary": "The Island has more data than before, but not all conclusions are yet verified."
+      "summary": "The Outpost has more data than before, but not all conclusions are yet verified."
     }
   ]
 }

@@ -3,45 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Expedition Board | Nowhere Expeditions</title>
-    <meta name="description" content="Current Expedition Board for the Nowhere Expeditions campaign." />
-    <link rel="stylesheet" href="styles.css" />
-    <script src="site.js" defer></script>
+    <title>The Expedition Board has moved | Nowhere Expeditions</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="jobs.html" />
+    <script>
+      // Expedition IDs became Job IDs unchanged; a report anchor (#e-17#report-x) now points at its Session Record.
+      const [jobId, anchor] = window.location.hash.slice(1).split("#");
+      window.location.replace(anchor && anchor.startsWith("report-") ? "archive.html#" + anchor.slice(7) : "jobs.html" + (jobId ? "#" + jobId : ""));
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=jobs.html" /></noscript>
   </head>
-  <body data-page="expeditions">
-    <header class="site-header">
-      <div class="wrapper topbar">
-        <div class="brand" aria-label="Nowhere Expeditions home">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span>Nowhere Expeditions</span>
-        </div>
-        <nav class="main-nav" aria-label="Main navigation">
-          <a class="nav-link" href="index.html">Overview</a>
-          <a class="nav-link" href="island.html">Island</a>
-          <a class="nav-link active" href="expeditions.html">Expedition Board</a>
-          <a class="nav-link" href="gates.html">Gate Archive</a>
-          <a class="nav-link" href="characters.html">Characters</a>
-          <a class="nav-link" href="rules.html">Rules</a>
-        </nav>
-      </div>
-    </header>
-
-    <main class="page-shell wrapper">
-      <section aria-labelledby="expedition-head">
-        <div class="section-header">
-          <span class="kicker">Operating Brief</span>
-          <h1 id="expedition-head">Expedition Board</h1>
-          <p class="page-subtitle">Expeditions looking for crew, what they are after, and the record of those already run.</p>
-        </div>
-        <div id="expedition-board" aria-live="polite"></div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <div class="wrapper">
-        <span>Nowhere Expeditions</span>
-        <span>Expedition board • crew briefings • public opportunities</span>
-      </div>
-    </footer>
+  <body>
+    <p>The Expedition Board is now <a href="jobs.html">jobs.html</a>.</p>
   </body>
 </html>

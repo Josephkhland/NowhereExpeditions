@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rules &amp; Principles | Nowhere Expeditions</title>
-    <meta name="description" content="Public rules and campaign principles for the Nowhere Expeditions campaign." />
+    <title>Marketplace | Nowhere Expeditions</title>
+    <meta name="description" content="Equipment and prices posted at the Outpost Marketplace." />
     <link rel="stylesheet" href="styles.css" />
     <script src="site.js" defer></script>
   </head>
-  <body data-page="rules">
+  <body data-page="marketplace">
     <header class="site-header">
       <div class="wrapper topbar">
         <div class="brand" aria-label="Nowhere Expeditions home">
@@ -20,33 +20,28 @@
           <a class="nav-link" href="outpost.html">Outpost</a>
           <a class="nav-link" href="jobs.html">Job Board</a>
           <a class="nav-link" href="archive.html">Archive</a>
-          <a class="nav-link" href="marketplace.html">Marketplace</a>
+          <a class="nav-link active" href="marketplace.html">Marketplace</a>
           <a class="nav-link" href="characters.html">Characters</a>
-          <a class="nav-link active" href="rules.html">Rules</a>
+          <a class="nav-link" href="rules.html">Rules</a>
         </nav>
       </div>
     </header>
 
     <main class="page-shell wrapper">
-      <section aria-labelledby="rules-head">
+      <section aria-labelledby="marketplace-head">
         <div class="section-header">
-          <span class="kicker">Public Reference</span>
-          <h1 id="rules-head">Rules &amp; Principles</h1>
-          <p class="page-subtitle">Campaign procedures, shared-world principles, and Outpost rules.</p>
+          <span class="kicker">Trade Notice</span>
+          <h1 id="marketplace-head">Marketplace</h1>
+          <p class="page-subtitle">Equipment currently offered by Outpost traders, with posted prices and weights.</p>
         </div>
-        <div class="rules-search-bar">
-          <label for="rules-search">Search rules</label>
-          <input id="rules-search" class="search-input" type="search" placeholder="Search by topic or keyword" autocomplete="off" />
-          <p id="rules-count" class="muted" aria-live="polite">Loading rules...</p>
-        </div>
-        <div id="rules-list" class="rules-list" aria-live="polite"><p class="empty-state">Loading campaign rules...</p></div>
+        <div id="marketplace" aria-live="polite"></div>
       </section>
     </main>
 
     <footer class="footer">
       <div class="wrapper">
         <span>Nowhere Expeditions</span>
-        <span>Public-facing rules • status archive • current knowledge</span>
+        <span>Marketplace • posted prices • equipment catalogue</span>
       </div>
     </footer>
   </body>
