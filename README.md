@@ -29,7 +29,7 @@ The site reads everything it shows from JSON files in `public-site/data/`. The c
 │   ├── index.html                Landing page
 │   ├── outpost.html              Outpost Sheet (capabilities, stress, projects…)
 │   ├── jobs.html                 Job Board: open listings + closed jobs
-│   ├── archive.html              Archive: Gate Records, Session Records, lore
+│   ├── archive.html              Archive: Gate Records, Session Records, lore, Explore graph
 │   ├── marketplace.html          Marketplace: featured Gear + price list
 │   ├── island.html, gates.html,  Redirects from the old addresses
 │   │   expeditions.html

@@ -589,6 +589,223 @@ const ARCHIVE_CATEGORIES = [
 const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate Record", "session-record": "Session Record", newspaper: "Newspaper", history: "History", folklore: "Folklore" };
 const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
 
+/* ---------- Archive Explore mode: a neighborhood view of how records link ---------- */
+
+// Every connection is derived from published data at page load; nothing about the graph is stored.
+// Archive entries and Jobs link with [[archive-id]] and [text](jobs.html#id) in their text; Jobs point at their
+// Session Record; Session Records and Jobs list their crew; Jobs name an organizer.
+const LORE_TYPE_COLORS = { "gate-record": "#7ad7d1", "session-record": "#e0a85d", newspaper: "#c8d3d6", history: "#b9a3e3", folklore: "#7dcf98" };
+const LORE_KIND_ORDER = { archive: 0, job: 1, character: 2 };
+
+const buildLoreGraph = (campaign) => {
+  const nodes = new Map();
+  const addNode = (kind, record, label, extra) => nodes.set(`${kind}:${record.id}`, { key: `${kind}:${record.id}`, kind, id: record.id, label, ...extra });
+  campaign.archive.forEach((entry) => addNode("archive", entry, entry.title, { type: entry.type, summary: entry.summary, href: `archive.html#${encodeURIComponent(entry.id)}` }));
+  campaign.jobs.forEach((job) => addNode("job", job, job.title, { type: job.type, summary: job.summary || job.objective, href: `jobs.html#${encodeURIComponent(job.id)}` }));
+  campaign.characters.forEach((character) => addNode("character", character, character.name, { type: character.type, summary: character.summary, href: `characters.html#${encodeURIComponent(character.id)}` }));
+
+  const edges = new Map();
+  const addEdge = (from, to, kind) => {
+    if (from !== to && nodes.has(from) && nodes.has(to)) edges.set(`${from}|${to}|${kind}`, { from, to, kind });
+  };
+  const textLinks = (from, texts) => {
+    const text = texts.filter(Boolean).join("\n");
+    for (const match of text.matchAll(/\[\[([a-z0-9-]+)(?:\|[^\]]+)?\]\]/g)) addEdge(from, `archive:${match[1]}`, "link");
+    for (const match of text.matchAll(/\b(archive|jobs|characters)\.html#([a-z0-9-]+)/g)) {
+      addEdge(from, `${{ archive: "archive", jobs: "job", characters: "character" }[match[1]]}:${match[2]}`, "link");
+    }
+  };
+  campaign.archive.forEach((entry) => {
+    textLinks(`archive:${entry.id}`, [entry.summary, entry.content]);
+    (entry.participantIds || []).forEach((id) => addEdge(`archive:${entry.id}`, `character:${id}`, "crew"));
+  });
+  campaign.jobs.forEach((job) => {
+    textLinks(`job:${job.id}`, [job.summary, job.objective, job.briefing]);
+    if (job.sessionRecordId) addEdge(`job:${job.id}`, `archive:${job.sessionRecordId}`, "session-record");
+    (job.participantIds || []).forEach((id) => addEdge(`job:${job.id}`, `character:${id}`, "crew"));
+    if (job.organizerId) addEdge(`job:${job.id}`, `character:${job.organizerId}`, "organizer");
+  });
+
+  // Neighbors of one node, merged per neighbor so two-way or multi-kind connections draw as one line.
+  const neighbors = (key, { jobs = true, characters = true } = {}) => {
+    const merged = new Map();
+    for (const edge of edges.values()) {
+      const outgoing = edge.from === key;
+      if (!outgoing && edge.to !== key) continue;
+      const other = nodes.get(outgoing ? edge.to : edge.from);
+      if ((other.kind === "job" && !jobs) || (other.kind === "character" && !characters)) continue;
+      const item = merged.get(other.key) || { node: other, out: false, in: false, kinds: new Set(), relations: new Set() };
+      item[outgoing ? "out" : "in"] = true;
+      item.kinds.add(edge.kind);
+      item.relations.add(loreRelation(edge.kind, outgoing, nodes.get(key).kind));
+      merged.set(other.key, item);
+    }
+    return [...merged.values()].sort((left, right) => LORE_KIND_ORDER[left.node.kind] - LORE_KIND_ORDER[right.node.kind]
+      || String(left.node.label).localeCompare(String(right.node.label)));
+  };
+  return { nodes, neighbors };
+};
+
+// How a neighbor relates to the record in the center, in plain words.
+const loreRelation = (kind, outgoing, centerKind) => {
+  if (kind === "link") return outgoing ? "mentioned here" : "mentions this";
+  if (kind === "session-record") return centerKind === "job" ? "session record" : "job recorded here";
+  if (kind === "organizer") return outgoing ? "organizer" : "organized";
+  return outgoing ? "crew" : centerKind === "character" ? "took part" : "crew of";
+};
+
+const loreKindLabel = (node) => node.kind === "archive" ? archiveTypeLabel(node.type) : node.kind === "job" ? `Job · ${humanize(node.type)}` : node.type === "npc" ? "NPC" : "Character";
+
+const loreShape = (node, size) => {
+  if (node.kind === "job") {
+    return `<polygon class="lore-shape" points="0,${-size} ${size},0 0,${size} ${-size},0" fill="#0b1214" stroke="#6fa8dc" stroke-width="2.5" />`;
+  }
+  if (node.kind === "character") {
+    return `<circle class="lore-shape" r="${size}" fill="#0b1214" stroke="#e7f0f2" stroke-width="2" />
+      <text class="lore-initials" text-anchor="middle" dy="0.35em" font-size="${Math.round(size * 0.75)}">${escapeHtml(initials(node.label))}</text>`;
+  }
+  return `<circle class="lore-shape" r="${size}" fill="${LORE_TYPE_COLORS[node.type] || "#aebec2"}" stroke="#0b1214" stroke-width="2" />`;
+};
+
+const truncate = (text, length) => text.length > length ? `${text.slice(0, length - 1).trimEnd()}…` : text;
+
+const renderLoreGraph = (svgHost, graph, center, neighborItems) => {
+  const width = Math.max(320, Math.min(1180, svgHost.clientWidth || 800));
+  const height = Math.round(Math.max(360, Math.min(620, width * 0.62)));
+  const cx = width / 2;
+  const cy = height / 2;
+  const shown = neighborItems.slice(0, 24);
+  const outerRadius = Math.min(width / 2 - (width < 600 ? 70 : 140), height / 2 - 48);
+  const rings = shown.length > 12 ? [shown.filter((_, index) => index % 2 === 0), shown.filter((_, index) => index % 2 === 1)] : [shown];
+  const labelLength = width < 600 ? 14 : 26;
+  const positioned = rings.flatMap((ring, ringIndex) => ring.map((item, index) => {
+    const radius = rings.length === 1 ? outerRadius : ringIndex === 0 ? outerRadius * 0.62 : outerRadius;
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / ring.length + (ringIndex === 1 ? Math.PI / ring.length : 0);
+    return { ...item, x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle), angle };
+  }));
+  const centerSize = 24;
+  const nodeSize = width < 600 ? 11 : 14;
+
+  const edge = (item) => {
+    const dx = item.x - cx;
+    const dy = item.y - cy;
+    const distance = Math.hypot(dx, dy) || 1;
+    const [ux, uy] = [dx / distance, dy / distance];
+    const start = [cx + ux * (centerSize + 4), cy + uy * (centerSize + 4)];
+    const end = [item.x - ux * (nodeSize + 4), item.y - uy * (nodeSize + 4)];
+    const dash = item.kinds.has("link") ? "" : item.kinds.has("session-record") ? "7 5" : "2 5";
+    // Lines run center -> neighbor; arrowheads show which way each link points.
+    return `<line class="lore-edge" x1="${start[0].toFixed(1)}" y1="${start[1].toFixed(1)}" x2="${end[0].toFixed(1)}" y2="${end[1].toFixed(1)}"
+      ${dash ? `stroke-dasharray="${dash}"` : ""} ${item.out ? 'marker-end="url(#lore-arrow)"' : ""} ${item.in ? 'marker-start="url(#lore-arrow-back)"' : ""} />`;
+  };
+
+  const label = (item) => {
+    const cos = Math.cos(item.angle);
+    const sin = Math.sin(item.angle);
+    const anchor = cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle";
+    const offset = nodeSize + 7;
+    const x = item.x + cos * offset;
+    const y = item.y + sin * offset + (sin > 0.3 ? 9 : sin < -0.3 ? -2 : 4);
+    // Fit the label into the room left on its side of the canvas (about 6.5px per character at 12px).
+    const room = anchor === "start" ? width - x - 6 : anchor === "end" ? x - 6 : 2 * Math.min(x, width - x) - 12;
+    const fits = Math.max(6, Math.min(labelLength, Math.floor(room / 6.5)));
+    return `<text class="lore-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}">${escapeHtml(truncate(item.node.label, fits))}</text>`;
+  };
+
+  svgHost.innerHTML = `
+    <svg class="lore-graph" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-labelledby="lore-graph-title">
+      <title id="lore-graph-title">Connections of ${escapeHtml(center.label)}: ${neighborItems.length} linked records. The list below the graph has the same information.</title>
+      <defs>
+        <marker id="lore-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8ea3a8" /></marker>
+        <marker id="lore-arrow-back" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,0 L0,5 L10,10 z" fill="#8ea3a8" /></marker>
+      </defs>
+      <g class="lore-edges">${positioned.map(edge).join("")}</g>
+      ${positioned.map((item) => `
+        <a class="lore-node lore-${item.node.kind}" href="#explore/${item.node.kind}/${encodeURIComponent(item.node.id)}">
+          <title>${escapeHtml(item.node.label)} (${escapeHtml(loreKindLabel(item.node))}): ${escapeHtml([...item.relations].join(", "))}</title>
+          <g transform="translate(${item.x.toFixed(1)} ${item.y.toFixed(1)})">${loreShape(item.node, nodeSize)}</g>
+          ${label(item)}
+        </a>`).join("")}
+      <a class="lore-node lore-center lore-${center.kind}" href="${center.href}">
+        <title>${escapeHtml(center.label)} (${escapeHtml(loreKindLabel(center))}): open the full record</title>
+        <g transform="translate(${cx} ${cy})">${loreShape(center, centerSize)}</g>
+        <text class="lore-label lore-center-label" x="${cx}" y="${cy + centerSize + 20}" text-anchor="middle">${escapeHtml(truncate(center.label, labelLength + 14))}</text>
+      </a>
+      ${neighborItems.length ? "" : `<text class="lore-empty" x="${cx}" y="${cy + centerSize + 46}" text-anchor="middle">No connections on record yet.</text>`}
+    </svg>`;
+  return neighborItems.length - shown.length;
+};
+
+const LORE_PREFS_KEY = "nowhere-expeditions:explore";
+const loreOptions = () => {
+  try { return { jobs: true, characters: true, ...JSON.parse(localStorage.getItem(LORE_PREFS_KEY) || "{}") }; } catch { return { jobs: true, characters: true }; }
+};
+
+const renderLoreExplorer = (container, graph, key) => {
+  const center = graph.nodes.get(key);
+  if (!center) {
+    container.innerHTML = '<p class="empty-state">That record is not on public record. <a class="inline-link" href="archive.html">Back to the Archive</a></p>';
+    return;
+  }
+  const options = loreOptions();
+  const items = graph.neighbors(key, options);
+  const back = center.kind === "archive" ? `#${encodeURIComponent(center.id)}` : "archive.html";
+  container.innerHTML = `
+    <div class="explore-head">
+      <a class="back-link" href="${back}">← ${center.kind === "archive" ? "Back to the record" : "Back to the Archive"}</a>
+      <div class="explore-title">
+        <span class="kicker">Explore · ${escapeHtml(loreKindLabel(center))}</span>
+        <h2>${escapeHtml(center.label)}</h2>
+      </div>
+      <div class="explore-controls" role="group" aria-label="Show in the graph">
+        <label class="explore-toggle"><input type="checkbox" data-explore-toggle="jobs" ${options.jobs ? "checked" : ""} />${loreShapeIcon("job")}Jobs</label>
+        <label class="explore-toggle"><input type="checkbox" data-explore-toggle="characters" ${options.characters ? "checked" : ""} />${loreShapeIcon("character")}Characters</label>
+      </div>
+    </div>
+    <div class="explore-canvas" id="explore-canvas"></div>
+    <p class="muted explore-more" id="explore-more" hidden></p>
+    <div class="explore-legend" aria-label="Legend">
+      ${Object.entries(LORE_TYPE_COLORS).map(([type, color]) => `<span><svg viewBox="-8 -8 16 16" aria-hidden="true"><circle r="6" fill="${color}" /></svg>${escapeHtml(archiveTypeLabel(type))}</span>`).join("")}
+      <span>${loreShapeIcon("job")}Job</span>
+      <span>${loreShapeIcon("character")}Character</span>
+      <span><svg viewBox="0 0 28 8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" stroke="#8ea3a8" stroke-width="2" /></svg>Link in text</span>
+      <span><svg viewBox="0 0 28 8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" stroke="#8ea3a8" stroke-width="2" stroke-dasharray="7 5" /></svg>Session record</span>
+      <span><svg viewBox="0 0 28 8" aria-hidden="true"><line x1="0" y1="4" x2="28" y2="4" stroke="#8ea3a8" stroke-width="2" stroke-dasharray="2 5" /></svg>Crew / organizer</span>
+    </div>
+    <div class="detail-grid explore-details">
+      <section class="detail-block">
+        <h3>${escapeHtml(loreKindLabel(center))}</h3>
+        <p>${center.summary ? escapeHtml(truncate(center.summary.replace(/\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g, (m, id, text) => text || graph.nodes.get(`archive:${id}`)?.label || id), 240)) : '<span class="muted">No summary.</span>'}</p>
+        <a class="inline-link" href="${center.href}">Open the full record →</a>
+      </section>
+      <section class="detail-block">
+        <h3>Connections (${items.length})</h3>
+        ${items.length ? `<ul class="clean-list explore-list">${items.map((item) => `
+          <li><a class="inline-link" href="#explore/${item.node.kind}/${encodeURIComponent(item.node.id)}">${escapeHtml(item.node.label)}</a>
+            <span class="muted">${escapeHtml(loreKindLabel(item.node))} · ${escapeHtml([...item.relations].join(", "))}</span></li>`).join("")}</ul>`
+          : '<p class="muted">No connections on record yet.</p>'}
+      </section>
+    </div>`;
+  const draw = () => {
+    const hidden = renderLoreGraph(container.querySelector("#explore-canvas"), graph, center, items);
+    const more = container.querySelector("#explore-more");
+    more.hidden = hidden <= 0;
+    more.textContent = hidden > 0 ? `${hidden} more connection${hidden > 1 ? "s" : ""} are listed below the graph.` : "";
+  };
+  draw();
+  container.querySelectorAll("[data-explore-toggle]").forEach((input) => input.addEventListener("change", () => {
+    const next = { ...loreOptions(), [input.dataset.exploreToggle]: input.checked };
+    try { localStorage.setItem(LORE_PREFS_KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+    renderLoreExplorer(container, graph, key);
+    container.querySelector(`[data-explore-toggle="${input.dataset.exploreToggle}"]`)?.focus();
+  }));
+  return draw;
+};
+
+const loreShapeIcon = (kind) => kind === "job"
+  ? '<svg viewBox="-8 -8 16 16" aria-hidden="true"><polygon points="0,-6 6,0 0,6 -6,0" fill="#0b1214" stroke="#6fa8dc" stroke-width="1.6" /></svg>'
+  : '<svg viewBox="-8 -8 16 16" aria-hidden="true"><circle r="5.5" fill="#0b1214" stroke="#e7f0f2" stroke-width="1.4" /></svg>';
+
 const renderArchive = async () => {
   const root = document.getElementById("archive");
   if (!root) return;
@@ -606,6 +823,7 @@ const renderArchive = async () => {
     }
 
     root.innerHTML = `
+      <div id="archive-browse">
       <div class="filter-bar" role="group" aria-label="Archive categories">
         ${ARCHIVE_CATEGORIES.map(([type, label]) => `<button type="button" class="filter-chip" data-archive-type="${type}" aria-pressed="${type === category}">${label}</button>`).join("")}
       </div>
@@ -618,7 +836,11 @@ const renderArchive = async () => {
           <div id="archive-list" class="entry-list"></div>
         </aside>
         <div id="archive-detail" class="browser-detail"></div>
-      </div>`;
+      </div>
+      </div>
+      <section id="archive-explore" class="explore" aria-label="Explore connections" hidden></section>`;
+    const graph = buildLoreGraph(campaign);
+    let redrawExplore = null;
 
     const entryMeta = (entry) => {
       if (entry.type === "gate-record") return entry.details?.designation || "Gate Record";
@@ -674,7 +896,10 @@ const renderArchive = async () => {
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
             </div>
-            ${isGate ? statusPill(entry.details?.gateStatus) : ""}
+            <div class="detail-actions">
+              ${isGate ? statusPill(entry.details?.gateStatus) : ""}
+              <a class="explore-link" href="#explore/archive/${encodeURIComponent(entry.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="4.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="19" r="2.2" fill="currentColor"/><circle cx="4.5" cy="19" r="2.2" fill="currentColor"/><path d="M6 6.5l4 3.5M18 6.5l-4 3.5M18 17.5l-4-3.5M6 17.5l4-3.5" stroke="currentColor" stroke-width="1.5"/></svg>Explore connections</a>
+            </div>
           </div>
           ${entry.image ? `<figure class="archive-figure"><img src="${escapeHtml(entry.image)}" alt="${escapeHtml(entry.title)}" loading="lazy" /></figure>` : ""}
           ${entry.summary ? `<p class="lede archive-summary">${richInline(entry.summary, campaign)}</p>` : ""}
@@ -712,12 +937,34 @@ const renderArchive = async () => {
       query = event.target.value.trim().toLowerCase();
       renderList();
     });
-    window.addEventListener("hashchange", () => {
+    // #explore/<archive|job|character>/<id> opens Explore mode; any other hash is an Archive entry.
+    const route = () => {
+      const explore = /^#explore\/(archive|job|character)\/(.+)$/.exec(window.location.hash);
+      const browse = document.getElementById("archive-browse");
+      const panel = document.getElementById("archive-explore");
+      browse.hidden = Boolean(explore);
+      panel.hidden = !explore;
+      if (explore) {
+        redrawExplore = renderLoreExplorer(panel, graph, `${explore[1]}:${decodeURIComponent(explore[2])}`);
+        // Scroll the explorer to just below the sticky site header.
+        const header = document.querySelector(".site-header");
+        window.scrollTo({ top: root.getBoundingClientRect().top + window.scrollY - (header?.offsetHeight || 0) - 12 });
+        return;
+      }
+      redrawExplore = null;
       renderList();
+    };
+    window.addEventListener("hashchange", () => {
+      route();
       // On narrow screens the entry sits below the list.
-      if (window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-detail").scrollIntoView({ block: "start" });
+      if (!window.location.hash.startsWith("#explore/") && window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-detail").scrollIntoView({ block: "start" });
     });
-    renderList();
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => redrawExplore?.(), 150);
+    });
+    route();
   } catch (error) {
     root.innerHTML = '<div class="card"><p>Archive data could not be loaded.</p></div>';
     console.error(error);

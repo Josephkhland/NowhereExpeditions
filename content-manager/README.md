@@ -39,6 +39,10 @@ Structured references are stored as IDs in SQLite foreign-key columns and link t
 
 Authored text (Archive summary and content, Job summary, objective, and briefing) can link Archive entries with `[[entry-id]]` or `[[entry-id|link text]]`, and other pages with `[text](jobs.html#e-17)`. Content also understands `## headings`, `- list items`, `**bold**`, and `*italic*`. The editor lists every Archive link in a record and flags missing or unpublished targets. On export, links to unpublished entries become plain text so their IDs never reach the site.
 
+### Explore mode
+
+Each Archive entry has **Explore connections**, which opens `archive.html#explore/<archive|job|character>/<id>`: the record in the center and everything connected to it on a ring around it. Connections are derived when the page loads, never stored: `[[archive-id]]` and `[text](jobs.html#id)` links in text (both directions), a Job's Session Record, Session Record and Job crews, and Job organizers. Archive entries are filled circles colored by type, Jobs are diamonds, Characters are outlined circles; Jobs and Characters can be hidden with toggles. Clicking a node re-centers on it, and the same connections are listed as text below the graph.
+
 ### Dice
 
 `public-site/dice.js` rolls Fate dice (4dF + modifier) for skills on public and editable sheets and for Outpost capabilities. Results and the last 30 rolls (with label and modifier) are kept only in the player's browser, shared between open tabs, with a **Clear** button. Nothing is sent anywhere.
