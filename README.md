@@ -38,6 +38,7 @@ The site reads everything it shows from JSON files in `public-site/data/`. The c
 │   ├── rules.html                Redirects to game.html#rules
 │   ├── sheet.html                Editable character sheet (opens in a new tab; Save file for the GM)
 │   ├── dice.js                   Fate dice roller and roll history (browser-local)
+│   ├── vendor/                   markdown-it (MIT), renders authored Markdown
 │   ├── site.js / styles.css      All site behaviour and styling
 │   ├── assets/
 │   │   └── images/               Landing page artwork

@@ -318,6 +318,53 @@ class ContentStoreTests(unittest.TestCase):
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount"})
 
+    # --- preview ---
+
+    def test_preview_serves_the_site_with_database_data_and_the_unsaved_draft(self) -> None:
+        hidden = self.store.save_record("archive", None, {"type": "history", "title": "Unpublished history", "published": False})["id"]
+        content_type, page = self.store.preview_file("index.html")
+        self.assertEqual(content_type, "text/html; charset=utf-8")
+        self.assertIn(b"window.top !== window", page, "preview pages keep scrolling inside the frame")
+        self.assertIn(b'<script src="site.js"></script>', page)
+        self.assertEqual(self.store.preview_file("site.js")[1], (self.site_dir / "site.js").read_bytes())
+        index = json.loads(self.store.preview_file("data/archive/index.json")[1])
+        self.assertIn(f"{hidden}.json", index, "the preview includes unpublished records")
+
+        result = self.store.set_preview_draft({"collection": "jobs", "id": "e-17", "data": {
+            **self.record("jobs", "e-17"), "title": "Draft title", "briefing": "See [[g-03]]."}})
+        self.assertEqual(result, {"id": "e-17"})
+        job = json.loads(self.store.preview_file("data/jobs/e-17.json")[1])
+        self.assertEqual((job["title"], job["briefing"]), ("Draft title", "See [[g-03]]."))
+        self.assertEqual(self.record("jobs", "e-17")["title"], "Saltglass Survey", "a draft is never saved")
+
+        new = self.store.set_preview_draft({"collection": "gear", "data": {"name": "Brand New Lamp", "price": 5, "weight": 1}})
+        self.assertEqual(new, {"id": "brand-new-lamp"})
+        self.assertIn("brand-new-lamp.json", json.loads(self.store.preview_file("data/gear/index.json")[1]))
+
+        invalid = self.store.set_preview_draft({"collection": "jobs", "id": "e-17", "data": {"title": ""}})
+        self.assertIn("title is required", invalid["error"])
+        self.assertEqual(json.loads(self.store.preview_file("data/jobs/e-17.json")[1])["title"], "Saltglass Survey")
+
+        self.store.set_preview_draft({"collection": "outpost", "data": {"name": "Draft Outpost"}})
+        self.assertEqual(json.loads(self.store.preview_file("data/outpost.json")[1])["name"], "Draft Outpost")
+        self.store.set_preview_draft({"collection": "outpost", "data": None})
+        self.assertEqual(json.loads(self.store.preview_file("data/outpost.json")[1])["name"], "Test Outpost")
+
+    def test_preview_never_serves_files_outside_the_site_or_stale_data_files(self) -> None:
+        write_json(self.data_dir / "stale.json", {"old": True})
+        self.assertIsNone(self.store.preview_file("data/stale.json"))
+        self.assertIsNone(self.store.preview_file("../manager.db"))
+        self.assertIsNone(self.store.preview_file("missing.html"))
+        send, stop = self.serve()
+        try:
+            draft = send("/api/preview", {"collection": "characters", "data": {"name": "Wren"}})
+            self.assertEqual(draft, {"id": "wren"})
+            with self.assertRaises(HTTPError) as missing:
+                send("/preview/../app.py", method="GET")
+            self.assertEqual(missing.exception.code, 404)
+        finally:
+            stop()
+
     # --- sample content ---
 
     def test_sample_records_are_hidden_from_manager_and_site_until_shown(self) -> None:

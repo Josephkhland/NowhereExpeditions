@@ -591,7 +591,7 @@ const collections = {
       ${field("Posted by", "postedBy", record.postedBy || "", { placeholder: "e.g. Harbor Authority", help: "Optional. The in-world client or notice issuer." })}
       ${textarea("Summary", "summary", record.summary || "", { full: true, help: "One or two sentences for the Job Board card. The objective is used when this is empty." })}
       ${textarea("Objective", "objective", record.objective || "", { full: true })}
-      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, rows: 7, help: "Optional. Link lore with [[archive-id]] or [[archive-id|link text]]." })}
+      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, rows: 7, help: "Optional. Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       <div class="form-section">Schedule and crew</div>
       ${field("Scheduled", "scheduledAt", record.scheduledAt || "", { type: "datetime-local" })}
       ${field("Expected duration", "expectedDuration", record.expectedDuration || "", { placeholder: "e.g. 3 hours" })}
@@ -632,7 +632,7 @@ const collections = {
       ${field("Title", "title", record.title || "", { required: true })}
       ${field("Subtitle", "subtitle", record.subtitle || "", { full: true })}
       ${textarea("Summary", "summary", record.summary || "", { full: true, help: "Optional teaser shown in Archive listings." })}
-      ${textarea("Content", "content", record.content || "", { full: true, rows: 12, help: "Paragraphs separated by blank lines. ## Heading, - list item, **bold**, *italic*. Link entries with [[archive-id]] or [[archive-id|link text]]; other pages with [text](jobs.html#id)." })}
+      ${textarea("Content", "content", record.content || "", { full: true, rows: 12, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       ${field("Author", "author", record.author || "", { placeholder: "e.g. Harbor Gazette" })}
       ${field("Published", "publishedAt", record.publishedAt || "", { type: "date", help: "When the document appeared in the world." })}
       ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
@@ -747,7 +747,7 @@ const collections = {
       ${section("rule", `
         ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}`)}
       ${textarea("Short summary", "summary", record.summary || "", { full: true })}
-      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Paragraphs, ## headings, - lists, **bold**, and [[archive-id]] links work here." })}
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}`;
     },
     related: (record) => linkCheck([record.summary, record.details]) + legacyNote(record),
@@ -839,6 +839,140 @@ function filteredRecords(key) {
 function renderContent() {
   if (activeView === "outpost") renderOutpostEditor();
   else renderCollection(activeView);
+  if (preview.open) schedulePreview(0);
+}
+
+/* ---------- Site preview: the real public pages, fed by the database and the unsaved form ---------- */
+
+const preview = { open: false, timer: null, size: "desktop", page: "", counter: 0, latest: 0 };
+
+// Which public page shows a record of each kind.
+const PREVIEW_PAGES = {
+  outpost: () => "outpost.html",
+  characters: (id, data) => `characters.html#${encodeURIComponent(id)}${data?.sheet ? "#sheet" : ""}`,
+  jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
+  archive: (id) => `archive.html#${encodeURIComponent(id)}`,
+  gear: (id) => `marketplace.html#gear-${encodeURIComponent(id)}`,
+  game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`
+};
+
+function currentDraft() {
+  if (activeView === "outpost") {
+    const form = document.getElementById("outpost-form");
+    return form ? { collection: "outpost", data: readOutpost(form) } : null;
+  }
+  const form = document.getElementById("record-form");
+  if (!form) return null;
+  const config = collections[activeView];
+  const formData = new FormData(form);
+  const data = { ...config.read(formData, form), published: form.elements.published.checked };
+  if (form.elements.sample) data.sample = form.elements.sample.checked;
+  return { collection: activeView, id: form.dataset.editingId || formText(formData, "recordId"), data };
+}
+
+function schedulePreview(delay = 600) {
+  clearTimeout(preview.timer);
+  preview.timer = setTimeout(() => refreshPreview().catch((error) => setPreviewStatus(error.message === "Not found."
+    // The page loads fresh scripts on refresh, but the Python server only loads new code when restarted.
+    ? "The running content manager is older than this page and has no preview yet. Restart it (stop and start the Content manager task), then refresh this tab."
+    : error.message, true)), delay);
+}
+
+function setPreviewStatus(text, isError = false) {
+  const status = document.getElementById("preview-status");
+  status.textContent = text;
+  status.classList.toggle("is-error", isError);
+}
+
+async function refreshPreview() {
+  // Refreshes can overlap when records change quickly; only the newest one may update the frame.
+  const ticket = ++preview.latest;
+  const frame = document.getElementById("preview-frame");
+  let draft;
+  try {
+    draft = currentDraft();
+  } catch (error) {
+    setPreviewStatus(`Not valid yet: ${error.message} The preview shows the saved version.`, true);
+    return;
+  }
+  if (!draft) {
+    await api("/api/preview", { method: "POST", body: JSON.stringify({ data: null }) });
+    preview.page = "";
+    document.querySelectorAll(".preview-frame-wrap iframe").forEach((item) => item.removeAttribute("src"));
+    document.getElementById("preview-title").textContent = "Nothing to preview";
+    setPreviewStatus("Choose or create a record to see it on the site.");
+    return;
+  }
+  const result = await api("/api/preview", { method: "POST", body: JSON.stringify(draft) });
+  if (ticket !== preview.latest) return;
+  const page = PREVIEW_PAGES[draft.collection](result.id, draft.data);
+  document.getElementById("preview-title").textContent = draft.collection === "outpost" ? "Outpost Sheet"
+    : collections[draft.collection].name(draft.data) || `New ${collections[draft.collection].singular.toLowerCase()}`;
+  setPreviewStatus(result.error
+    ? `Not valid yet: ${result.error} The preview shows the saved version.`
+    : "Shows unsaved changes and unpublished records. Nothing reaches the public site until you save and sync.", Boolean(result.error));
+  // Keep the reader's place when the same page is shown again after an edit.
+  let scroll = 0;
+  try { scroll = page === preview.page ? frame.contentWindow.scrollY : 0; } catch { scroll = 0; }
+  preview.page = page;
+  document.getElementById("preview-open").href = `/preview/${page}`;
+  const hashAt = page.indexOf("#");
+  const [file, hash] = hashAt < 0 ? [page, ""] : [page.slice(0, hashAt), page.slice(hashAt)];
+  preview.counter += 1;
+  // A changing query string forces a full load, so the page fetches the new draft data.
+  await showInPreview(`/preview/${file}?v=${preview.counter}${hash}`, scroll, ticket);
+}
+
+// Double buffering: the new version loads in the hidden frame, renders, and gets its scroll position back;
+// only then does it swap to the front. The visible preview never blanks or jumps while it updates.
+function showInPreview(url, scroll, ticket) {
+  const front = document.querySelector(".preview-frame-wrap iframe.is-front");
+  const back = [...document.querySelectorAll(".preview-frame-wrap iframe")].find((item) => item !== front);
+  return new Promise((resolve) => {
+    back.onload = () => {
+      back.onload = null;
+      const started = Date.now();
+      const settle = () => {
+        if (ticket !== preview.latest) return resolve();
+        let rendered = false;
+        try { rendered = back.contentDocument.documentElement.dataset.rendered === "true"; } catch { /* navigated away */ }
+        // site.js marks the page once it has fetched its data and rendered (including its own scrolling).
+        if (!rendered && Date.now() - started < 5000) return setTimeout(settle, 50);
+        // instant: the site uses smooth scrolling, which would still be gliding after the swap.
+        try { back.contentWindow.scrollTo({ top: scroll, behavior: "instant" }); } catch { /* navigated away */ }
+        back.classList.add("is-front");
+        back.removeAttribute("aria-hidden");
+        back.removeAttribute("tabindex");
+        back.title = "Site preview";
+        front.classList.remove("is-front");
+        front.setAttribute("aria-hidden", "true");
+        front.setAttribute("tabindex", "-1");
+        front.title = "Site preview (loading)";
+        back.id = "preview-frame";
+        front.id = "preview-frame-back";
+        resolve();
+      };
+      settle();
+    };
+    back.src = url;
+  });
+}
+
+function setPreviewOpen(open) {
+  preview.open = open;
+  document.getElementById("preview-panel").hidden = !open;
+  document.querySelector(".app-shell").classList.toggle("with-preview", open);
+  if (open) schedulePreview(0);
+  else {
+    clearTimeout(preview.timer);
+    api("/api/preview", { method: "POST", body: JSON.stringify({ data: null }) }).catch(() => {});
+  }
+}
+
+function setPreviewSize(size) {
+  preview.size = size;
+  document.querySelector(".preview-frame-wrap").classList.toggle("is-phone", size === "phone");
+  document.querySelectorAll("[data-preview-size]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.previewSize === size)));
 }
 
 function renderCollection(key) {
@@ -888,6 +1022,7 @@ function recordForm(key, record) {
           <div><h2>${record ? escapeHtml(config.name(record) || `Edit ${singular}`) : `New ${singular}`}</h2><p>${record ? `ID: ${escapeHtml(record.id)}` : "Create a new record"}</p></div>
           <div class="editor-actions">
             ${record ? '<button type="button" class="button button-danger" data-action="delete-record">Delete</button>' : ""}
+            <button type="button" class="button button-secondary" data-action="open-preview" title="See this record on the site, including unsaved changes">Preview</button>
             <button type="submit" class="button button-primary">Save ${singular}</button>
           </div>
         </div>
@@ -1032,7 +1167,7 @@ function renderOutpostEditor() {
     <form id="outpost-form" class="outpost-layout">
       <header class="outpost-editor-head">
         <div><h2>Outpost Sheet</h2><p>Manage profile, stress, capabilities, and current Outpost records.</p></div>
-        <button type="submit" class="button button-primary">Save Outpost Sheet</button>
+        <div class="editor-actions"><button type="button" class="button button-secondary" data-action="open-preview">Preview</button><button type="submit" class="button button-primary">Save Outpost Sheet</button></div>
       </header>
       <div class="outpost-tabs" role="tablist" aria-label="Outpost Sheet sections">
         ${tabs.map(([key, label]) => `<button id="outpost-tab-${key}" class="outpost-tab" type="button" role="tab" data-outpost-tab="${key}" aria-controls="outpost-panel-${key}" aria-selected="${activeOutpostTab === key}" tabindex="${activeOutpostTab === key ? "0" : "-1"}">${label}</button>`).join("")}
@@ -1083,7 +1218,7 @@ async function saveRecord(form) {
   showNotice(`${config.name(data) || config.singular} saved in the local manager${data.published ? "" : " (unpublished)"}.`);
 }
 
-async function saveOutpost(form) {
+function readOutpost(form) {
   const formData = new FormData(form);
   const outpost = {
     ...state.outpost,
@@ -1103,6 +1238,11 @@ async function saveOutpost(form) {
   if (outpost.stress.current < 0 || outpost.stress.max < 1 || outpost.stress.current > outpost.stress.max) {
     throw new Error("Stress must be between zero and the maximum box count.");
   }
+  return outpost;
+}
+
+async function saveOutpost(form) {
+  const outpost = readOutpost(form);
   await api("/api/outpost", { method: "POST", body: JSON.stringify({ data: outpost }) });
   await loadState();
   showNotice("Outpost Sheet saved in the local manager.");
@@ -1292,6 +1432,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedId = null;
       draft = true;
       renderContent();
+    } else if (action === "open-preview") {
+      setPreviewOpen(true);
     } else if (action === "delete-record") {
       try { await deleteSelected(); } catch (error) { showNotice(error.message, true); }
     } else if (action === "clear-image") {
@@ -1387,6 +1529,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("sync-button").addEventListener("click", async () => {
     try { await syncDataToSite(); } catch (error) { showNotice(error.message, true); }
   });
+  document.getElementById("preview-panel").addEventListener("click", (event) => {
+    if (event.target.closest("[data-preview-close]")) setPreviewOpen(false);
+    else if (event.target.closest("[data-preview-refresh]")) schedulePreview(0);
+    else if (event.target.closest("[data-preview-size]")) setPreviewSize(event.target.closest("[data-preview-size]").dataset.previewSize);
+  });
+  workArea.addEventListener("input", () => { if (preview.open) schedulePreview(); });
+  workArea.addEventListener("change", () => { if (preview.open) schedulePreview(); });
   document.getElementById("include-samples").addEventListener("change", async (event) => {
     try { await setIncludeSamples(event.target.checked); } catch (error) { showNotice(error.message, true); event.target.checked = !event.target.checked; }
   });

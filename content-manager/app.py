@@ -10,6 +10,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,6 +26,22 @@ PORTRAIT_PREFIX = "data/portraits/"
 IMAGE_PREFIX = "data/images/"
 MEDIA_PREFIXES = (PORTRAIT_PREFIX, IMAGE_PREFIX)
 IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
+# Added to preview pages only. Inside the manager's preview frame, scrollIntoView would also scroll the
+# manager page around the frame; this keeps page scrolling inside the frame. The public site is unchanged.
+PREVIEW_FRAME_SCRIPT = b"""<script>
+if (window.top !== window) {
+  Element.prototype.scrollIntoView = function (options) {
+    const top = this.getBoundingClientRect().top + window.scrollY;
+    const block = options && typeof options === "object" ? options.block : "start";
+    window.scrollTo(0, block === "center" ? top - window.innerHeight / 2 : block === "nearest" ? window.scrollY : top);
+  };
+}
+</script>
+"""
+# Content types for files served by the preview of the public site.
+PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+                 ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                 ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
 SCHEMA_VERSION = 5
 
@@ -448,6 +465,11 @@ class ContentStore:
         self.export_dir = Path(export_dir) if export_dir else self.site_dir.parent / "site-export"
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.migration_report: list[str] = []
+        # Preview: an unsaved record from the editor, and the data built for it (rebuilt when anything changes).
+        self._preview_lock = threading.Lock()
+        self._preview_draft: dict[str, Any] | None = None
+        self._preview_version = 0
+        self._preview_cache: tuple[tuple[Any, ...], dict[str, bytes]] | None = None
         if self._has_legacy_schema():
             self.migration_report = self._migrate_from_v3()
         self._create_schema()
@@ -1075,10 +1097,17 @@ class ContentStore:
 
     # --- Export -------------------------------------------------------------
 
-    def _build_data_export(self) -> tuple[dict[str, bytes], dict[str, int]]:
-        """Build public JSON for published records only, dropping references to unpublished ones."""
+    def _build_data_export(self, preview: bool = False) -> tuple[dict[str, bytes], dict[str, int]]:
+        """Build public JSON for published records only, dropping references to unpublished ones.
+        In preview mode unpublished records are included and the editor's unsaved draft replaces its record."""
         state = self.state()
-        published = {name: {record["id"]: record for record in state[name] if record.get("published")} for name in COLLECTIONS}
+        draft = self._preview_draft if preview else None
+        if draft and draft["collection"] == "outpost":
+            state["outpost"] = draft["record"]
+        elif draft:
+            records = [record for record in state[draft["collection"]] if record["id"] != draft["id"]]
+            state[draft["collection"]] = [*records, draft["record"]]
+        published = {name: {record["id"]: record for record in state[name] if preview or record.get("published")} for name in COLLECTIONS}
         public_archive = set(published["archive"])
         output: dict[str, bytes] = {}
         exported: dict[str, list[dict[str, Any]]] = {name: [] for name in PAGE_COLLECTIONS}
@@ -1143,6 +1172,59 @@ class ContentStore:
         counts["unpublished"] = sum(len(state[name]) for name in COLLECTIONS) - sum(counts.values())
         counts["samplesHidden"] = len(state["hiddenSamples"])
         return output, counts
+
+    # --- Preview ------------------------------------------------------------
+
+    def set_preview_draft(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Keep the editor's unsaved record for the preview. Returns the ID the preview page should open,
+        or an error message when the draft is not valid yet (the preview then shows the saved version)."""
+        collection = body.get("collection")
+        data = body.get("data")
+        with self._preview_lock:
+            self._preview_version += 1
+            if data is None:
+                self._preview_draft = None
+                return {"id": None}
+            if collection == "outpost":
+                if not isinstance(data, dict):
+                    raise ManagerError("Outpost data must be an object.")
+                self._preview_draft = {"collection": "outpost", "id": None, "record": data}
+                return {"id": None}
+            spec = self._spec(collection)
+            if not isinstance(data, dict):
+                raise ManagerError(f"{spec.label} data must be an object.")
+            record_id = slugify(str(body.get("id") or "")) or next(
+                (slugify(str(data.get(field) or "")) for field in spec.id_fields if slugify(str(data.get(field) or ""))), "") or "draft-preview"
+            try:
+                clean = spec.clean(data)
+            except ManagerError as error:
+                self._preview_draft = None
+                return {"id": record_id, "error": str(error)}
+            self._preview_draft = {"collection": collection, "id": record_id,
+                                   "record": {**clean, "id": record_id, "published": True, "sample": bool(data.get("sample"))}}
+            return {"id": record_id}
+
+    def preview_file(self, relative: str) -> tuple[str, bytes] | None:
+        """A file of the public site for the preview: pages and assets from public-site, data from the database."""
+        relative = relative or "index.html"
+        if relative.startswith("data/"):
+            key = (self.database_path.stat().st_mtime_ns, self._preview_version)
+            with self._preview_lock:
+                if not self._preview_cache or self._preview_cache[0] != key:
+                    self._preview_cache = (key, self._build_data_export(preview=True)[0])
+                content = self._preview_cache[1].get(relative.removeprefix("data/"))
+        else:
+            target = (self.site_dir / relative).resolve()
+            site = self.site_dir.resolve()
+            if site not in target.parents or not target.is_file() or target.is_relative_to(self.data_dir.resolve()):
+                return None
+            content = target.read_bytes()
+            if target.suffix.lower() == ".html":
+                content = (content.replace(b"</head>", PREVIEW_FRAME_SCRIPT + b"</head>", 1) if b"</head>" in content
+                           else PREVIEW_FRAME_SCRIPT + content)
+        if content is None:
+            return None
+        return PREVIEW_TYPES.get(Path(relative).suffix.lower(), "application/octet-stream"), content
 
     def sync_site_data(self) -> dict[str, int | str]:
         output, counts = self._build_data_export()
@@ -1263,6 +1345,13 @@ def outpost_terminology(value: Any, key: str = "") -> Any:
     return value
 
 
+class ManagerServer(ThreadingHTTPServer):
+    # A site page (and so the preview) requests dozens of data files at once. The default queue of 5 waiting
+    # connections makes Windows reset some of them, which the page sees as "Failed to fetch".
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
     class ManagerHandler(BaseHTTPRequestHandler):
         def _send(self, status: int, body: bytes, content_type: str) -> None:
@@ -1309,6 +1398,8 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                         self._send_json(404, {"error": "Image not found."})
                 elif method == "POST" and path == "/api/media":
                     self._send_json(201, store.save_media(self._read_body()))
+                elif method == "POST" and path == "/api/preview":
+                    self._send_json(200, store.set_preview_draft(self._read_body()))
                 elif method == "POST" and path == "/api/settings":
                     store.set_include_samples(self._read_body().get("includeSamples"))
                     self._send_json(200, {"saved": True})
@@ -1340,7 +1431,19 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             if self._route_api("GET"):
                 return
-            path = urlsplit(self.path).path
+            path = unquote(urlsplit(self.path).path)
+            if path == "/preview":
+                self.send_response(302)
+                self.send_header("Location", "/preview/")
+                self.end_headers()
+                return
+            if path.startswith("/preview/"):
+                found = store.preview_file(path.removeprefix("/preview/"))
+                if found:
+                    self._send(200, found[1], found[0])
+                else:
+                    self._send(404, b"Not found", "text/plain; charset=utf-8")
+                return
             relative = "index.html" if path == "/" else path.removeprefix("/static/")
             if path != "/" and not path.startswith("/static/"):
                 self._send(404, b"Not found", "text/plain; charset=utf-8")
@@ -1378,7 +1481,7 @@ def main() -> None:
     store = ContentStore(args.database, args.data_dir, args.export_dir)
     for line in store.migration_report:
         print(f"[migration] {line}")
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), create_handler(store))
+    server = ManagerServer(("127.0.0.1", args.port), create_handler(store))
     print(f"Content manager ready at http://127.0.0.1:{args.port}")
     print(f"SQLite database: {args.database.resolve()}")
     print("Press Ctrl+C to stop.")

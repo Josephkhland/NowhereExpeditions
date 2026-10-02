@@ -1519,6 +1519,59 @@ a.entry-item { display: block; }
   text-transform: uppercase;
 }
 .rich-text > .rich-heading:first-child { margin-top: 0; }
+.rich-text > :last-child { margin-bottom: 0; }
+h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
+
+/* Full Markdown: lists, quotes, code, tables, rules, images */
+.rich-text ul,
+.rich-text ol { margin: 0 0 0.7rem; padding-left: 1.3rem; color: var(--muted); }
+.rich-text li + li { margin-top: 0.3rem; }
+.rich-text li > ul,
+.rich-text li > ol { margin: 0.3rem 0 0; }
+.rich-text ul li::marker { color: var(--accent); }
+.rich-text ol li::marker { color: var(--accent); font-variant-numeric: tabular-nums; }
+.rich-text strong { color: var(--text); }
+.rich-text s,
+.rich-text del { color: var(--muted); }
+
+.rich-text blockquote {
+  margin: 0 0 0.7rem;
+  padding: 0.5rem 0.9rem;
+  border-left: 3px solid var(--accent-2);
+  background: rgba(224, 168, 93, 0.06);
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+}
+
+.rich-text blockquote p { color: var(--text); }
+
+.rich-text code {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--line);
+  background: rgba(9, 14, 16, 0.85);
+  color: var(--accent);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.88em;
+}
+
+.rich-text pre {
+  margin: 0 0 0.7rem;
+  padding: 0.7rem 0.9rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: rgba(9, 14, 16, 0.85);
+}
+
+.rich-text pre code { padding: 0; border: 0; background: none; color: var(--text); }
+.rich-text hr { margin: 1rem 0; border: 0; border-top: 1px solid var(--line-strong); }
+.rich-text img { max-width: 100%; height: auto; margin: 0.4rem 0; border: 1px solid var(--line); }
+
+.rich-table { margin: 0 0 0.7rem; overflow-x: auto; }
+.rich-table table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.rich-table th,
+.rich-table td { padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--line); color: var(--muted); text-align: left; vertical-align: top; }
+.rich-table th { color: var(--text); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; border-bottom-color: var(--line-strong); }
 
 .archive-subtitle { margin: 0.2rem 0 0; color: var(--text); font-family: Georgia, "Times New Roman", serif; font-style: italic; }
 .archive-summary { margin: 0; color: var(--text); }

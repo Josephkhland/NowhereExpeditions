@@ -236,10 +236,35 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .nested-field input:focus, .nested-field select:focus, .nested-field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(22,116,91,.13); }
 .nested-empty { margin: 0; padding: 15px; border: 1px dashed var(--line); color: var(--muted); font-size: 12px; text-align: center; }
 
+.app-shell.with-preview { grid-template-columns: 248px minmax(0, 1fr) min(48vw, 820px); }
+/* With the preview open, the record list sits above the editor so the form keeps its width. */
+.with-preview .collection-layout { grid-template-columns: 1fr; }
+.with-preview .record-list-panel { max-height: 240px; overflow: auto; }
+.with-preview .record-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.preview-panel { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; border-left: 1px solid var(--line); background: #e9ece8; }
+.preview-bar { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.preview-heading { display: grid; gap: 2px; min-width: 0; }
+.preview-heading strong { overflow: hidden; font: 500 17px Georgia, serif; text-overflow: ellipsis; white-space: nowrap; }
+#preview-status.is-error { color: var(--red); }
+.preview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.preview-actions .button { min-height: 32px; padding: 0 10px; font-size: 11px; text-decoration: none; }
+.preview-sizes { display: flex; margin-right: auto; border: 1px solid var(--line); }
+.preview-sizes button { min-height: 30px; padding: 0 10px; border: 0; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 650; }
+.preview-sizes button[aria-pressed="true"] { color: #fff; background: var(--forest); }
+.preview-frame-wrap { position: relative; flex: 1; min-height: 0; }
+.preview-frame-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #0d1517; }
+/* The back frame loads the next version out of sight (double buffering). */
+.preview-frame-wrap iframe:not(.is-front) { visibility: hidden; }
+.preview-frame-wrap.is-phone iframe { top: 14px; bottom: 14px; left: 50%; width: 390px; max-width: 100%; height: auto; transform: translateX(-50%); border: 1px solid #b9c4bd; box-shadow: var(--shadow); }
+
 @media (max-width: 1050px) {
   .app-shell { grid-template-columns: 210px minmax(0,1fr); }
   .main-area { padding: 0 22px; }
   .collection-layout { grid-template-columns: minmax(200px, 245px) minmax(0,1fr); gap: 14px; }
+}
+@media (max-width: 1250px) {
+  .app-shell.with-preview { grid-template-columns: 210px minmax(0, 1fr); }
+  .preview-panel { position: fixed; inset: 0 0 0 auto; z-index: 40; width: min(100vw, 720px); box-shadow: -12px 0 30px rgba(22, 44, 37, 0.2); }
 }
 @media (max-width: 760px) {
   .app-shell { display: block; }

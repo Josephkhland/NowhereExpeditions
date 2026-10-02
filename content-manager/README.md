@@ -37,7 +37,7 @@ Structured references are stored as IDs in SQLite foreign-key columns and link t
 
 ### Links between records
 
-Authored text (Archive summary and content, Job summary, objective, and briefing) can link Archive entries with `[[entry-id]]` or `[[entry-id|link text]]`, and other pages with `[text](jobs.html#e-17)`. Content also understands `## headings`, `- list items`, `**bold**`, and `*italic*`. The editor lists every Archive link in a record and flags missing or unpublished targets. On export, links to unpublished entries become plain text so their IDs never reach the site.
+Authored text (Archive summary and content; Job summary, objective, and briefing; Game summary and details; Gear descriptions) is **Markdown**: CommonMark plus tables and `~~strikethrough~~`, rendered on the site by the vendored [markdown-it](https://github.com/markdown-it/markdown-it) (`public-site/vendor/`, MIT). Single line breaks are kept, raw HTML is shown as text, and `javascript:` links are refused. `#` headings start one level below the section they sit in. On top of Markdown, `[[entry-id]]` or `[[entry-id|link text]]` links an Archive entry; other pages use normal links such as `[text](jobs.html#e-17)`. The editor lists every Archive link in a record and flags missing or unpublished targets. On export, links to unpublished entries become plain text so their IDs never reach the site.
 
 ### Explore mode
 
@@ -59,6 +59,16 @@ Only the data a future Load system needs is stored: `Gear.weight` and each stash
 - Uploaded images are stored in SQLite: portraits are published to `data/portraits/`, Archive and Gear images to `data/images/`.
 
 Public data layout: `data/{gear,characters,archive,jobs}/index.json` manifests plus one `<id>.json` per record, alongside `outpost.json` and `game.json` (all Game posts in one file). Record IDs are stable slugs and double as public URL fragments (`archive.html#g-03`, `jobs.html#e-17`, `marketplace.html#gear-rope`, `characters.html#varga`). The old pages `island.html`, `gates.html`, `expeditions.html`, and `rules.html` redirect to their replacements, keeping the record ID.
+
+## Preview
+
+**Preview** (next to Save on every record and on the Outpost Sheet) opens a panel showing the record on the real public site, with the same pages, styles, and scripts. The manager serves `public-site` under `/preview/` but answers its `data/` requests from the database instead of the files, so the preview:
+
+- shows **unsaved** form changes, updating as you type, and unpublished records;
+- follows the **Show sample content** switch;
+- never writes anything: `public-site/data` changes only with Sync data or Export.
+
+If the form is not valid yet (for example a missing title), the preview keeps showing the saved version and says why. **Desktop / Phone** switches the width, and **Open in new tab** opens the same preview full size; you can click around the whole site from there.
 
 ## Sample content
 

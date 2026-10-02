@@ -66,6 +66,28 @@
       <section id="work-area" class="work-area" aria-live="polite"></section>
       <footer class="workspace-footer"><span>Changes are stored locally in SQLite.</span><span id="database-indicator">Initialising local database</span></footer>
     </main>
+    <aside class="preview-panel" id="preview-panel" aria-label="Site preview" hidden>
+      <div class="preview-bar">
+        <div class="preview-heading">
+          <span class="eyebrow">SITE PREVIEW</span>
+          <strong id="preview-title">Preview</strong>
+          <span class="helper" id="preview-status" role="status" aria-live="polite"></span>
+        </div>
+        <div class="preview-actions">
+          <div class="preview-sizes" role="group" aria-label="Preview width">
+            <button type="button" data-preview-size="desktop" aria-pressed="true">Desktop</button>
+            <button type="button" data-preview-size="phone" aria-pressed="false">Phone</button>
+          </div>
+          <button type="button" class="button button-secondary" data-preview-refresh>Refresh</button>
+          <a class="button button-secondary" id="preview-open" href="/preview/" target="_blank" rel="noopener">Open in new tab ↗</a>
+          <button type="button" class="button button-secondary" data-preview-close aria-label="Close preview">✕</button>
+        </div>
+      </div>
+      <div class="preview-frame-wrap">
+        <iframe id="preview-frame" class="is-front" title="Site preview"></iframe>
+        <iframe id="preview-frame-back" title="Site preview (loading)" tabindex="-1" aria-hidden="true"></iframe>
+      </div>
+    </aside>
   </div>
 </body>
 </html>

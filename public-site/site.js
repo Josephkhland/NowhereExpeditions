@@ -42,8 +42,16 @@ const formatStatus = (status = "UNKNOWN") => {
 
 const slugify = (value = "") => String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-const fetchJson = async (url) => {
-  const response = await fetch(url);
+// A page loads many small data files at once; one retry rides out a dropped connection.
+const fetchJson = async (url, retries = 1) => {
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    if (retries <= 0) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return fetchJson(url, retries - 1);
+  }
   if (!response.ok) {
     throw new Error(`Failed to load ${url}: ${response.status}`);
   }
@@ -456,41 +464,62 @@ const itemList = (items, fallback = "NO DATA") => Array.isArray(items) && items.
   ? `<ul class="clean-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
   : `<p class="muted">${fallback}</p>`;
 
-/* Authored text: one paragraph per line, "## " headings, "- " lists, **bold**, *italic*,
-   [[archive-id]] / [[archive-id|text]] links to Archive entries, and [text](page.html#id) links. */
-const richInline = (text, campaign) => escapeHtml(text)
-  .replace(/\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g, (match, id, label) => {
-    const entry = campaign.archiveById.get(id);
-    if (!entry) return label || "[record unavailable]";
-    return `<a class="inline-link archive-link" href="archive.html#${encodeURIComponent(id)}">${label || escapeHtml(entry.title)}</a>`;
-  })
-  .replace(/\[([^\]]+)\]\(((?:https?:\/\/|[a-z0-9-]+\.html)[^\s)]*)\)/g, (match, label, href) =>
-    `<a class="inline-link" href="${href}"${/^https?:/.test(href) ? ' rel="noopener"' : ""}>${label}</a>`)
-  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-  .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+/* Authored text is Markdown (CommonMark plus tables and ~~strikethrough~~), rendered by the vendored
+   markdown-it (vendor/markdown-it.min.js). Raw HTML is never rendered, and links to javascript: and similar are
+   refused by markdown-it. On top of Markdown, [[archive-id]] / [[archive-id|text]] link to Archive entries.
+   Single line breaks are kept as line breaks, as authors expect from a plain text box. */
+const markdown = (() => {
+  if (!window.markdownit) return null;
+  const md = window.markdownit({ html: false, linkify: true, breaks: true, typographer: true });
+  const renderDefault = (tokens, index, options, env, self) => self.renderToken(tokens, index, options);
+  const linkOpen = md.renderer.rules.link_open || renderDefault;
+  md.renderer.rules.link_open = (tokens, index, options, env, self) => {
+    const token = tokens[index];
+    const href = token.attrGet("href") || "";
+    token.attrJoin("class", href.startsWith("archive.html#") ? "inline-link archive-link" : "inline-link");
+    if (/^https?:/i.test(href)) token.attrSet("rel", "noopener");
+    return linkOpen(tokens, index, options, env, self);
+  };
+  // Headings sit inside sections that already have their own h2/h3, so # starts at h4.
+  md.renderer.rules.heading_open = (tokens, index, options, env, self) => {
+    const token = tokens[index];
+    token.tag = `h${Math.min(6, Number(token.tag.slice(1)) + 3)}`;
+    token.attrJoin("class", "rich-heading");
+    return self.renderToken(tokens, index, options);
+  };
+  md.renderer.rules.heading_close = (tokens, index, options, env, self) => {
+    tokens[index].tag = tokens[index - 2]?.tag || tokens[index].tag;
+    return self.renderToken(tokens, index, options);
+  };
+  const image = md.renderer.rules.image || renderDefault;
+  md.renderer.rules.image = (tokens, index, options, env, self) => {
+    tokens[index].attrSet("loading", "lazy");
+    return image(tokens, index, options, env, self);
+  };
+  md.renderer.rules.table_open = () => '<div class="rich-table"><table>';
+  md.renderer.rules.table_close = () => "</table></div>";
+  return md;
+})();
+
+const escapeMarkdown = (text) => String(text).replace(/([\\`*_{}\[\]()#+!|<>~])/g, "\\$1");
+
+// [[archive-id]] links become ordinary Markdown links; links to records not on the site become plain text.
+const expandArchiveLinks = (text, campaign) => String(text || "").replace(/\[\[([a-z0-9-]+)(?:\|([^\]\n]+))?\]\]/g, (match, id, label) => {
+  const entry = campaign.archiveById.get(id);
+  if (!entry) return escapeMarkdown(label || "[record unavailable]");
+  return `[${escapeMarkdown(label || entry.title)}](archive.html#${encodeURIComponent(id)})`;
+});
+
+// Inline text (card summaries, ledes): Markdown without paragraphs, lists, or headings.
+const richInline = (text, campaign) => markdown
+  ? markdown.renderInline(expandArchiveLinks(text, campaign))
+  : escapeHtml(expandArchiveLinks(text, campaign));
 
 const richText = (text, campaign, fallback = "NO DATA") => {
-  const lines = String(text || "").split("\n").map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) return `<p class="muted">${fallback}</p>`;
-  const output = [];
-  let list = [];
-  const flush = () => {
-    if (list.length) output.push(`<ul class="clean-list">${list.map((item) => `<li>${richInline(item, campaign)}</li>`).join("")}</ul>`);
-    list = [];
-  };
-  lines.forEach((line) => {
-    if (/^[-*] /.test(line)) {
-      list.push(line.slice(2));
-      return;
-    }
-    flush();
-    const heading = /^(#{2,3}) (.+)$/.exec(line);
-    output.push(heading ? `<h4 class="rich-heading">${richInline(heading[2], campaign)}</h4>` : `<p>${richInline(line, campaign)}</p>`);
-  });
-  flush();
-  return `<div class="rich-text">${output.join("")}</div>`;
+  if (!String(text || "").trim()) return `<p class="muted">${fallback}</p>`;
+  if (!markdown) return paragraphs(expandArchiveLinks(text, campaign), fallback);
+  return `<div class="rich-text">${markdown.render(expandArchiveLinks(text, campaign))}</div>`;
 };
-
 const formatDate = (value) => {
   if (!value) return "";
   const date = new Date(`${value}T00:00`);
@@ -1527,16 +1556,13 @@ const setActiveNav = () => {
 };
 
 
+const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster };
+
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
   initializeDestinationCarousel();
-  renderOutpost();
-
   const page = document.body.dataset.page;
-  renderAnnouncementBanner();
-  if (page === "game") await renderGame();
-  else if (page === "jobs") await renderJobBoard();
-  else if (page === "archive") await renderArchive();
-  else if (page === "marketplace") await renderMarketplace();
-  else if (page === "characters") await renderCharacterRoster();
+  await Promise.all([renderOutpost(), renderAnnouncementBanner(), PAGE_RENDERERS[page]?.()]);
+  // Marks the page as fully rendered; the content manager's preview waits for this before showing an update.
+  document.documentElement.dataset.rendered = "true";
 });
