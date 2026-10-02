@@ -42,6 +42,19 @@ button { cursor: pointer; }
 .nav-symbol { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1px solid #66857a; color: #d3ebde; font-size: 11px; }
 .nav-count { margin-left: auto; color: #a8c0b4; font-size: 11px; font-variant-numeric: tabular-nums; }
 .sidebar-spacer { flex: 1; min-height: 25px; }
+.sample-label { margin-top: 26px; }
+.sample-switch { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 4px; padding: 9px 7px; color: #d4e2db; font-size: 12px; cursor: pointer; }
+.sample-switch:hover { background: rgba(255,255,255,.07); }
+.sample-switch input { appearance: none; position: relative; width: 34px; height: 19px; margin: 0; border: 1px solid #66857a; border-radius: 10px; background: rgba(0,0,0,.2); cursor: pointer; }
+.sample-switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #a8c0b4; transition: transform .15s ease; }
+.sample-switch input:checked { border-color: #ecc078; background: rgba(236,192,120,.25); }
+.sample-switch input:checked::after { transform: translateX(15px); background: #ecc078; }
+.sample-switch input:focus-visible { outline: 2px solid #ecc078; outline-offset: 2px; }
+.sample-switch strong, .sample-switch small { display: block; }
+.sample-switch strong { font-weight: 600; }
+.sample-switch small { margin-top: 2px; color: #94ada1; font-size: 10px; }
+.record-sample { flex: 0 0 auto; padding: 1px 5px; border: 1px solid #b9a3e3; color: #6c4fa8; background: #f5f0fd; font-size: 9px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+.sample-flag:has(input:checked) { border-color: #cdbdf0; background: #f7f3fe; }
 .sidebar-note { margin: 15px 11px 0; color: #94ada1; font-size: 11px; line-height: 1.65; }
 
 .main-area { display: flex; flex-direction: column; min-width: 0; min-height: 100vh; padding: 0 35px; }
@@ -233,6 +246,7 @@ h1, h2, h3, h4, p { margin-top: 0; }
   .sidebar { min-height: auto; padding: 13px 14px 10px; }
   .brand { margin: 0 5px 14px; }
   .side-label, .sidebar-spacer, .sidebar-note { display: none; }
+  .sample-switch { margin: 8px 0 0; }
   .primary-nav { display: flex; gap: 3px; overflow-x: auto; }
   .nav-item { width: auto; min-width: max-content; min-height: 37px; gap: 7px; padding: 0 9px; font-size: 11px; }
   .nav-symbol { width: 19px; height: 19px; }

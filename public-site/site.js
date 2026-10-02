@@ -261,50 +261,137 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character)
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 })[character]);
 
-const renderRules = async () => {
-  const root = document.getElementById("rules-list");
-  const search = document.getElementById("rules-search");
-  const count = document.getElementById("rules-count");
-  if (!root || !search || !count) return;
+/* ---------- Game: out-of-character announcements and rules ---------- */
 
-  try {
-    const rules = await fetchJson("data/rules.json");
-    if (!Array.isArray(rules)) throw new Error("Rules data must be a list.");
-    const sortedRules = [...rules].sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
-
-    const renderList = () => {
-      const query = search.value.trim().toLowerCase();
-      const filtered = sortedRules.filter((rule) => {
-        const searchable = [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(query);
-      });
-
-      count.textContent = query ? `Showing ${filtered.length} of ${sortedRules.length} rules` : `${sortedRules.length} rules`;
-      root.innerHTML = filtered.length ? filtered.map((rule) => `
-        <article class="rule-entry">
-          <div class="rule-entry-heading">
-            <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
-            <h2>${escapeHtml(rule.title || "Untitled rule")}</h2>
-          </div>
-          <p class="rule-summary">${escapeHtml(rule.summary || "")}</p>
-          ${rule.details ? `<details class="rule-details"><summary>Read rule</summary><p>${escapeHtml(rule.details)}</p></details>` : ""}
-          ${(Array.isArray(rule.tags) && rule.tags.length) ? `<div class="rule-tags" aria-label="Related topics">${rule.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-        </article>
-      `).join("") : '<p class="empty-state">No rules match this search.</p>';
-    };
-
-    search.addEventListener("input", renderList);
-    renderList();
-  } catch (error) {
-    count.textContent = "Rules unavailable";
-    root.innerHTML = '<p class="empty-state">Campaign rules could not be loaded.</p>';
-    console.error(error);
-  }
+const todayIso = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 
+const fetchGame = async () => {
+  const posts = await fetchJson("data/game.json");
+  if (!Array.isArray(posts)) throw new Error("Game data must be a list.");
+  return posts;
+};
+
+// Announcements past their "show until" date drop off; pinned ones come first, then newest.
+const visibleAnnouncements = (posts) => posts
+  .filter((post) => post.type === "announcement" && (!post.showUntil || post.showUntil >= todayIso()))
+  .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned))
+    || String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")));
+
+const renderGame = async () => {
+  const announcementRoot = document.getElementById("announcement-list");
+  const rulesRoot = document.getElementById("rules-list");
+  const search = document.getElementById("rules-search");
+  const count = document.getElementById("rules-count");
+  if (!announcementRoot || !rulesRoot) return;
+
+  let posts;
+  let campaign;
+  try {
+    [posts, campaign] = await Promise.all([fetchGame(), loadCampaign()]);
+  } catch (error) {
+    announcementRoot.innerHTML = '<p class="empty-state">Announcements could not be loaded.</p>';
+    rulesRoot.innerHTML = '<p class="empty-state">Campaign rules could not be loaded.</p>';
+    count.textContent = "Rules unavailable";
+    console.error(error);
+    return;
+  }
+
+  const announcements = visibleAnnouncements(posts);
+  announcementRoot.innerHTML = announcements.length ? announcements.map((post) => `
+    <article class="announcement${post.pinned ? " is-pinned" : ""}" id="post-${escapeHtml(post.id)}">
+      <div class="announcement-meta">
+        ${post.pinned ? '<span class="pill pill-small status-observed">Pinned</span>' : ""}
+        <span>${escapeHtml(formatDate(post.publishedAt))}</span>
+      </div>
+      <h2>${escapeHtml(post.title)}</h2>
+      ${post.summary ? `<p class="announcement-summary">${richInline(post.summary, campaign)}</p>` : ""}
+      ${post.details ? richText(post.details, campaign) : ""}
+      ${(post.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+    </article>`).join("") : '<p class="empty-state">No announcements right now.</p>';
+
+  const rules = posts.filter((post) => post.type !== "announcement")
+    .sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
+  const renderRules = () => {
+    const query = search.value.trim().toLowerCase();
+    const filtered = rules.filter((rule) => [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
+      .filter(Boolean).join(" ").toLowerCase().includes(query));
+    count.textContent = query ? `Showing ${filtered.length} of ${rules.length} rules` : `${rules.length} rules`;
+    rulesRoot.innerHTML = filtered.length ? filtered.map((rule) => `
+      <article class="rule-entry" id="post-${escapeHtml(rule.id)}">
+        <div class="rule-entry-heading">
+          <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
+          <h2>${escapeHtml(rule.title || "Untitled rule")}</h2>
+        </div>
+        <p class="rule-summary">${richInline(rule.summary || "", campaign)}</p>
+        ${rule.details ? `<details class="rule-details"><summary>Read rule</summary>${richText(rule.details, campaign)}</details>` : ""}
+        ${(Array.isArray(rule.tags) && rule.tags.length) ? `<div class="rule-tags" aria-label="Related topics">${rule.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+      </article>
+    `).join("") : '<p class="empty-state">No rules match this search.</p>';
+  };
+  search.addEventListener("input", renderRules);
+  renderRules();
+
+  // Tabs follow the hash: #rules, #announcements, or #post-<id> (which opens the tab holding that post).
+  const tabs = [...document.querySelectorAll("[data-game-tab]")];
+  const select = (name, { focus = false, updateHash = true } = {}) => {
+    tabs.forEach((tab) => {
+      const active = tab.dataset.gameTab === name;
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+      if (active && focus) tab.focus();
+    });
+    if (updateHash) window.history.replaceState(null, "", `#${name}`);
+  };
+  const route = () => {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    const post = hash.startsWith("post-") ? posts.find((item) => `post-${item.id}` === hash) : null;
+    if (post) {
+      select(post.type === "announcement" ? "announcements" : "rules", { updateHash: false });
+      const target = document.getElementById(hash);
+      target?.querySelector("details")?.setAttribute("open", "");
+      target?.scrollIntoView({ block: "start" });
+    } else if (hash === "rules" || hash === "announcements") {
+      select(hash, { updateHash: false });
+    } else {
+      select(announcements.length ? "announcements" : "rules", { updateHash: false });
+    }
+  };
+  tabs.forEach((tab) => tab.addEventListener("click", () => select(tab.dataset.gameTab)));
+  document.querySelector(".game-tabs").addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const current = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    select(tabs[next].dataset.gameTab, { focus: true });
+  });
+  window.addEventListener("hashchange", route);
+  route();
+};
+
+// The Overview shows the newest pinned announcement as a single line.
+const renderAnnouncementBanner = async () => {
+  const banner = document.getElementById("announcement-banner");
+  if (!banner) return;
+  try {
+    const pinned = visibleAnnouncements(await fetchGame()).find((post) => post.pinned);
+    if (!pinned) return;
+    banner.innerHTML = `
+      <a class="announcement-banner-link" href="game.html#post-${encodeURIComponent(pinned.id)}">
+        <span class="kicker">Announcement</span>
+        <strong>${escapeHtml(pinned.title)}</strong>
+        <span class="muted">${escapeHtml(formatDate(pinned.publishedAt))}</span>
+        <span class="announcement-banner-arrow" aria-hidden="true">→</span>
+      </a>`;
+    banner.hidden = false;
+  } catch (error) {
+    console.warn("No announcements available.", error);
+  }
+};
 /* ---------- Campaign records: Characters, Jobs, Archive, Gear ---------- */
 
 const fetchCollection = async (name) => {
@@ -1446,7 +1533,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderOutpost();
 
   const page = document.body.dataset.page;
-  if (page === "rules") await renderRules();
+  renderAnnouncementBanner();
+  if (page === "game") await renderGame();
   else if (page === "jobs") await renderJobBoard();
   else if (page === "archive") await renderArchive();
   else if (page === "marketplace") await renderMarketplace();

@@ -26,7 +26,7 @@ IMAGE_PREFIX = "data/images/"
 MEDIA_PREFIXES = (PORTRAIT_PREFIX, IMAGE_PREFIX)
 IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -37,6 +37,7 @@ ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "history", "folkl
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
+GAME_POST_TYPES = ("announcement", "rule")
 
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 DATETIME_RE = re.compile(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?")
@@ -343,13 +344,26 @@ def clean_gear(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def clean_rule(data: dict[str, Any]) -> dict[str, Any]:
+def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
+    """Out-of-character notes on the Game page: announcements and campaign rules."""
+    post_type = clean_choice(data, "type", GAME_POST_TYPES, "rule")
+    announcement = post_type == "announcement"
+    published_at = clean_pattern(data, "publishedAt", DATE_RE, "Posted date")
+    show_until = clean_pattern(data, "showUntil", DATE_RE, "Show until date") if announcement else ""
+    if announcement and not published_at:
+        raise ManagerError("An announcement needs a posted date.")
+    if show_until and show_until < published_at:
+        raise ManagerError("Show until cannot be earlier than the posted date.")
     return {
-        "title": clean_text(data, "title", "A rule title"),
-        "category": clean_text(data, "category", "A rule category"),
+        "type": post_type,
+        "title": clean_text(data, "title", "A title"),
+        "category": clean_text(data, "category") if announcement else clean_text(data, "category", "A rule category"),
         "summary": clean_text(data, "summary"),
         "details": clean_text(data, "details"),
         "tags": clean_list(data, "tags"),
+        "publishedAt": published_at,
+        "pinned": bool(data.get("pinned")) if announcement else False,
+        "showUntil": show_until,
     }
 
 
@@ -366,7 +380,7 @@ class Collection:
     links: tuple[tuple[str, str, str, str, str], ...] = ()
     # Returns (label, value) that must be unique within the collection, or None.
     unique: Callable[[dict[str, Any]], tuple[str, str] | None] | None = None
-    # Public JSON fields written by Sync/Export. Empty means a single combined file (rules.json).
+    # Public JSON fields, one file per record. Empty means the collection is written as a single combined file.
     public_fields: tuple[str, ...] = ()
     # Fields holding site image paths (uploaded images live in the media table).
     image_fields: tuple[str, ...] = ()
@@ -414,11 +428,14 @@ COLLECTIONS: dict[str, Collection] = {
                        "participantIds", "requirements", "sessionRecordId"),
         text_fields=("summary", "objective", "briefing"),
     ),
-    "rules": Collection(
-        "rules", "Rule", ("title",), clean_rule, lambda record: str(record.get("title", "")),
+    # Announcements and rules share one combined public file, game.json.
+    "game": Collection(
+        "game_posts", "Game post", ("title",), clean_game_post, lambda record: str(record.get("title", "")),
+        text_fields=("summary", "details"),
     ),
 }
 PAGE_COLLECTIONS = ("gear", "characters", "archive", "jobs")
+GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil")
 
 
 # --- Store ------------------------------------------------------------------
@@ -434,6 +451,7 @@ class ContentStore:
         if self._has_legacy_schema():
             self.migration_report = self._migrate_from_v3()
         self._create_schema()
+        self.migration_report += self._migrate_rules_to_game()
         with self._connect() as connection:
             initialized = connection.execute("SELECT value FROM metadata WHERE key = 'initialized'").fetchone()
         if not initialized:
@@ -462,7 +480,7 @@ class ContentStore:
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     data TEXT NOT NULL
                 );
-                CREATE TABLE IF NOT EXISTS rules (
+                CREATE TABLE IF NOT EXISTS game_posts (
                     id TEXT PRIMARY KEY,
                     data TEXT NOT NULL
                 );
@@ -689,6 +707,25 @@ class ContentStore:
                                (json.dumps(report, ensure_ascii=False),))
         return report
 
+    def _migrate_rules_to_game(self) -> list[str]:
+        """Schema v5: the Rules collection became Game posts of type "rule". Rows keep their IDs and categories,
+        and the originals are copied to legacy_records."""
+        with self._connect() as connection:
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            if "rules" not in tables:
+                return []
+            rows = connection.execute("SELECT id, data FROM rules").fetchall()
+            for row in rows:
+                connection.execute("INSERT OR REPLACE INTO legacy_records (source, id, data) VALUES ('rules', ?, ?)",
+                                   (row["id"], row["data"]))
+                data = {key: value for key, value in json.loads(row["data"]).items() if key != "id"}
+                data.setdefault("published", True)
+                post = {"type": "rule", "publishedAt": "", "pinned": False, "showUntil": "", **data}
+                connection.execute("INSERT OR REPLACE INTO game_posts (id, data) VALUES (?, ?)",
+                                   (row["id"], json.dumps(post, ensure_ascii=False)))
+            connection.execute("DROP TABLE rules")
+        return [f"Moved {len(rows)} rules into the Game section as rule posts."]
+
     # --- Record persistence -------------------------------------------------
 
     def _spec(self, name: str) -> Collection:
@@ -746,7 +783,7 @@ class ContentStore:
         records = []
         for row in connection.execute(f"SELECT {columns} FROM {spec.table} ORDER BY id"):
             data = json.loads(row["data"])
-            # Rules imported from rules.json carry no flag; everything in the public files is published.
+            # Older rows may carry no flag; everything that came from the public files is published.
             data.setdefault("published", True)
             for field, column, _ in spec.refs:
                 data[field] = row[column]
@@ -801,6 +838,7 @@ class ContentStore:
             raise ManagerError(f"{spec.label} data must be an object.")
         clean = spec.clean(data)
         clean["published"] = bool(data.get("published", False))
+        include_samples = self.include_samples()
 
         with self._connect() as connection:
             existing = None
@@ -811,6 +849,8 @@ class ContentStore:
                 chosen_id = record_id
                 if existing.get("legacy"):
                     clean["legacy"] = existing["legacy"]  # provenance of migrated records survives edits
+                if not include_samples:
+                    self._keep_hidden_references(connection, spec, existing, clean)
             else:
                 requested = slugify(str(data.get("id") or ""))
                 if requested:
@@ -852,6 +892,7 @@ class ContentStore:
                 if not connection.execute("SELECT 1 FROM gear WHERE id = ?", (item["gearId"],)).fetchone():
                     raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
 
+            clean["sample"] = bool(data["sample"]) if "sample" in data else bool(existing and existing.get("sample"))
             record = {**clean, "id": chosen_id}
             self._write_record(connection, name, chosen_id, record, insert=existing is None)
             for field in spec.image_fields if existing else ():
@@ -902,20 +943,22 @@ class ContentStore:
 
     # --- Import -------------------------------------------------------------
 
-    def _read_rules(self) -> list[dict[str, Any]]:
-        rules_path = self.data_dir / "rules.json"
-        rules = read_json(rules_path) if rules_path.exists() else []
-        if not isinstance(rules, list) or any(not isinstance(rule, dict) for rule in rules):
-            raise ManagerError("Rules data must be a JSON array of objects.")
+    def _read_game(self) -> list[dict[str, Any]]:
+        game_path = self.data_dir / "game.json"
+        legacy_path = self.data_dir / "rules.json"
+        posts = read_json(game_path) if game_path.exists() else read_json(legacy_path) if legacy_path.exists() else []
+        if not isinstance(posts, list) or any(not isinstance(post, dict) for post in posts):
+            raise ManagerError("Game data must be a JSON array of objects.")
         seen_ids: set[str] = set()
-        for rule in rules:
-            rule_id = str(rule.get("id", "")).strip()
-            if not rule_id or not str(rule.get("title", "")).strip() or not str(rule.get("category", "")).strip():
-                raise ManagerError("Each rule needs an ID, title, and category.")
-            if rule_id in seen_ids:
-                raise ManagerError(f"Duplicate rule ID in static data: {rule_id}")
-            seen_ids.add(rule_id)
-        return rules
+        for post in posts:
+            post_id = str(post.get("id", "")).strip()
+            if not post_id or not str(post.get("title", "")).strip():
+                raise ManagerError("Each Game post needs an ID and a title.")
+            if post_id in seen_ids:
+                raise ManagerError(f"Duplicate Game post ID in static data: {post_id}")
+            seen_ids.add(post_id)
+            post.setdefault("type", "rule")
+        return posts
 
     def _read_site(self) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
         outpost_path = self.data_dir / "outpost.json"
@@ -938,11 +981,11 @@ class ContentStore:
 
     def import_site(self) -> None:
         outpost, records = self._read_site()
-        rules = self._read_rules()
+        posts = self._read_game()
         media_dirs = [self.data_dir / "portraits", self.data_dir / "images"]
         with self._connect() as connection:
             for table in ("character_stash", "job_participants", "archive_participants", "jobs", "archive_entries",
-                          "characters", "gear", "media", "outpost_state", "rules"):
+                          "characters", "gear", "media", "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -968,22 +1011,56 @@ class ContentStore:
                 "INSERT INTO outpost_state (id, data) VALUES (1, ?)",
                 (json.dumps(outpost, ensure_ascii=False),),
             )
-            for rule in rules:
-                connection.execute(
-                    "INSERT INTO rules (id, data) VALUES (?, ?)",
-                    (str(rule["id"]), json.dumps(rule, ensure_ascii=False)),
-                )
+            for post in posts:
+                self._write_record(connection, "game", str(post["id"]), {**post, "published": True}, insert=True)
             connection.execute(
                 "INSERT OR REPLACE INTO metadata (key, value) VALUES ('initialized', '1')"
             )
 
+    # --- Sample content ------------------------------------------------------
+
+    def include_samples(self) -> bool:
+        """Whether records flagged as sample content are shown in the manager and written to the site."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'includeSamples'").fetchone()
+        return bool(row) and row["value"] == "1"
+
+    def set_include_samples(self, include: Any) -> None:
+        with self._connect() as connection:
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('includeSamples', ?)", ("1" if include else "0",))
+
+    def _sample_ids(self, connection: sqlite3.Connection) -> dict[str, set[str]]:
+        return {name: {record["id"] for record in self._records(connection, name) if record.get("sample")} for name in COLLECTIONS}
+
+    def _keep_hidden_references(self, connection: sqlite3.Connection, spec: Collection, existing: dict[str, Any], clean: dict[str, Any]) -> None:
+        """While samples are hidden the client never sees them, so a saved record would silently lose its links
+        to them. Put those links back."""
+        hidden = self._sample_ids(connection)
+        for field, _, target in spec.refs:
+            if not clean.get(field) and existing.get(field) in hidden[target]:
+                clean[field] = existing[field]
+        for field, _, _, _, target in spec.links:
+            kept = [item for item in existing.get(field) or [] if item in hidden[target] and item not in clean.get(field, [])]
+            clean[field] = [*clean.get(field, []), *kept]
+        if "stash" in clean:
+            owned = {item["gearId"] for item in clean["stash"]}
+            clean["stash"] += [item for item in existing.get("stash") or [] if item["gearId"] in hidden["gear"] and item["gearId"] not in owned]
+
     # --- State --------------------------------------------------------------
 
     def state(self) -> dict[str, Any]:
+        """Everything the manager shows. Hidden sample records are left out, except for a short list naming them
+        so references to them can still be labelled."""
+        include = self.include_samples()
         with self._connect() as connection:
-            result: dict[str, Any] = {name: self._records(connection, name) for name in COLLECTIONS}
+            records = {name: self._records(connection, name) for name in COLLECTIONS}
             outpost_row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone()
-            result["outpost"] = json.loads(outpost_row["data"]) if outpost_row else {}
+        result: dict[str, Any] = {name: [record for record in items if include or not record.get("sample")] for name, items in records.items()}
+        result["outpost"] = json.loads(outpost_row["data"]) if outpost_row else {}
+        samples = [{"collection": name, "id": record["id"], "label": COLLECTIONS[name].display(record) or record["id"]}
+                   for name, items in records.items() for record in items if record.get("sample")]
+        result["settings"] = {"includeSamples": include, "sampleCount": len(samples)}
+        result["hiddenSamples"] = [] if include else samples
         return result
 
     def save_outpost(self, data: Any) -> None:
@@ -1054,12 +1131,17 @@ class ContentStore:
                 output[f"{name}/{filename}"] = json_bytes({field: record.get(field) for field in fields})
             output[f"{name}/index.json"] = json_bytes(sorted(filenames))
 
-        rules = [{key: value for key, value in rule.items() if key != "published"} for rule in published["rules"].values()]
+        posts = [public_record("game", post) for post in published["game"].values()]
+        announcements = sorted((post for post in posts if post.get("type") == "announcement"),
+                               key=lambda post: (post.get("publishedAt") or "", post.get("title", "")), reverse=True)
+        game = announcements + sorted((post for post in posts if post.get("type") != "announcement"),
+                                      key=lambda post: str(post.get("title", "")))
         output["outpost.json"] = json_bytes(state["outpost"])
-        output["rules.json"] = json_bytes(rules)
+        output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
         counts = {name: len(exported[name]) for name in PAGE_COLLECTIONS}
-        counts["rules"] = len(rules)
+        counts["game"] = len(game)
         counts["unpublished"] = sum(len(state[name]) for name in COLLECTIONS) - sum(counts.values())
+        counts["samplesHidden"] = len(state["hiddenSamples"])
         return output, counts
 
     def sync_site_data(self) -> dict[str, int | str]:
@@ -1227,6 +1309,9 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                         self._send_json(404, {"error": "Image not found."})
                 elif method == "POST" and path == "/api/media":
                     self._send_json(201, store.save_media(self._read_body()))
+                elif method == "POST" and path == "/api/settings":
+                    store.set_include_samples(self._read_body().get("includeSamples"))
+                    self._send_json(200, {"saved": True})
                 elif method == "POST" and path == "/api/outpost":
                     store.save_outpost(self._read_body().get("data"))
                     self._send_json(200, {"saved": True})

@@ -796,6 +796,58 @@ details[open] summary {
   color: var(--muted);
 }
 
+/* ---------- Game: out-of-character notes ---------- */
+
+/* Game is the one out-of-character section, set slightly apart from the in-world ones. */
+.nav-meta { position: relative; margin-left: 0.7rem; }
+.nav-meta::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: -0.65rem;
+  border-left: 1px solid var(--line-strong);
+}
+
+.game-tabs { margin: 1.2rem 0 0.4rem; }
+
+.announcement-list { display: grid; gap: 1rem; margin-top: 1rem; }
+
+.announcement {
+  max-width: 82ch;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  background: var(--panel);
+  scroll-margin-top: 110px;
+}
+
+.announcement.is-pinned { border-left-color: var(--accent-2); }
+.announcement h2 { margin: 0.3rem 0 0.5rem; font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; font-weight: 500; }
+.announcement-meta { display: flex; align-items: center; gap: 0.6rem; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.announcement-summary { margin: 0 0 0.6rem; color: var(--text); }
+.announcement .rich-text p { color: var(--muted); }
+.announcement .rule-tags { margin-top: 0.8rem; }
+.rule-entry { scroll-margin-top: 110px; }
+
+.announcement-banner { margin-top: 1rem; }
+
+.announcement-banner-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.9rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-2);
+  background: rgba(224, 168, 93, 0.06);
+}
+
+.announcement-banner-link .kicker { color: var(--accent-2); }
+.announcement-banner-link:hover,
+.announcement-banner-link:focus-visible { border-color: var(--accent-2); background: rgba(224, 168, 93, 0.1); }
+.announcement-banner-arrow { margin-left: auto; color: var(--accent-2); }
+
 .rule-tags {
   display: flex;
   flex-wrap: wrap;

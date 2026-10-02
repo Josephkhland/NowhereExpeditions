@@ -91,8 +91,9 @@ class ContentStoreTests(unittest.TestCase):
             **job, "id": "e-17", "designation": "E-17", "title": "Saltglass Survey", "objective": "Map the approaches.",
             "status": "open", "sessionRecordId": None,
         })
-        write_json(self.data_dir / "rules.json", [{
+        write_json(self.data_dir / "game.json", [{
             "id": "persistent-world",
+            "type": "rule",
             "category": "Campaign",
             "title": "The world persists",
             "summary": "Expedition outcomes affect the shared world.",
@@ -143,8 +144,8 @@ class ContentStoreTests(unittest.TestCase):
     def test_initial_import_loads_public_data(self) -> None:
         state = self.store.state()
         self.assertEqual(state["outpost"]["name"], "Test Outpost")
-        self.assertEqual(state["rules"][0]["id"], "persistent-world")
-        self.assertTrue(state["rules"][0]["published"])
+        self.assertEqual((state["game"][0]["id"], state["game"][0]["type"]), ("persistent-world", "rule"))
+        self.assertTrue(state["game"][0]["published"])
         gate = self.record("archive", "g-03")
         self.assertEqual((gate["type"], gate["details"]["knownHazards"]), ("gate-record", ["Pressure shifts"]))
         job = self.record("jobs", "e-16")
@@ -284,14 +285,14 @@ class ContentStoreTests(unittest.TestCase):
         self.store.save_record("archive", "route-note", {**self.record("archive", "route-note"),
                                                          "content": f"Cf. [[{hidden_session}|the incident]].",
                                                          "participantIds": [secret, crew]})
-        self.store.save_record("rules", "persistent-world", {**self.record("rules", "persistent-world"), "published": False})
+        self.store.save_record("game", "persistent-world", {**self.record("game", "persistent-world"), "published": False})
 
         counts = self.store.export_site()
         data = self.export_dir / "data"
         self.assertEqual(read_json(data / "characters" / "index.json"), [f"{crew}.json"])
         self.assertEqual(read_json(data / "gear" / "index.json"), ["rope.json"])
         self.assertNotIn(f"{hidden_session}.json", read_json(data / "archive" / "index.json"))
-        self.assertEqual(read_json(data / "rules.json"), [])
+        self.assertEqual(read_json(data / "game.json"), [])
         job = read_json(data / "jobs" / "e-17.json")
         self.assertIsNone(job["organizerId"])
         self.assertIsNone(job["sessionRecordId"])
@@ -316,6 +317,109 @@ class ContentStoreTests(unittest.TestCase):
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount"})
+
+    # --- sample content ---
+
+    def test_sample_records_are_hidden_from_manager_and_site_until_shown(self) -> None:
+        self.assertFalse(self.store.state()["settings"]["includeSamples"], "samples start hidden")
+        self.store.set_include_samples(True)
+        lantern = self.add_gear("Sample lantern", sample=True)
+        sample_crew = self.add_character("Sample crew", sample=True, stash=[{"gearId": lantern}])
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "participantIds": [sample_crew]})
+        self.store.export_site()
+        self.assertIn(f"{lantern}.json", read_json(self.export_dir / "data" / "gear" / "index.json"))
+
+        self.store.set_include_samples(False)
+        state = self.store.state()
+        self.assertNotIn(lantern, [gear["id"] for gear in state["gear"]])
+        self.assertNotIn(sample_crew, [character["id"] for character in state["characters"]])
+        self.assertEqual(state["settings"], {"includeSamples": False, "sampleCount": 2})
+        self.assertEqual({item["id"] for item in state["hiddenSamples"]}, {lantern, sample_crew})
+        counts = self.store.export_site()
+        data = self.export_dir / "data"
+        self.assertNotIn(f"{lantern}.json", read_json(data / "gear" / "index.json"))
+        self.assertEqual(read_json(data / "jobs" / "e-17.json")["participantIds"], [])
+        self.assertEqual(counts["samplesHidden"], 2)
+
+    def test_saving_while_samples_are_hidden_keeps_links_to_them_and_their_flag(self) -> None:
+        self.store.set_include_samples(True)
+        rope_sample = self.add_gear("Sample rope", sample=True)
+        sample_crew = self.add_character("Sample crew", sample=True)
+        real = self.add_character("Real crew", stash=[{"gearId": "rope"}, {"gearId": rope_sample, "quantity": 2}])
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "participantIds": [sample_crew, real], "organizerId": sample_crew})
+        self.store.set_include_samples(False)
+        # The client never saw the sample records, so it sends the record without them.
+        self.store.save_record("jobs", "e-17", {**self.record("jobs", "e-17"), "participantIds": [real], "organizerId": None, "title": "Renamed"})
+        self.store.save_record("characters", real, {"name": "Real crew", "published": True, "stash": [{"gearId": "rope"}]})
+        self.store.set_include_samples(True)
+        job = self.record("jobs", "e-17")
+        self.assertEqual((job["title"], job["participantIds"], job["organizerId"]), ("Renamed", [real, sample_crew], sample_crew))
+        self.assertEqual([item["gearId"] for item in self.record("characters", real)["stash"]], ["rope", rope_sample])
+        # Edits without the field keep the flag; sending it changes it.
+        self.store.save_record("gear", rope_sample, {"name": "Sample rope", "published": True})
+        self.assertTrue(self.record("gear", rope_sample)["sample"])
+        self.store.save_record("gear", rope_sample, {"name": "Sample rope", "published": True, "sample": False})
+        self.assertFalse(self.record("gear", rope_sample)["sample"])
+
+    def test_settings_api_toggles_samples(self) -> None:
+        self.store.save_record("characters", None, {"name": "Hidden sample", "sample": True, "published": True})
+        send, stop = self.serve()
+        try:
+            self.assertEqual(send("/api/state", method="GET")["settings"], {"includeSamples": False, "sampleCount": 1})
+            send("/api/settings", {"includeSamples": True})
+            state = send("/api/state", method="GET")
+            self.assertTrue(state["settings"]["includeSamples"])
+            self.assertIn("Hidden sample", [character["name"] for character in state["characters"]])
+        finally:
+            stop()
+
+    # --- Game: announcements and rules ---
+
+    def test_game_posts_validate_and_export_newest_announcements_first(self) -> None:
+        with self.assertRaisesRegex(ManagerError, "posted date"):
+            self.store.save_record("game", None, {"type": "announcement", "title": "No date"})
+        with self.assertRaisesRegex(ManagerError, "rule category"):
+            self.store.save_record("game", None, {"type": "rule", "title": "No category"})
+        with self.assertRaisesRegex(ManagerError, "earlier than the posted date"):
+            self.store.save_record("game", None, {"type": "announcement", "title": "Bad", "publishedAt": "2026-10-05", "showUntil": "2026-10-01"})
+        with self.assertRaisesRegex(ManagerError, "type must be one of"):
+            self.store.save_record("game", None, {"type": "poll", "title": "X"})
+        old = self.store.save_record("game", None, {"type": "announcement", "title": "Session zero", "publishedAt": "2026-09-01",
+                                                    "published": True})["id"]
+        new = self.store.save_record("game", None, {"type": "announcement", "title": "Next session moved", "publishedAt": "2026-10-02",
+                                                    "pinned": True, "showUntil": "2026-10-10", "details": "See [[g-03]] and [[hidden]].",
+                                                    "published": True})["id"]
+        rule = self.store.save_record("game", None, {"type": "rule", "title": "Pinned rules are not a thing", "category": "Campaign",
+                                                     "pinned": True, "showUntil": "2026-12-01", "published": True})["id"]
+        self.assertEqual((self.record("game", rule)["pinned"], self.record("game", rule)["showUntil"]), (False, ""))
+        self.store.export_site()
+        game = read_json(self.export_dir / "data" / "game.json")
+        self.assertEqual([post["id"] for post in game][:2], [new, old])
+        self.assertEqual({post["type"] for post in game[2:]}, {"rule"})
+        latest = game[0]
+        self.assertEqual((latest["pinned"], latest["showUntil"]), (True, "2026-10-10"))
+        self.assertEqual(latest["details"], "See [[g-03]] and [record unavailable].")
+        self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil"})
+
+    def test_rules_table_from_schema_v4_moves_into_game(self) -> None:
+        connection = sqlite3.connect(self.database)
+        connection.execute("CREATE TABLE rules (id TEXT PRIMARY KEY, data TEXT NOT NULL)")
+        connection.execute("INSERT INTO rules VALUES ('old-rule', ?)", (json.dumps({"id": "old-rule", "title": "Old rule", "category": "Jobs"}),))
+        connection.commit()
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertEqual(reopened.migration_report, ["Moved 1 rules into the Game section as rule posts."])
+        post = next(item for item in reopened.state()["game"] if item["id"] == "old-rule")
+        self.assertEqual((post["type"], post["category"], post["published"]), ("rule", "Jobs", True))
+        connection = sqlite3.connect(self.database)
+        self.assertIsNone(connection.execute("SELECT name FROM sqlite_master WHERE name = 'rules'").fetchone())
+        connection.close()
+
+    def test_import_accepts_a_rules_json_from_before_game(self) -> None:
+        (self.data_dir / "game.json").unlink()
+        write_json(self.data_dir / "rules.json", [{"id": "legacy", "title": "Legacy rule", "category": "Campaign"}])
+        self.store.import_site()
+        self.assertEqual(self.record("game", "legacy")["type"], "rule")
 
     # --- character sheets ---
 
@@ -432,7 +536,7 @@ class ContentStoreTests(unittest.TestCase):
         self.assertEqual((result["archive"], result["jobs"], result["gear"]), (3, 2, 1))
         self.assertFalse(unmanaged_file.exists())
         self.assertTrue((self.data_dir / "archive" / "g-03.json").is_file())
-        self.assertEqual(read_json(self.data_dir / "rules.json")[0]["id"], "persistent-world")
+        self.assertEqual(read_json(self.data_dir / "game.json")[0]["id"], "persistent-world")
         self.assertEqual((self.site_dir / "index.html").read_bytes(), page_before)
 
     def test_api_crud_and_delete_protection(self) -> None:
@@ -458,9 +562,9 @@ class ContentStoreTests(unittest.TestCase):
             send(f"/api/jobs/{job}", method="DELETE")
             send(f"/api/archive/{session}", method="DELETE")
             send(f"/api/characters/{character}", method="DELETE")
-            rule = send("/api/rules", {"data": {"title": "Choose a route", "category": "Jobs", "published": True}})["id"]
+            rule = send("/api/game", {"data": {"type": "rule", "title": "Choose a route", "category": "Jobs", "published": True}})["id"]
             send("/api/export", {})
-            self.assertIn(rule, [item["id"] for item in read_json(self.export_dir / "data" / "rules.json")])
+            self.assertIn(rule, [item["id"] for item in read_json(self.export_dir / "data" / "game.json")])
         finally:
             stop()
 
@@ -553,8 +657,8 @@ class LegacyMigrationTests(unittest.TestCase):
         state = self.store.state()
         self.assertEqual(state["outpost"]["name"], "The Outpost")
         self.assertEqual(state["outpost"]["capabilities"][0]["detail"], "The Outpost's ability to build.")
-        rule = state["rules"][0]
-        self.assertEqual((rule["id"], rule["category"], rule["tags"]), ("island-projects", "Outpost", ["Outpost"]))
+        rule = state["game"][0]
+        self.assertEqual((rule["id"], rule["type"], rule["category"], rule["tags"]), ("island-projects", "rule", "Outpost", ["Outpost"]))
         self.assertEqual(rule["summary"], "See the Outpost Sheet and the Archive.")
 
         connection = sqlite3.connect(self.database)
@@ -562,7 +666,7 @@ class LegacyMigrationTests(unittest.TestCase):
         sources = {row[0] for row in connection.execute("SELECT source FROM legacy_records")}
         connection.close()
         self.assertFalse(tables & {"gates", "expeditions", "expedition_reports", "island_state"})
-        self.assertEqual(sources, {"gates", "expeditions", "expedition_reports", "island_state", "expedition_participants"})
+        self.assertEqual(sources, {"gates", "expeditions", "expedition_reports", "island_state", "expedition_participants", "rules"})
         self.assertTrue((self.root / "content.v3-backup.db").is_file())
 
     def test_migrated_records_keep_provenance_after_editing_and_export_cleanly(self) -> None:

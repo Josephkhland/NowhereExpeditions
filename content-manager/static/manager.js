@@ -1,4 +1,4 @@
-const state = { gear: [], characters: [], archive: [], jobs: [], rules: [], outpost: {} };
+const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpost: {}, settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [] };
 let activeView = "outpost";
 let selectedId = null;
 let draft = false;
@@ -113,11 +113,12 @@ function referenceSelect(label, name, value, key, labelFor, options = {}) {
     .filter(options.filter || (() => true))
     .map((record) => [record.id, `${labelFor(record)}${record.published ? "" : " — unpublished"}`])
     .sort((left, right) => left[1].localeCompare(right[1]));
-  if (value && !choices.some(([id]) => id === value)) choices.unshift([value, `Missing record: ${value}`]);
+  if (value && !choices.some(([id]) => id === value)) choices.unshift([value, hiddenSampleLabel(key, value) || `Missing record: ${value}`]);
   return selectField(label, name, value || "", choices, { emptyLabel: options.emptyLabel || "— None —", ...options });
 }
 
 function participantPicker(selectedIds) {
+  const hiddenCount = selectedIds.filter((id) => !findRecord("characters", id) && hiddenSampleLabel("characters", id)).length;
   const selected = selectedIds.map((id) => findRecord("characters", id)).filter(Boolean);
   const others = [...state.characters].filter((character) => !selectedIds.includes(character.id))
     .sort((left, right) => String(left.name).localeCompare(String(right.name)));
@@ -130,6 +131,7 @@ function participantPicker(selectedIds) {
   return `<div class="field full"><span class="field-label">Participants <span class="participant-count">(${selectedIds.length} selected)</span></span>
     <input type="search" class="reference-filter" data-filter-list="participant-list" placeholder="Filter characters" aria-label="Filter participants" />
     <div class="check-list" id="participant-list">${list}</div>
+    ${hiddenCount ? `<span class="helper">+ ${hiddenCount} hidden sample participant${hiddenCount > 1 ? "s" : ""}, kept when you save.</span>` : ""}
     <span class="helper">Crew count on the board is the number of participants. Include the organizer here if they are going.</span></div>`;
 }
 
@@ -485,7 +487,7 @@ function stashEditor(stash) {
   const rows = stash.map((item) => {
     const gear = findRecord("gear", item.gearId);
     return `<tr data-stash-row data-gear-id="${escapeHtml(item.gearId)}">
-      <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`}
+      <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : (hiddenSampleLabel("gear", item.gearId) ? `<span class="helper">${escapeHtml(hiddenSampleLabel("gear", item.gearId))}</span>` : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`)}
         ${gear && !gear.published ? '<span class="record-draft">Unpublished</span>' : ""}</td>
       <td>${escapeHtml(humanize(gear?.category || ""))}</td>
       <td class="numeric">${weightText(gear?.weight)}</td>
@@ -718,41 +720,91 @@ const collections = {
       discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") }
     })
   },
-  rules: {
-    title: "Campaign Rules", panel: "CAMPAIGN RULES", singular: "Rule",
+  game: {
+    title: "Game", panel: "GAME POSTS", singular: "Game post",
     name: (record) => record.title,
-    meta: (record) => [record.category || "Uncategorized"],
-    idHelp: "Generated from the title when left blank.",
+    meta: (record) => record.type === "announcement"
+      ? ["Announcement", record.pinned ? "Pinned" : "", record.publishedAt]
+      : ["Rule", record.category || "Uncategorized"],
+    // Announcements first, newest at the top; then rules by title.
+    sortKey: (record) => record.type === "announcement"
+      ? `0 ${String(99999999 - Number(String(record.publishedAt || "0").replace(/-/g, ""))).padStart(8, "0")}`
+      : `1 ${record.title || ""}`,
+    filters: [["type", "Announcements and rules", [["announcement", "Announcements"], ["rule", "Rules"]]]],
+    idHelp: "Generated from the title when left blank. Announcements are linked as game.html#post-<id>.",
     fields: (record) => {
+      const type = record.type || listFilters.game?.type || "announcement";
       const categories = ["Campaign", "Jobs", "Outpost", "Information"];
       if (record.category && !categories.includes(record.category)) categories.push(record.category);
+      const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
-      ${field("Title", "title", record.title || "", { required: true, full: true })}
-      ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]), { required: true })}
+      ${selectField("Type", "type", type, [["announcement", "Announcement"], ["rule", "Rule"]], { help: "Announcements are dated notices; rules are reference material." })}
+      ${field("Title", "title", record.title || "", { required: true })}
+      ${section("announcement", `
+        ${field("Posted", "publishedAt", record.publishedAt || new Date().toISOString().slice(0, 10), { type: "date", help: "Required for announcements." })}
+        ${field("Show until", "showUntil", record.showUntil || "", { type: "date", help: "Optional. After this date the announcement is hidden from the site." })}
+        <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
+      ${section("rule", `
+        ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}`)}
       ${textarea("Short summary", "summary", record.summary || "", { full: true })}
-      ${textarea("Rule details", "details", record.details || "", { full: true, rows: 8 })}
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Paragraphs, ## headings, - lists, **bold**, and [[archive-id]] links work here." })}
       ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}`;
     },
-    read: (formData) => ({
-      title: formText(formData, "title"), category: formText(formData, "category"),
-      summary: formText(formData, "summary"), details: formText(formData, "details"),
-      tags: linesToArray(formData.get("tags"))
-    })
+    related: (record) => linkCheck([record.summary, record.details]) + legacyNote(record),
+    read: (formData) => {
+      const type = formText(formData, "type");
+      return {
+        type, title: formText(formData, "title"),
+        category: type === "rule" ? formText(formData, "category") : "",
+        publishedAt: type === "announcement" ? formText(formData, "publishedAt") : "",
+        showUntil: type === "announcement" ? formText(formData, "showUntil") : "",
+        pinned: type === "announcement" && formData.get("pinned") === "on",
+        summary: formText(formData, "summary"), details: formText(formData, "details"),
+        tags: linesToArray(formData.get("tags"))
+      };
+    }
   }
 };
 
 function legacyNote(record) {
   if (!record.legacy) return "";
-  const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report" }[record.legacy.source] || record.legacy.source;
+  const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report", rules: "Rule" }[record.legacy.source] || record.legacy.source;
   return `<div class="field full"><span class="helper">Migrated from a v3 ${escapeHtml(source)}. The original record is kept in the database's legacy_records table.</span></div>`;
 }
 
 /* ---------- Rendering ---------- */
 
+const hiddenSampleLabel = (collection, id) => {
+  const sample = state.hiddenSamples.find((item) => item.collection === collection && item.id === id);
+  return sample ? `${sample.label} — hidden sample` : "";
+};
+
+function renderSampleSwitch() {
+  const toggle = document.getElementById("include-samples");
+  toggle.checked = state.settings.includeSamples;
+  const count = state.settings.sampleCount;
+  document.getElementById("sample-count").textContent = count
+    ? `${count} sample record${count === 1 ? "" : "s"} ${state.settings.includeSamples ? "shown" : "hidden"}`
+    : "No sample records yet";
+}
+
+async function setIncludeSamples(include) {
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ includeSamples: include }) });
+  selectedId = null;
+  draft = false;
+  await loadState();
+  showNotice(include
+    ? "Sample content is shown. Sync data or Export to include published samples on the site."
+    : "Sample content is hidden. Sync data or Export to remove it from the site.");
+}
+
 async function loadState() {
   const loaded = await api("/api/state");
   for (const key of Object.keys(collections)) state[key] = loaded[key] || [];
   state.outpost = loaded.outpost || {};
+  state.settings = loaded.settings || { includeSamples: false, sampleCount: 0 };
+  state.hiddenSamples = loaded.hiddenSamples || [];
+  renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
   renderContent();
@@ -779,7 +831,9 @@ function filteredRecords(key) {
   return state[key]
     .filter((record) => Object.entries(filters).every(([field, value]) => !value || record[field] === value))
     .filter((record) => !query || JSON.stringify(record).toLowerCase().includes(query))
-    .sort((left, right) => String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
+    .sort((left, right) => config.sortKey
+      ? config.sortKey(left).localeCompare(config.sortKey(right))
+      : String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
 }
 
 function renderContent() {
@@ -795,7 +849,7 @@ function renderCollection(key) {
   const listMarkup = items.length ? items.map((record) => `
     <button type="button" class="record-button ${selected?.id === record.id ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
       <span class="record-name">${escapeHtml(config.name(record) || "Untitled")}</span>
-      <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}</span>
+      <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}${record.sample ? '<span class="record-sample">Sample</span>' : ""}</span>
     </button>
   `).join("") : '<div class="empty-list">No matching records yet.</div>';
   const editor = draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
@@ -839,6 +893,7 @@ function recordForm(key, record) {
         </div>
         <div class="form-grid">
           <label class="publish-toggle field full"><input type="checkbox" name="published" ${published ? "checked" : ""} /><span><strong>Published</strong><span class="helper">When unchecked, Sync data and Export to site leave this record out of the public site.</span></span></label>
+          ${state.settings.includeSamples ? `<label class="publish-toggle field full sample-flag"><input type="checkbox" name="sample" ${record?.sample ? "checked" : ""} /><span><strong>Sample content</strong><span class="helper">Preview data, not campaign canon. While <em>Show sample content</em> is off, it is hidden here and left out of Sync data and Export.</span></span></label>` : ""}
           ${record ? "" : field("ID / URL slug", "recordId", "", { full: true, help: `Optional. ${config.idHelp} It cannot be changed later.` })}
           ${config.fields(record || {})}
           ${record && config.related ? config.related(record) : ""}
@@ -1016,6 +1071,8 @@ async function saveRecord(form) {
   const formData = new FormData(form);
   const existing = findRecord(key, form.dataset.editingId);
   const data = { ...config.read(formData, form), published: form.elements.published.checked };
+  // The flag is only sent while samples are shown; otherwise the server keeps whatever the record had.
+  if (form.elements.sample) data.sample = form.elements.sample.checked;
   if (!existing && formText(formData, "recordId")) data.id = formText(formData, "recordId");
   const result = existing
     ? await api(`/api/${key}/${encodeURIComponent(existing.id)}`, { method: "PUT", body: JSON.stringify({ data }) })
@@ -1077,7 +1134,7 @@ async function uploadImage(input) {
   showNotice("Image uploaded. Save the record to keep it.");
 }
 
-const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.rules} rules${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}`;
+const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.game} Game posts${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}${result.samplesHidden ? `; ${result.samplesHidden} hidden sample records left out` : ""}`;
 
 async function exportToSite() {
   const result = await api("/api/export", { method: "POST", body: "{}" });
@@ -1291,7 +1348,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const form = event.target.closest("#record-form");
-    if (form?.dataset.collection === "archive" && event.target.name === "type") {
+    if (form && event.target.name === "type" && form.querySelector("[data-type-section]")) {
       form.querySelectorAll("[data-type-section]").forEach((section) => {
         section.hidden = section.dataset.typeSection !== event.target.value;
       });
@@ -1329,6 +1386,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("sync-button").addEventListener("click", async () => {
     try { await syncDataToSite(); } catch (error) { showNotice(error.message, true); }
+  });
+  document.getElementById("include-samples").addEventListener("change", async (event) => {
+    try { await setIncludeSamples(event.target.checked); } catch (error) { showNotice(error.message, true); event.target.checked = !event.target.checked; }
   });
   document.getElementById("import-button").addEventListener("click", async () => {
     try { await importFromSite(); } catch (error) { showNotice(error.message, true); }

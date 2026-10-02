@@ -13,7 +13,7 @@ The repository has two halves:
 
 ```
 content-manager (local, SQLite)
-        │  edit Outpost, Characters, Jobs, Archive, Gear, Rules
+        │  edit Outpost, Characters, Jobs, Archive, Gear, Game
         │  tick "Published" on what players may see
         ▼
    Sync data ──► public-site/data/*.json ──► git push ──► GitHub Action ──► GitHub Pages
@@ -34,7 +34,8 @@ The site reads everything it shows from JSON files in `public-site/data/`. The c
 │   ├── island.html, gates.html,  Redirects from the old addresses
 │   │   expeditions.html
 │   ├── characters.html           Characters, profiles, Fate Core sheets, stashes
-│   ├── rules.html                Searchable campaign rules
+│   ├── game.html                 Game: announcements and searchable rules (out of character)
+│   ├── rules.html                Redirects to game.html#rules
 │   ├── sheet.html                Editable character sheet (opens in a new tab; Save file for the GM)
 │   ├── dice.js                   Fate dice roller and roll history (browser-local)
 │   ├── site.js / styles.css      All site behaviour and styling
@@ -108,7 +109,7 @@ Full details, including first-time GitHub Pages setup, are in [DEPLOYING.md](DEP
 | **Job Listing** | Work posted on the Job Board (an expedition, recovery, bounty…), optionally with the Session Record of how it went | `jobs.html#<id>` |
 | **Archive Entry** | One lore page: a Gate Record, Session Record, newspaper, history, or folklore entry | `archive.html#<id>` |
 | **Gear** | An item in the Marketplace catalogue, with price and weight | `marketplace.html#gear-<id>` |
-| **Rule** | A campaign rule or principle | `rules.html` |
+| **Game post** | An out-of-character announcement or campaign rule | `game.html` (`#post-<id>`) |
 | **Outpost Sheet** | The shared Outpost "character" | `outpost.html` |
 
 Only a few relationships are structured (Job → Session Record, Job and Session Record → participants, Character stash → Gear); everything else is a `[[archive-id]]` link inside the text, so the Archive reads like a wiki. Histories are derived: a Character's history is the Jobs they joined. Players open an editable sheet from their character page, save it as a file after the session, and the GM imports the file they send back. New players can build a character the same way from **Create new character** on the Characters page. The full model, publishing rules, and the sheet workflow are described in [content-manager/README.md](content-manager/README.md).
