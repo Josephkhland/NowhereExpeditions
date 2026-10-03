@@ -1,5 +1,17 @@
 [
   {
+    "id": "test-009",
+    "type": "announcement",
+    "title": "Game Listing",
+    "category": "",
+    "summary": "# WHAT is love?\nBaby don't hurt me.",
+    "details": "It has been 11 years since the Valeoran Ruins where discovered at the far ends of an uncharted horizon. Rising from the sea and reaching high into the sky, fragments of an ancient wonder remain suspended, drifting in place over an unnaturally still ocean. Today, floating platforms, laboratories, workshops, shipyards and habitation blocks surround the ruins, forming Endros; A rapidly growing settlement so remote that newspapers have taken the liberty of calling it \"Endros in the Middle of Nowhere\", \"Endwhere\" or just \"Nowhere\".\n\nSeveral years after the initial discovery, researchers observed portions of the ruins beginning to move, gathering together and forming temporary portals known as **Gates**. What lies beyond them varies widly: Ruins, Unknown Ecosystems, Impossible machinery. Strange places where familiar rules no longer apply and resources found nowhere else in the known world. Materials recovered from Gates ave created an entirely new field of technology known as **Artificery**. More recently, researchers begun documenting something stranger still: Magic.\n\n> JOIN NOWHERE EXPEDITIONS\nNowhere Expeditions recruits specialists willing to relocate to Endros and participate in expeditions beyond the Gates.\nResearchers. Engineers. Physicians. Sailors. Security personnel. Salvagers. Artificers. Surveyors.\nAnd occasionally people whose qualifications are harder to put on official paperwork.\n\nYou will live in Endros, eat in Endros, breath in Endros.",
+    "tags": [],
+    "publishedAt": "2026-10-02",
+    "pinned": true,
+    "showUntil": ""
+  },
+  {
     "id": "persistent-world",
     "type": "rule",
     "title": "Expeditions change a persistent world",
