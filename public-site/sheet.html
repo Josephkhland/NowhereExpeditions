@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Character Sheet | Nowhere Expeditions</title>
 <!--
-  Editable Fate Core sheet for Nowhere Expeditions. It runs in two modes:
-  - Live: sheet.html?id=<character> on the public site loads the published sheet, stash, and Marketplace.
-    Edits are kept in this browser until "Reset to published".
-  - New: sheet.html?new starts a blank character (Fate Core defaults, every skill at +0) with name fields.
-    The draft is kept in this browser until "Start over"; the saved file is imported by the GM as a new character.
-  - File: a copy saved with "Save file". The sheet travels as JSON in the nowhere-sheet-data block, and dice.js
-    is copied in, so the file works offline. The GM imports this file in the content manager.
+  Editable Fate Core sheet for Nowhere Expeditions.
+  - sheet.html?id=<character> loads the published character, stash, and Marketplace.
+  - sheet.html?new starts a blank character (Fate Core defaults, every skill at +0) with name fields.
+  Edits are kept in this browser until "Reset to published" / "Start over". "Save file" downloads the character
+  as a small JSON file (format "nowhere-expeditions/fate-sheet", version 3) that the GM imports in the content
+  manager; "Open file" loads such a file back into this sheet. Edit mode changes everything; View mode shows the
+  sheet for play (skills as a pyramid) while keeping Fate points, stress, and consequences usable.
 -->
 <style>
   :root {
@@ -26,11 +26,14 @@
   .kicker { display: block; color: var(--accent); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; }
   h1 { margin: 0.1rem 0 0; font-size: 1.7rem; letter-spacing: -0.02em; }
   h2 { margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
-  .actions { display: flex; align-items: center; gap: 0.8rem; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
   #status { color: var(--muted); font-size: 0.8rem; }
   #status.dirty { color: var(--accent-2); }
   .primary { padding: 0.6rem 1rem; border: 1px solid var(--accent-2); background: var(--accent-2); color: #101719; font-weight: 700; cursor: pointer; }
   .primary:hover { filter: brightness(1.08); }
+  .secondary { padding: 0.6rem 0.9rem; border: 1px solid var(--line-strong); background: transparent; color: var(--text); cursor: pointer; }
+  .secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
   .help { margin: 1rem 0; color: var(--muted); font-size: 0.9rem; }
   .banner { margin: 0 0 1rem; padding: 0.7rem 0.9rem; border-left: 3px solid var(--accent-2); background: rgba(224, 168, 93, 0.08); font-size: 0.9rem; }
   .banner button { margin-left: 0.6rem; }
@@ -45,11 +48,13 @@
   .rows { display: grid; gap: 0.45rem; }
   .row { display: grid; gap: 0.45rem; align-items: center; }
   .row-aspect { grid-template-columns: minmax(0, 1fr) 2.2rem; }
-  .row-skill { grid-template-columns: minmax(0, 1fr) 11rem 2.2rem; }
+  .row-skill { grid-template-columns: minmax(0, 1fr) 11rem 2.6rem 2.2rem; }
+  .row-skill .nx-roll { height: 2.3rem; }
   .row-stunt { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) 2.2rem; align-items: start; }
   .row-consequence { grid-template-columns: 7rem 4rem minmax(0, 1fr) 2.2rem; }
   .small { min-width: 2.2rem; height: 2.3rem; padding: 0 0.6rem; border: 1px solid var(--line-strong); background: transparent; cursor: pointer; }
   .small:hover { border-color: var(--accent); color: var(--accent); }
+  .small:disabled { opacity: 0.5; cursor: not-allowed; }
   .remove:hover { border-color: var(--danger); color: var(--danger); }
   .add { margin-top: 0.6rem; }
   .counter { display: flex; align-items: center; gap: 0.4rem; }
@@ -73,27 +78,50 @@
   .num { font-variant-numeric: tabular-nums; text-align: right; }
   .sale { color: var(--accent-2); }
   .market-list { max-height: 26rem; overflow-y: auto; }
-  .small:disabled { opacity: 0.5; cursor: not-allowed; }
   .coins, .weight { white-space: nowrap; }
   .coins svg, .weight svg { display: inline-block; width: 1em; height: 1em; margin-right: 0.3em; vertical-align: -0.12em; color: var(--accent-2); }
   .weight svg { width: 1.25em; height: 1.25em; vertical-align: -0.25em; color: var(--accent); }
   s .coins svg { opacity: 0.6; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .secondary { padding: 0.6rem 0.9rem; border: 1px solid var(--line-strong); background: transparent; color: var(--text); cursor: pointer; }
-  .secondary:hover { border-color: var(--accent); color: var(--accent); }
   .identity { border-color: var(--accent-2); }
+  .identity textarea { min-height: 5rem; }
   .back { color: var(--muted); font-size: 0.8rem; text-decoration: none; }
   .back:hover { color: var(--accent-2); }
-  .row-skill { grid-template-columns: minmax(0, 1fr) 11rem 2.6rem 2.2rem; }
-  .row-skill .nx-roll { height: 2.3rem; }
   dialog { width: min(32rem, calc(100% - 2rem)); padding: 1.2rem; border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); }
   dialog::backdrop { background: rgba(5, 9, 10, 0.75); }
   dialog h2 { color: var(--accent-2); }
   dialog ol { padding-left: 1.2rem; }
   dialog li { margin: 0.35rem 0; }
   dialog code { color: var(--accent); }
+
+  /* View mode: the sheet as it is read during play. */
+  .view-summary { margin: 0; color: var(--text); white-space: pre-line; }
+  .view-aspects { display: grid; gap: 0.5rem; margin: 0; }
+  .view-aspects div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+  .view-aspects div:last-child { border-bottom: 0; }
+  .view-aspects dt { padding-top: 0.2rem; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .view-aspects dd { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.1rem; font-style: italic; }
+  .pyramid { display: grid; gap: 0.5rem; }
+  .tier { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); align-items: start; gap: 0.8rem; }
+  .tier-rating { padding-top: 0.35rem; color: var(--accent); font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tier-skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .skill-roll { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.7rem; border: 1px solid var(--line-strong); background: #0a1113; color: var(--text); cursor: pointer; }
+  .skill-roll .nx-die-icon { width: 1em; height: 1em; color: var(--accent); }
+  .skill-roll:hover, .skill-roll:focus-visible { border-color: var(--accent-2); color: var(--accent-2); }
+  .skill-roll:hover .nx-die-icon { color: var(--accent-2); }
+  .view-value { font-size: 1.6rem; font-weight: 700; }
+  .view-consequence { display: grid; grid-template-columns: 2.2rem 5.5rem minmax(0, 1fr); align-items: center; gap: 0.6rem; }
+  .shift { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border: 1px solid var(--line-strong); color: var(--accent-2); font-weight: 700; }
+  .view-list { margin: 0; padding-left: 1.1rem; color: var(--muted); }
+  .view-list li + li { margin-top: 0.45rem; }
+  .view-list strong { color: var(--text); }
+  .view-gear { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .view-gear ul { margin: 0; padding: 0; list-style: none; }
+  .view-gear li { display: flex; justify-content: space-between; gap: 0.8rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+
   @media (max-width: 720px) {
-    .grid, .row-skill, .row-stunt, .row-consequence, .row-stash, .row-market, .market-tools { grid-template-columns: 1fr; }
+    .grid, .row-skill, .row-stunt, .row-consequence, .row-stash, .row-market, .market-tools, .view-gear { grid-template-columns: 1fr; }
+    .tier, .view-aspects div { grid-template-columns: 1fr; gap: 0.25rem; }
     .num { text-align: left; }
     .row .remove { justify-self: start; }
   }
@@ -110,13 +138,15 @@
 <div class="wrap">
   <header class="bar">
     <div>
-      <a class="back" id="back-link" hidden>← Character record</a>
+      <a class="back" id="back-link" href="characters.html">← Characters</a>
       <span class="kicker">Nowhere Expeditions · Fate Core sheet</span><h1 id="character-name">Character</h1>
     </div>
     <div class="actions">
       <span id="status" role="status" aria-live="polite"></span>
+      <button type="button" class="secondary mode-toggle" id="mode-toggle" aria-pressed="false" hidden>View sheet</button>
       <button type="button" class="secondary" id="reset-sheet" hidden>Reset to published</button>
-      <button type="button" class="primary" id="save-copy" hidden>Save file</button>
+      <label class="secondary" id="open-file" hidden>Open file<input type="file" accept=".json,application/json,.html,.htm" id="open-file-input" hidden /></label>
+      <button type="button" class="primary" id="save-file" hidden>Save file</button>
     </div>
   </header>
   <p class="help" id="help"></p>
@@ -125,92 +155,129 @@
 </div>
 <dialog id="saved-dialog" aria-labelledby="saved-title">
   <h2 id="saved-title">Sheet saved</h2>
-  <p>Your browser downloaded <code id="saved-file">character-sheet.html</code>, usually into your Downloads folder.</p>
+  <p>Your browser downloaded <code id="saved-file">character-sheet.json</code>, usually into your Downloads folder.</p>
   <ol>
     <li><strong>Send that file to your GM</strong> after the session (Discord, email, whatever your table uses).</li>
     <li>The GM imports it into the campaign records. Until then, the public character page shows the last published version.</li>
-    <li id="saved-kept">Your edits also stay in this browser, so you can keep playing from this tab.</li>
+    <li>Your edits also stay in this browser, so you can keep playing from this tab. On another device, use <strong>Open file</strong> to continue from the saved file.</li>
   </ol>
   <form method="dialog"><button class="primary">Got it</button></form>
 </dialog>
-<script type="application/json" id="nowhere-sheet-data">null</script>
-<script src="dice.js" id="nowhere-dice"></script>
+<script src="dice.js"></script>
 <script>
 (async () => {
   "use strict";
   const FORMAT = "nowhere-expeditions/fate-sheet";
   const LADDER = [[8, "Legendary"], [7, "Epic"], [6, "Fantastic"], [5, "Superb"], [4, "Great"], [3, "Good"],
     [2, "Fair"], [1, "Average"], [0, "Mediocre"], [-1, "Poor"], [-2, "Terrible"]];
+  const LADDER_NAMES = Object.fromEntries(LADDER);
+  // Fate Core defaults for a brand-new character: every standard skill listed at Mediocre (+0).
+  const FATE_SKILLS = ["Athletics", "Burglary", "Contacts", "Crafts", "Deceive", "Drive", "Empathy", "Fight", "Investigate",
+    "Lore", "Notice", "Physique", "Provoke", "Rapport", "Resources", "Shoot", "Stealth", "Will"];
   const app = document.getElementById("app");
   const statusText = document.getElementById("status");
   const banner = document.getElementById("banner");
-  const saveButton = document.getElementById("save-copy");
+  const saveButton = document.getElementById("save-file");
   const resetButton = document.getElementById("reset-sheet");
+  const modeButton = document.getElementById("mode-toggle");
+  const openFile = document.getElementById("open-file");
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const signed = (value) => `${value >= 0 ? "+" : ""}${value}`;
+  const timeText = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+  const storageGet = (key) => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } };
+  const storageSet = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } };
+  const storageRemove = (key) => { try { localStorage.removeItem(key); } catch { /* storage unavailable */ } };
 
-  // Live mode reads the published records; a saved file carries its own data.
   const fetchJson = async (url) => {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`${url}: ${response.status}`);
     return response.json();
   };
-  const loadPublished = async (id) => {
-    const character = await fetchJson(`data/characters/${encodeURIComponent(id)}.json`);
-    if (!character.sheet) throw new Error("This character has no public sheet.");
-    const gearFiles = await fetchJson("data/gear/index.json").catch(() => []);
-    const gear = await Promise.all(gearFiles.map((file) => fetchJson(`data/gear/${file}`)));
-    return {
-      format: FORMAT, version: 2, characterId: character.id, characterName: character.name,
-      exportedAt: new Date().toISOString(), savedAt: null, sheet: character.sheet, stash: character.stash || [],
-      // A snapshot of the Marketplace so a saved file can still browse Gear offline. It is reference data only.
-      catalogue: gear.map(({ id: gearId, name, category, description, price, weight, availability, discount }) =>
-        ({ id: gearId, name, category, description, price, weight, availability, discount }))
-    };
-  };
 
-  // Fate Core defaults for a brand-new character: every standard skill listed at Mediocre (+0).
-  const FATE_SKILLS = ["Athletics", "Burglary", "Contacts", "Crafts", "Deceive", "Drive", "Empathy", "Fight", "Investigate",
-    "Lore", "Notice", "Physique", "Provoke", "Rapport", "Resources", "Shoot", "Stealth", "Will"];
-  const newCharacter = async () => {
-    const gearFiles = await fetchJson("data/gear/index.json").catch(() => []);
-    const gear = await Promise.all(gearFiles.map((file) => fetchJson(`data/gear/${file}`)));
-    return {
-      format: FORMAT, version: 2, newCharacter: true, characterId: null, characterName: "", playerName: "",
-      exportedAt: new Date().toISOString(), savedAt: null,
-      sheet: {
-        aspects: { highConcept: "", trouble: "", other: ["", "", ""] },
-        skills: FATE_SKILLS.map((name) => ({ name, rating: 0 })),
-        stunts: [{ name: "", description: "" }],
-        refresh: 3, fatePoints: 3,
-        stress: [{ name: "Physical", boxes: [false, false] }, { name: "Mental", boxes: [false, false] }],
-        consequences: [{ label: "Mild", shift: 2, aspect: "" }, { label: "Moderate", shift: 4, aspect: "" }, { label: "Severe", shift: 6, aspect: "" }],
-        extras: ""
-      },
-      stash: [],
-      catalogue: gear.map(({ id: gearId, name, category, description, price, weight, availability, discount }) =>
-        ({ id: gearId, name, category, description, price, weight, availability, discount }))
-    };
-  };
+  /* ---------- What this page shows ---------- */
 
-  let envelope;
-  try { envelope = JSON.parse(document.getElementById("nowhere-sheet-data").textContent || "null"); } catch { envelope = null; }
   const params = new URLSearchParams(window.location.search);
   const characterParam = params.get("id");
-  const creating = !envelope && params.has("new");
-  // "live" means the sheet is backed by this browser rather than by a file: a published character or a new one.
-  const live = !envelope && (Boolean(characterParam) || creating);
-  if (live) {
-    try {
-      envelope = creating ? await newCharacter() : await loadPublished(characterParam);
-    } catch (error) {
-      app.innerHTML = `<p class="empty">The sheet could not be loaded (${escapeHtml(error.message)}). Open it again from the character's page.</p>`;
-      return;
+  const creating = !characterParam && params.has("new");
+  const draftKeyFor = (id) => id ? `nowhere-sheet-live:${id}` : "nowhere-sheet-new";
+
+  // The published version (or the blank one), as the starting point for this browser's draft.
+  let base;
+  try {
+    if (characterParam) {
+      const character = await fetchJson(`data/characters/${encodeURIComponent(characterParam)}.json`);
+      if (!character.sheet) throw new Error("This character has no public sheet.");
+      base = { characterId: character.id, characterName: character.name, playerName: character.playerName || "",
+        summary: character.summary || "", sheet: character.sheet, stash: character.stash || [] };
+    } else if (creating) {
+      base = { newCharacter: true, characterId: null, characterName: "", playerName: "", summary: "",
+        sheet: {
+          aspects: { highConcept: "", trouble: "", other: ["", "", ""] },
+          skills: FATE_SKILLS.map((name) => ({ name, rating: 0 })),
+          stunts: [{ name: "", description: "" }],
+          refresh: 3, fatePoints: 3,
+          stress: [{ name: "Physical", boxes: [false, false] }, { name: "Mental", boxes: [false, false] }],
+          consequences: [{ label: "Mild", shift: 2, aspect: "" }, { label: "Moderate", shift: 4, aspect: "" }, { label: "Severe", shift: 6, aspect: "" }],
+          extras: ""
+        },
+        stash: [] };
     }
-  }
-  if (!envelope || envelope.format !== FORMAT || !envelope.sheet) {
-    app.innerHTML = '<p class="empty">This file does not contain a character sheet. Open the sheet again from the character\'s page.</p>';
+  } catch (error) {
+    app.innerHTML = `<p class="empty">The sheet could not be loaded (${escapeHtml(error.message)}). Open it again from the character's page.</p>`;
     return;
   }
+
+  /* ---------- Opening a saved file ---------- */
+
+  // Accepts the JSON file from "Save file", and the older HTML sheet files that carried the same data inside.
+  const parseSheetFile = (text) => {
+    let data = null;
+    try {
+      if (text.trim().startsWith("{")) data = JSON.parse(text);
+      else {
+        const node = new DOMParser().parseFromString(text, "text/html").getElementById("nowhere-sheet-data");
+        data = node ? JSON.parse(node.textContent) : null;
+      }
+    } catch { data = null; }
+    if (!data || data.format !== FORMAT || !data.sheet || typeof data.sheet !== "object") {
+      throw new Error("That file is not a Nowhere Expeditions character sheet.");
+    }
+    return data;
+  };
+
+  // A loaded file becomes this browser's draft for its character, then the page opens that character.
+  const openSheetFile = async (file) => {
+    const data = parseSheetFile(await file.text());
+    const target = data.newCharacter || !data.characterId ? "sheet.html?new" : `sheet.html?id=${encodeURIComponent(data.characterId)}`;
+    const key = draftKeyFor(data.newCharacter ? null : data.characterId);
+    const existing = storageGet(key);
+    const who = data.characterName || (data.newCharacter ? "the new character" : data.characterId);
+    if (existing?.sheet && !confirm(`Replace the edits kept in this browser for ${who} with the contents of ${file.name}?`)) return;
+    storageSet(key, {
+      at: data.savedAt || new Date().toISOString(), savedAt: data.savedAt || null, sheet: data.sheet,
+      stash: Array.isArray(data.stash) ? data.stash : undefined,
+      identity: { name: data.characterName || "", playerName: data.playerName || "", summary: typeof data.summary === "string" ? data.summary : undefined },
+      basedOn: null, openedFrom: file.name
+    });
+    const here = window.location.pathname.split("/").pop() + window.location.search;
+    if (here === target) window.location.reload();
+    else window.location.href = target;
+  };
+  openFile.querySelector("input").addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try { await openSheetFile(file); } catch (error) { alert(error.message); }
+  });
+  openFile.hidden = false;
+
+  if (!base) {
+    app.innerHTML = `<p class="empty">Open a character's sheet from the <a class="back" href="characters.html">Characters</a> page, start a
+      <a class="back" href="sheet.html?new">new character</a>, or use <strong>Open file</strong> to continue from a saved sheet file.</p>`;
+    return;
+  }
+
+  /* ---------- Working copy ---------- */
 
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const normalize = (sheet) => ({
@@ -223,110 +290,108 @@
     consequences: (sheet.consequences || []).map((item) => ({ label: item.label || "", shift: Number(item.shift) || 2, aspect: item.aspect || "" })),
     extras: sheet.extras || ""
   });
-  // Edits are kept in this browser. Live sheets keep one draft per character until "Reset to published";
-  // a saved file keeps its draft per file version.
-  const draftKey = () => creating ? "nowhere-sheet-new" : live ? `nowhere-sheet-live:${envelope.characterId}`
-    : `nowhere-sheet:${envelope.characterId}:${envelope.exportedAt}:${envelope.savedAt || "original"}`;
-  const storage = {
-    read() { try { return JSON.parse(localStorage.getItem(draftKey()) || "null"); } catch { return null; } },
-    write(value) { try { localStorage.setItem(draftKey(), JSON.stringify(value)); } catch { /* storage unavailable */ } },
-    clear() { try { localStorage.removeItem(draftKey()); } catch { /* storage unavailable */ } }
-  };
-  const timeText = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
-  // Identifies the published version a live draft started from, so a newer GM version can be noticed.
-  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || []]);
-  const publishedFingerprint = fingerprint(envelope);
-
-  let state = normalize(envelope.sheet);
-  const identity = { name: envelope.characterName || "", playerName: envelope.playerName || "" };
-  const characterName = () => identity.name.trim() || (envelope.newCharacter ? "New character" : "Character");
-  let dirty = false;
-  let draftTimer;
-  let lastSavedAt = live ? null : envelope.savedAt;
-
-  // Inventory. Files from before the stash existed (version 1) carry no stash, and saving them never adds one,
-  // so importing an old file cannot wipe a character's stash.
-  const hasInventory = Array.isArray(envelope.stash);
-  const catalogue = Array.isArray(envelope.catalogue) ? envelope.catalogue : [];
-  const gearById = new Map(catalogue.map((gear) => [gear.id, gear]));
-  const CATEGORIES = [...new Set(catalogue.map((gear) => gear.category))].sort();
   const normalizeStash = (items) => (Array.isArray(items) ? items : [])
     .filter((item) => item && typeof item.gearId === "string")
     .map((item) => ({ gearId: item.gearId, quantity: Math.max(1, Math.round(Number(item.quantity)) || 1), broughtIntoAction: Boolean(item.broughtIntoAction) }));
-  let stash = normalizeStash(envelope.stash);
+  // Identifies the published version a draft started from, so a newer GM version can be noticed.
+  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || [], source.summary || ""]);
+  const publishedFingerprint = fingerprint(base);
+
+  const draftKey = draftKeyFor(base.characterId);
+  let state = normalize(base.sheet);
+  let stash = normalizeStash(base.stash);
+  const identity = { name: base.characterName || "", playerName: base.playerName || "", summary: base.summary || "" };
+  const characterName = () => identity.name.trim() || (base.newCharacter ? "New character" : "Character");
+  let dirty = false;
+  let draftTimer;
+  let lastSavedAt = null;
+  let mode = storageGet("nowhere-sheet-mode") === "view" ? "view" : "edit";
+
+  const draft = storageGet(draftKey);
+  if (draft?.sheet) {
+    state = normalize(draft.sheet);
+    if (Array.isArray(draft.stash)) stash = normalizeStash(draft.stash);
+    if (draft.identity) {
+      if (base.newCharacter) {
+        identity.name = draft.identity.name ?? identity.name;
+        identity.playerName = draft.identity.playerName ?? identity.playerName;
+      }
+      if (typeof draft.identity.summary === "string") identity.summary = draft.identity.summary;
+    }
+    lastSavedAt = draft.savedAt || null;
+    dirty = !draft.savedAt || draft.savedAt < draft.at;
+    if (draft.openedFrom) {
+      banner.innerHTML = `Loaded from <strong>${escapeHtml(draft.openedFrom)}</strong>${draft.savedAt ? `, saved ${escapeHtml(timeText(draft.savedAt))}` : ""}. Your edits continue from there.`;
+      banner.hidden = false;
+    } else if (!base.newCharacter && draft.basedOn && draft.basedOn !== publishedFingerprint) {
+      banner.innerHTML = `The GM has published a newer version of this sheet since you started editing here. You are still seeing your own edits from ${escapeHtml(timeText(draft.at))}. <button type="button" class="small" data-action="reset">Load the published version</button>`;
+      banner.hidden = false;
+    }
+  }
+
+  // The Marketplace is always the live published list.
+  const gearFiles = await fetchJson("data/gear/index.json").catch(() => []);
+  const catalogue = (await Promise.all(gearFiles.map((file) => fetchJson(`data/gear/${file}`).catch(() => null)))).filter(Boolean);
+  const gearById = new Map(catalogue.map((gear) => [gear.id, gear]));
+  const CATEGORIES = [...new Set(catalogue.map((gear) => gear.category))].sort();
   const inventoryView = { tab: "stash", query: "", category: "" };
   const humanize = (value) => { const text = String(value || "").replace(/-/g, " "); return text.charAt(0).toUpperCase() + text.slice(1); };
   const coin = (amount) => `<span class="coins"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(16, 23, 25, 0.45)" stroke-width="1.5"/></svg>${escapeHtml(amount)}<span class="visually-hidden"> coins</span></span>`;
   const weight = (amount, suffix = "") => `<span class="weight" title="Weight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 10h1.5V8H1zM2.5 5h3v14h-3zM5.5 7.5h2.5v9H5.5zM8 10.75h8v2.5H8zM16 7.5h2.5v9H16zM18.5 5h3v14h-3zM21.5 8H23v2h-1.5zM21.5 14H23v2h-1.5zM1 14h1.5v2H1z" fill="currentColor"/></svg><span class="visually-hidden">Weight </span>${escapeHtml(amount)}${suffix}</span>`;
   const priceText = (gear) => gear.discount?.active && Number.isFinite(gear.discount.salePrice)
     ? `<span class="sale">${coin(gear.discount.salePrice)}</span> <s>${coin(gear.price)}</s>` : coin(Number(gear.price) || 0);
+  const dieIcon = () => window.NowhereDice ? window.NowhereDice.icon : "🎲";
+
+  /* ---------- Header ---------- */
 
   const showName = () => {
     document.getElementById("character-name").textContent = characterName();
     document.title = `${characterName()} — Character Sheet`;
   };
-  document.getElementById("help").innerHTML = creating
-    ? "Build your character here: name them, set aspects, rate skills (all start at Mediocre +0), and pick starting Gear. Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
-    : live
-      ? "Edit anything during play; your changes are kept in this browser, even if you close the tab. Press <strong>Save file</strong> after the session and send the file to the GM."
-      : "This is a saved sheet file. Edit it, press <strong>Save file</strong> to save a new copy, and send the newest file to the GM.";
-  resetButton.textContent = creating ? "Start over" : live ? "Reset to published" : "Revert to file";
-  resetButton.hidden = false;
-  saveButton.hidden = false;
-  if (live) {
-    const back = document.getElementById("back-link");
-    back.href = creating ? "characters.html" : `characters.html#${encodeURIComponent(envelope.characterId)}#sheet`;
-    back.textContent = creating ? "← Characters" : `← ${envelope.characterName || "Character"}'s record`;
-    back.hidden = false;
-  }
-
-  const draft = storage.read();
-  if (draft?.sheet) {
-    state = normalize(draft.sheet);
-    if (hasInventory && Array.isArray(draft.stash)) stash = normalizeStash(draft.stash);
-    if (envelope.newCharacter && draft.identity) Object.assign(identity, draft.identity);
-    lastSavedAt = live ? draft.savedAt || null : lastSavedAt;
-    dirty = !draft.savedAt || draft.savedAt < draft.at;
-    if (!live) {
-      banner.innerHTML = `Restored changes made in this browser on ${escapeHtml(timeText(draft.at))} that were not saved to a file yet. <button type="button" class="small" data-action="reset">Discard them</button>`;
-      banner.hidden = false;
-    } else if (!creating && draft.basedOn && draft.basedOn !== publishedFingerprint) {
-      banner.innerHTML = `The GM has published a newer version of this sheet since you started editing here. You are still seeing your own edits from ${escapeHtml(timeText(draft.at))}. <button type="button" class="small" data-action="reset">Load the published version</button>`;
-      banner.hidden = false;
-    }
+  document.getElementById("help").innerHTML = base.newCharacter
+    ? "Build your character here: name them, write a public summary, set aspects, rate skills (all start at Mediocre +0), and pick starting Gear. Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
+    : "Edit anything during play; your changes are kept in this browser, even if you close the tab. Switch to <strong>View sheet</strong> for a play layout. Press <strong>Save file</strong> after the session and send the file to the GM.";
+  resetButton.textContent = base.newCharacter ? "Start over" : "Reset to published";
+  [resetButton, saveButton, modeButton].forEach((button) => { button.hidden = false; });
+  const back = document.getElementById("back-link");
+  if (!base.newCharacter) {
+    back.href = `characters.html#${encodeURIComponent(base.characterId)}#sheet`;
+    back.textContent = `← ${base.characterName || "Character"}'s record`;
   }
 
   const updateStatus = () => {
     statusText.classList.toggle("dirty", dirty);
-    statusText.textContent = dirty
-      ? (live ? "Edits kept in this browser · not saved to a file yet" : "Unsaved changes, press Save file")
+    statusText.textContent = dirty ? "Edits kept in this browser · not saved to a file yet"
       : lastSavedAt ? `Saved to file ${timeText(lastSavedAt)}` : "No changes yet";
   };
-
-  const persist = () => storage.write({
+  const persist = () => storageSet(draftKey, {
     at: new Date().toISOString(), sheet: state, stash, identity, savedAt: lastSavedAt,
-    basedOn: draft?.basedOn && live ? draft.basedOn : publishedFingerprint
+    basedOn: draft?.basedOn || publishedFingerprint
   });
-
   const changed = () => {
     dirty = true;
     updateStatus();
     clearTimeout(draftTimer);
     draftTimer = setTimeout(persist, 300);
   };
-  const removeButton = (list, index, label) => `<button type="button" class="small remove" data-action="remove" data-list="${list}" data-index="${index}" aria-label="Remove ${label}" title="Remove">×</button>`;
-  const ladderOptions = (rating) => LADDER.map(([value, name]) => `<option value="${value}" ${value === rating ? "selected" : ""}>${name} (${value >= 0 ? "+" : ""}${value})</option>`).join("");
 
-  const render = () => {
-    app.innerHTML = `
-      ${envelope.newCharacter ? `
-      <section class="identity" aria-labelledby="h-identity">
-        <h2 id="h-identity">New character</h2>
-        <div class="grid">
-          <label class="stack">Character name<input data-identity="name" value="${escapeHtml(identity.name)}" placeholder="Required before saving" autocomplete="off" /></label>
-          <label class="stack">Player name<input data-identity="playerName" value="${escapeHtml(identity.playerName)}" placeholder="Your name, so the GM knows who sent it" autocomplete="off" /></label>
-        </div>
-      </section>` : ""}
+  /* ---------- Edit mode ---------- */
+
+  const removeButton = (list, index, label) => `<button type="button" class="small remove" data-action="remove" data-list="${list}" data-index="${index}" aria-label="Remove ${label}" title="Remove">×</button>`;
+  const ladderOptions = (rating) => LADDER.map(([value, name]) => `<option value="${value}" ${value === rating ? "selected" : ""}>${name} (${signed(value)})</option>`).join("");
+
+  const identitySection = () => `
+    <section class="identity" aria-labelledby="h-identity">
+      <h2 id="h-identity">${base.newCharacter ? "New character" : "Character"}</h2>
+      ${base.newCharacter ? `<div class="grid" style="margin-bottom:0.8rem">
+        <label class="stack">Character name<input data-identity="name" value="${escapeHtml(identity.name)}" placeholder="Required before saving" autocomplete="off" /></label>
+        <label class="stack">Player name<input data-identity="playerName" value="${escapeHtml(identity.playerName)}" placeholder="Your name, so the GM knows who sent it" autocomplete="off" /></label>
+      </div>` : ""}
+      <label class="stack">Public summary<textarea data-identity="summary" placeholder="A few lines other players see on the character page">${escapeHtml(identity.summary)}</textarea></label>
+    </section>`;
+
+  const renderEdit = () => `
+      ${identitySection()}
       <section aria-labelledby="h-aspects">
         <h2 id="h-aspects">Aspects</h2>
         <div class="grid">
@@ -360,7 +425,7 @@
             <div class="row row-skill">
               <input data-list="skills" data-index="${index}" data-key="name" value="${escapeHtml(skill.name)}" placeholder="Skill" aria-label="Skill name" />
               <select data-list="skills" data-index="${index}" data-key="rating" aria-label="Skill rating">${ladderOptions(skill.rating)}</select>
-              <button type="button" class="nx-roll" data-action="roll" data-index="${index}" aria-label="Roll ${escapeHtml(skill.name || "this skill")}" title="Roll 4dF ${skill.rating >= 0 ? "+" : ""}${skill.rating}">${window.NowhereDice ? window.NowhereDice.icon : "🎲"}</button>
+              <button type="button" class="nx-roll" data-action="roll" data-index="${index}" aria-label="Roll ${escapeHtml(skill.name || "this skill")}" title="Roll 4dF ${signed(skill.rating)}">${dieIcon()}</button>
               ${removeButton("skills", index, "skill")}
             </div>`).join("") || '<p class="empty">No skills.</p>'}</div>
           <button type="button" class="small add" data-action="add" data-list="skills">+ Skill</button>
@@ -370,7 +435,7 @@
           ${state.stress.map((track, index) => `
             <div class="track">
               <input data-list="stress" data-index="${index}" data-key="name" value="${escapeHtml(track.name)}" aria-label="Stress track name" />
-              <div class="boxes">${track.boxes.map((marked, box) => `<button type="button" class="box" data-action="box" data-index="${index}" data-box="${box}" aria-pressed="${marked}" aria-label="${escapeHtml(track.name)} box ${box + 1}">${marked ? "X" : box + 1}</button>`).join("")}</div>
+              <div class="boxes">${stressBoxes(track, index)}</div>
               <div class="track-tools">
                 <button type="button" class="small" data-action="box-count" data-index="${index}" data-step="-1" aria-label="Remove a box" title="Remove a box">−□</button>
                 <button type="button" class="small" data-action="box-count" data-index="${index}" data-step="1" aria-label="Add a box" title="Add a box">+□</button>
@@ -407,13 +472,88 @@
       </section>
 
       ${renderInventory()}`;
+
+  const stressBoxes = (track, index) => track.boxes.map((marked, box) =>
+    `<button type="button" class="box" data-action="box" data-index="${index}" data-box="${box}" aria-pressed="${marked}" aria-label="${escapeHtml(track.name)} box ${box + 1}">${marked ? "X" : box + 1}</button>`).join("");
+
+  /* ---------- View mode: read for play, with the in-session controls kept ---------- */
+
+  const renderView = () => {
+    const aspects = [["High Concept", state.aspects.highConcept], ["Trouble", state.aspects.trouble], ...state.aspects.other.map((text) => ["Aspect", text])]
+      .filter(([, text]) => text.trim());
+    const tiers = [...new Set(state.skills.filter((skill) => skill.name.trim()).map((skill) => skill.rating))].sort((left, right) => right - left);
+    const owned = stash.map((item, index) => ({ ...item, index, gear: gearById.get(item.gearId) }));
+    const gearList = (items, empty) => items.length ? `<ul>${items.map(({ gear, gearId, quantity }) => `
+      <li><span>${escapeHtml(gear ? gear.name : gearId)}${quantity > 1 ? ` <span class="item-meta" style="display:inline">× ${quantity}</span>` : ""}</span>${gear ? weight(gear.weight, quantity > 1 ? " each" : "") : ""}</li>`).join("")}</ul>` : `<p class="empty">${empty}</p>`;
+    return `
+      ${identity.summary.trim() ? `<section aria-label="Summary"><p class="view-summary">${escapeHtml(identity.summary)}</p></section>` : ""}
+      <section aria-labelledby="h-v-aspects">
+        <h2 id="h-v-aspects">Aspects</h2>
+        ${aspects.length ? `<dl class="view-aspects">${aspects.map(([label, text]) => `<div><dt>${label}</dt><dd>${escapeHtml(text)}</dd></div>`).join("")}</dl>` : '<p class="empty">No aspects yet.</p>'}
+      </section>
+
+      <div class="grid">
+        <section aria-labelledby="h-v-points">
+          <h2 id="h-v-points">Fate points</h2>
+          <div class="counter">
+            <button type="button" class="small" data-action="fate" data-step="-1" aria-label="Spend a Fate point">−</button>
+            <span class="view-value" aria-live="polite">${escapeHtml(state.fatePoints ?? 0)}</span>
+            <button type="button" class="small" data-action="fate" data-step="1" aria-label="Gain a Fate point">+</button>
+          </div>
+        </section>
+        <section aria-labelledby="h-v-refresh">
+          <h2 id="h-v-refresh">Refresh</h2>
+          <span class="view-value">${escapeHtml(state.refresh ?? "—")}</span>
+        </section>
+      </div>
+
+      <section aria-labelledby="h-v-skills" style="margin-top:1rem">
+        <h2 id="h-v-skills">Skills · click to roll</h2>
+        ${tiers.length ? `<div class="pyramid">${tiers.map((rating) => `
+          <div class="tier">
+            <span class="tier-rating">${escapeHtml(LADDER_NAMES[rating] || "Rated")} ${signed(rating)}</span>
+            <span class="tier-skills">${state.skills.map((skill, index) => ({ skill, index })).filter(({ skill }) => skill.rating === rating && skill.name.trim())
+              .map(({ skill, index }) => `<button type="button" class="skill-roll" data-action="roll" data-index="${index}" title="Roll 4dF ${signed(rating)}">${escapeHtml(skill.name)}${dieIcon()}</button>`).join("")}</span>
+          </div>`).join("")}</div>` : '<p class="empty">No skills yet.</p>'}
+      </section>
+
+      <div class="grid">
+        <section aria-labelledby="h-v-stress">
+          <h2 id="h-v-stress">Stress</h2>
+          ${state.stress.map((track, index) => `
+            <div class="track"><span>${escapeHtml(track.name)}</span><div class="boxes">${stressBoxes(track, index)}</div></div>`).join("") || '<p class="empty">No stress tracks.</p>'}
+        </section>
+        <section aria-labelledby="h-v-consequences">
+          <h2 id="h-v-consequences">Consequences</h2>
+          <div class="rows">${state.consequences.map((item, index) => `
+            <div class="view-consequence">
+              <span class="shift" title="Absorbs ${escapeHtml(item.shift)} shifts">${escapeHtml(item.shift)}</span>
+              <span class="item-meta">${escapeHtml(item.label)}</span>
+              <input class="aspect-input" data-list="consequences" data-index="${index}" data-key="aspect" value="${escapeHtml(item.aspect)}" placeholder="Free" aria-label="${escapeHtml(item.label)} consequence" />
+            </div>`).join("") || '<p class="empty">No consequence slots.</p>'}</div>
+        </section>
+      </div>
+
+      <section aria-labelledby="h-v-stunts" style="margin-top:1rem">
+        <h2 id="h-v-stunts">Stunts</h2>
+        ${state.stunts.some((stunt) => stunt.name || stunt.description) ? `<ul class="view-list">${state.stunts.filter((stunt) => stunt.name || stunt.description)
+          .map((stunt) => `<li>${stunt.name ? `<strong>${escapeHtml(stunt.name)}.</strong> ` : ""}${escapeHtml(stunt.description)}</li>`).join("")}</ul>` : '<p class="empty">No stunts yet.</p>'}
+      </section>
+
+      ${state.extras.trim() ? `<section aria-labelledby="h-v-extras"><h2 id="h-v-extras">Extras and notes</h2><p class="view-summary">${escapeHtml(state.extras)}</p></section>` : ""}
+
+      <section aria-labelledby="h-v-gear">
+        <h2 id="h-v-gear">Gear</h2>
+        <div class="view-gear">
+          <div><h2>Brought into action</h2>${gearList(owned.filter((item) => item.broughtIntoAction), "Nothing marked for this job.")}</div>
+          <div><h2>Stored in stash</h2>${gearList(owned.filter((item) => !item.broughtIntoAction), "Nothing in storage.")}</div>
+        </div>
+      </section>`;
   };
 
+  /* ---------- Inventory (edit mode) ---------- */
+
   const renderInventory = () => {
-    if (!hasInventory) {
-      return `<section aria-labelledby="h-inventory"><h2 id="h-inventory">Inventory</h2>
-        <p class="empty">This sheet file was made before stashes existed. Download a new copy from your character page to manage Gear.</p></section>`;
-    }
     const tab = (key, label) => `<button type="button" class="tab" role="tab" id="tab-${key}" aria-controls="panel-${key}" aria-selected="${inventoryView.tab === key}" tabindex="${inventoryView.tab === key ? 0 : -1}" data-action="inventory-tab" data-tab="${key}">${label}</button>`;
     const rows = stash.map((item, index) => {
       const gear = gearById.get(item.gearId);
@@ -438,7 +578,7 @@
           <select data-market="category" aria-label="Gear category"><option value="">All categories</option>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${inventoryView.category === category ? "selected" : ""}>${escapeHtml(humanize(category))}</option>`).join("")}</select>
         </div>
         <div class="market-list" id="market-list">${renderMarket()}</div>
-        <p class="help">Adding Gear does not spend anything; settle the price with the GM. List as of ${escapeHtml(timeText(envelope.exportedAt))}.</p>
+        <p class="help">Adding Gear does not spend anything; settle the price with the GM.</p>
       </div>
     </section>`;
   };
@@ -446,22 +586,30 @@
   const renderMarket = () => {
     const query = inventoryView.query.trim().toLowerCase();
     const owned = new Map(stash.map((item) => [item.gearId, item]));
-    const items = catalogue
+    if (!catalogue.length) return '<p class="empty">The Marketplace has no published Gear yet.</p>';
+    return catalogue
       .filter((gear) => !inventoryView.category || gear.category === inventoryView.category)
       .filter((gear) => !query || [gear.name, gear.category, gear.description].join(" ").toLowerCase().includes(query))
-      .sort((left, right) => String(left.category).localeCompare(String(right.category)) || String(left.name).localeCompare(String(right.name)));
-    if (!catalogue.length) return '<p class="empty">No Marketplace list was included with this file.</p>';
-    return items.map((gear) => {
-      const item = owned.get(gear.id);
-      const unavailable = gear.availability === "unavailable";
-      return `<div class="row row-market">
-        <span><span class="item-name">${escapeHtml(gear.name)}</span><span class="item-meta">${escapeHtml(humanize(gear.category))}${gear.availability && gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}</span></span>
-        <span class="num">${priceText(gear)}</span>
-        <span class="num">${weight(gear.weight)}</span>
-        <button type="button" class="small" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable && !item ? "disabled" : ""}>${item ? `In stash (${item.quantity}) · +1` : unavailable ? "Unavailable" : "+ Add to stash"}</button>
-      </div>`;
-    }).join("") || '<p class="empty">No Gear matches.</p>';
+      .sort((left, right) => String(left.category).localeCompare(String(right.category)) || String(left.name).localeCompare(String(right.name)))
+      .map((gear) => {
+        const item = owned.get(gear.id);
+        const unavailable = gear.availability === "unavailable";
+        return `<div class="row row-market">
+          <span><span class="item-name">${escapeHtml(gear.name)}</span><span class="item-meta">${escapeHtml(humanize(gear.category))}${gear.availability && gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}</span></span>
+          <span class="num">${priceText(gear)}</span>
+          <span class="num">${weight(gear.weight)}</span>
+          <button type="button" class="small" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable && !item ? "disabled" : ""}>${item ? `In stash (${item.quantity}) · +1` : unavailable ? "Unavailable" : "+ Add to stash"}</button>
+        </div>`;
+      }).join("") || '<p class="empty">No Gear matches.</p>';
   };
+
+  const render = () => {
+    app.innerHTML = mode === "view" ? renderView() : renderEdit();
+    modeButton.textContent = mode === "view" ? "Edit sheet" : "View sheet";
+    modeButton.setAttribute("aria-pressed", String(mode === "view"));
+  };
+
+  /* ---------- Events ---------- */
 
   const lists = {
     other: () => state.aspects.other,
@@ -551,15 +699,18 @@
     if (action === "add") [...app.querySelectorAll(`[data-list="${button.dataset.list}"]`)].pop()?.focus();
   });
 
-  const reset = async () => {
-    const question = creating
+  modeButton.addEventListener("click", () => {
+    mode = mode === "view" ? "edit" : "view";
+    storageSet("nowhere-sheet-mode", mode);
+    render();
+  });
+
+  const reset = () => {
+    const question = base.newCharacter
       ? "Throw away this character and start again from a blank sheet?"
-      : live
-      ? "Discard the edits kept in this browser and load the sheet the GM last published?"
-      : "Discard the changes made in this browser and go back to what this file contains?";
+      : "Discard the edits kept in this browser and load the sheet the GM last published?";
     if (!confirm(question)) return;
-    storage.clear();
-    // Reloading picks up the current published sheet, stash, and Marketplace in live mode.
+    storageRemove(draftKey);
     window.location.reload();
   };
   resetButton.addEventListener("click", reset);
@@ -567,39 +718,29 @@
     if (event.target.dataset.action === "reset") reset();
   });
 
-  saveButton.addEventListener("click", async () => {
-    if (envelope.newCharacter && !identity.name.trim()) {
+  // Save file: the character as readable JSON, for the GM to import.
+  saveButton.addEventListener("click", () => {
+    if (base.newCharacter && !identity.name.trim()) {
       alert("Give your character a name before saving.");
+      if (mode === "view") { mode = "edit"; render(); }
       app.querySelector('[data-identity="name"]')?.focus();
       return;
     }
     const savedAt = new Date().toISOString();
-    const next = { ...envelope, savedAt, sheet: clone(state), ...(hasInventory ? { stash: clone(stash) } : {}),
-      ...(envelope.newCharacter ? { characterName: identity.name.trim(), playerName: identity.playerName.trim() } : {}) };
-    const copy = document.documentElement.cloneNode(true);
-    copy.querySelector("#app").innerHTML = "";
-    copy.querySelector("#banner").innerHTML = "";
-    copy.querySelector("#banner").hidden = true;
-    copy.querySelector("#status").textContent = "";
-    copy.querySelector("#status").className = "";
-    copy.querySelector("#back-link").hidden = true;
-    copy.querySelectorAll(".nx-dice, #nx-dice-style").forEach((node) => node.remove());
-    // "<" is escaped so the sheet text can never close the script block.
-    copy.querySelector("#nowhere-sheet-data").textContent = JSON.stringify(next).replace(/</g, "\\u003c");
-    // The saved file must work offline, so the dice script is copied in.
-    const diceTag = copy.querySelector("#nowhere-dice[src]");
-    if (diceTag) {
-      const code = await fetch(diceTag.getAttribute("src")).then((response) => response.ok ? response.text() : "").catch(() => "");
-      const inline = document.createElement("script");
-      inline.id = "nowhere-dice";
-      inline.textContent = code.replace(/<\/script/gi, "<\\/script");
-      diceTag.replaceWith(inline);
-    }
+    const file = {
+      format: FORMAT, version: 3, savedAt,
+      ...(base.newCharacter ? { newCharacter: true } : {}),
+      characterId: base.characterId || null,
+      characterName: base.newCharacter ? identity.name.trim() : base.characterName,
+      playerName: base.newCharacter ? identity.playerName.trim() : base.playerName,
+      summary: identity.summary.trim(),
+      sheet: clone(state),
+      stash: clone(stash)
+    };
     const slug = identity.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "character";
-    const fileName = envelope.newCharacter ? `new-character-${slug}-sheet.html` : `${envelope.characterId || "character"}-sheet.html`;
-    const blob = new Blob([`<!DOCTYPE html>\n${copy.outerHTML}`], { type: "text/html;charset=utf-8" });
+    const fileName = base.newCharacter ? `new-character-${slug}-sheet.json` : `${base.characterId}-sheet.json`;
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    link.href = URL.createObjectURL(new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: "application/json" }));
     link.download = fileName;
     document.body.append(link);
     link.click();
@@ -608,25 +749,11 @@
 
     lastSavedAt = savedAt;
     dirty = false;
-    if (live) {
-      clearTimeout(draftTimer);
-      persist();
-    } else {
-      storage.clear();
-      envelope = next;
-      banner.hidden = true;
-    }
+    clearTimeout(draftTimer);
+    persist();
     updateStatus();
     document.getElementById("saved-file").textContent = fileName;
-    document.getElementById("saved-kept").hidden = !live;
     document.getElementById("saved-dialog").showModal();
-  });
-
-  // Live edits survive closing the tab; an unsaved file copy does not, so only files warn before leaving.
-  window.addEventListener("beforeunload", (event) => {
-    if (live || !dirty) return;
-    event.preventDefault();
-    event.returnValue = "";
   });
 
   showName();

@@ -1,7 +1,7 @@
 /* Fate dice for Nowhere Expeditions.
    Rolls 4dF + a modifier and keeps the last 30 results in this browser only (localStorage), shared between open
-   tabs of the site. Used by the public pages and by the editable character sheet; when a sheet is saved as a file
-   this script is copied into it, so it must stay self-contained (no imports, styles injected below). */
+   tabs of the site. Used by the public pages and by the editable character sheet. It is self-contained (no imports,
+   styles injected below) so any page can load it with one script tag. */
 (() => {
   "use strict";
   if (window.NowhereDice) return;

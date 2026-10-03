@@ -289,6 +289,7 @@ function readSheet(form) {
 const SHEET_FILE_FORMAT = "nowhere-expeditions/fate-sheet";
 let sheetBeforeImport;
 let stashBeforeImport;
+let fieldsBeforeImport;
 
 // Accepts the editable HTML sheet from the public site (or its JSON). Nothing in the file is executed.
 function parseSheetFile(text) {
@@ -418,6 +419,7 @@ async function importSheetFile(input) {
     && !confirm(`This is a new-character file for “${envelope.characterName || "an unnamed character"}”. Import it over the existing character ${currentName}? To add it as a new character, press + New first.`)) return;
 
   const identityChanges = [];
+  fieldsBeforeImport = Object.fromEntries(["name", "playerName", "summary", "type"].map((name) => [name, form.querySelector(`[name="${name}"]`).value]));
   if (envelope.newCharacter) {
     const fill = (name, value, label) => {
       const control = form.querySelector(`[name="${name}"]`);
@@ -429,6 +431,14 @@ async function importSheetFile(input) {
     fill("name", String(envelope.characterName || "").trim(), "Name");
     fill("playerName", String(envelope.playerName || "").trim(), "Player name");
     form.querySelector('[name="type"]').value = "player";
+  }
+  // Players write their character's public summary on the sheet (sheet files from version 3 on).
+  if (typeof envelope.summary === "string") {
+    const summary = form.querySelector('[name="summary"]');
+    if (summary.value.trim() !== envelope.summary.trim()) {
+      identityChanges.push(summary.value.trim() ? "Public summary changed" : "Public summary added");
+      summary.value = envelope.summary.trim();
+    }
   }
 
   const before = readSheet(form);
@@ -772,6 +782,272 @@ function legacyNote(record) {
   return `<div class="field full"><span class="helper">Migrated from a v3 ${escapeHtml(source)}. The original record is kept in the database's legacy_records table.</span></div>`;
 }
 
+/* ---------- Batch import of character sheet files ---------- */
+
+// Pick a folder of sheet files, validate them, review each one, and keep a report of what was not imported.
+const BATCH_REPORT_KEY = "nowhere-manager:last-batch-import";
+const batch = { stage: "select", ready: [], failed: [], ignored: 0, index: 0, results: [] };
+
+// The same empty-row rules the server applies, so the change list shows only what would really change.
+function comparableSheet(sheet) {
+  const normalized = normalizeImportedSheet(sheet || {});
+  return {
+    ...normalized,
+    aspects: { ...normalized.aspects, other: normalized.aspects.other.filter((text) => text.trim()) },
+    skills: normalized.skills.filter((skill) => skill.name.trim()),
+    stunts: normalized.stunts.filter((stunt) => stunt.name.trim() || stunt.description.trim()),
+    stress: normalized.stress.filter((track) => track.name.trim()),
+    consequences: normalized.consequences.filter((item) => item.label.trim())
+  };
+}
+
+function importedStash(envelope) {
+  if (!Array.isArray(envelope.stash)) return { stash: null, skipped: [] };
+  const items = envelope.stash.filter((item) => item && typeof item.gearId === "string").map((item) => ({
+    gearId: item.gearId,
+    quantity: Math.max(1, Math.min(999, Math.round(Number(item.quantity)) || 1)),
+    broughtIntoAction: Boolean(item.broughtIntoAction)
+  }));
+  return { stash: items.filter((item) => findRecord("gear", item.gearId)), skipped: items.filter((item) => !findRecord("gear", item.gearId)).map((item) => item.gearId) };
+}
+
+// One file: either a ready import (with its change list) or the reason it cannot be imported.
+async function validateBatchFile(file) {
+  let envelope;
+  try {
+    envelope = parseSheetFile(await file.text());
+  } catch {
+    return { file: file.name, error: "Not a character sheet file (invalid JSON or wrong format)." };
+  }
+  const isNew = Boolean(envelope.newCharacter) || !envelope.characterId;
+  const name = String(envelope.characterName || "").trim();
+  if (isNew && !name) return { file: file.name, error: "New character file without a character name." };
+  const existing = isNew ? null : findRecord("characters", envelope.characterId);
+  if (!isNew && !existing) {
+    const hidden = hiddenSampleLabel("characters", envelope.characterId);
+    return { file: file.name, character: name || envelope.characterId,
+      error: hidden ? `Character “${envelope.characterId}” is hidden sample content; turn on Show sample content to import it.` : `No character with ID “${envelope.characterId}” in the manager.` };
+  }
+  const { stash, skipped } = importedStash(envelope);
+  const before = existing?.sheet ? comparableSheet(existing.sheet) : null;
+  const after = comparableSheet(envelope.sheet);
+  const changes = [];
+  if (isNew) {
+    changes.push(`New character: ${name}${envelope.playerName ? ` (player: ${envelope.playerName})` : ""}`);
+  }
+  if (typeof envelope.summary === "string" && envelope.summary.trim() !== String(existing?.summary || "").trim()) {
+    changes.push(existing?.summary ? "Public summary changed" : "Public summary added");
+  }
+  changes.push(...describeSheetChanges(before, after).filter((line) => !(isNew && line.startsWith("New sheet"))));
+  if (stash) changes.push(...describeStashChanges(existing?.stash || [], stash));
+  skipped.forEach((gearId) => changes.push(`Skipped unknown Gear “${gearId}”`));
+  // New-character files carry no ID, so importing the same file twice would create a second character.
+  const namesake = isNew ? state.characters.find((character) => String(character.name || "").trim().toLowerCase() === name.toLowerCase()) : null;
+  return {
+    file: file.name, envelope, isNew, existing, stash, changes,
+    warning: namesake ? `A character named “${namesake.name}” already exists (${namesake.id}). Approving creates a second one; deny it if this file was already imported.` : "",
+    character: isNew ? name : existing.name,
+    key: isNew ? `new:${name.toLowerCase()}` : `id:${existing.id}`,
+    savedAt: envelope.savedAt || ""
+  };
+}
+
+async function startBatch(files) {
+  const sheets = files.filter((file) => /\.json$/i.test(file.name));
+  const checked = await Promise.all(sheets.map(validateBatchFile));
+  const ready = [];
+  const failed = checked.filter((item) => item.error);
+  // Several files for one character: only the newest is reviewed.
+  const byTarget = new Map();
+  checked.filter((item) => !item.error).forEach((item) => {
+    const current = byTarget.get(item.key);
+    if (!current) byTarget.set(item.key, item);
+    else {
+      const [newer, older] = item.savedAt > current.savedAt ? [item, current] : [current, item];
+      byTarget.set(item.key, newer);
+      failed.push({ file: older.file, character: older.character, error: `Older file for the same character; ${newer.file} is newer.` });
+    }
+  });
+  byTarget.forEach((item) => ready.push(item));
+  ready.sort((left, right) => left.character.localeCompare(right.character));
+  Object.assign(batch, { stage: "summary", ready, failed, ignored: files.length - sheets.length, index: 0,
+    results: failed.map((item) => ({ file: item.file, character: item.character || "", status: "invalid", reason: item.error })) });
+  renderBatch();
+}
+
+async function decideBatch(approve) {
+  const item = batch.ready[batch.index];
+  if (!approve) {
+    batch.results.push({ file: item.file, character: item.character, status: "denied", reason: "Denied during review." });
+  } else {
+    try {
+      const envelope = item.envelope;
+      const sheet = { ...normalizeImportedSheet(envelope.sheet), public: item.existing?.sheet ? item.existing.sheet.public !== false : true };
+      const summary = typeof envelope.summary === "string" ? envelope.summary.trim() : item.existing?.summary || "";
+      if (item.isNew) {
+        await api("/api/characters", { method: "POST", body: JSON.stringify({ data: {
+          name: item.character, playerName: String(envelope.playerName || "").trim(), type: "player", status: "active",
+          summary, sheet, stash: item.stash || [], published: false
+        } }) });
+      } else {
+        const { id, legacy, sample, ...record } = item.existing;
+        await api(`/api/characters/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ data: {
+          ...record, summary, sheet, ...(item.stash ? { stash: item.stash } : {})
+        } }) });
+      }
+      batch.results.push({ file: item.file, character: item.character, status: "imported", reason: item.isNew ? "Created (unpublished)." : "Updated." });
+    } catch (error) {
+      batch.results.push({ file: item.file, character: item.character, status: "error", reason: `Could not be saved: ${error.message || "unknown error"}` });
+    }
+  }
+  batch.index += 1;
+  if (batch.index >= batch.ready.length) finishBatch();
+  else renderBatch();
+}
+
+function finishBatch() {
+  batch.stage = "done";
+  try { localStorage.setItem(BATCH_REPORT_KEY, JSON.stringify({ at: new Date().toISOString(), results: batch.results })); } catch { /* storage unavailable */ }
+  renderBatch();
+  loadState().catch((error) => showNotice(error.message, true));
+}
+
+const BATCH_STATUS = { imported: "Imported", denied: "Denied", invalid: "Failed validation", error: "Save failed" };
+
+function batchReportText(results, at) {
+  return [`Batch import ${new Date(at).toLocaleString()}`, ...results.map((item) =>
+    `${BATCH_STATUS[item.status]}: ${item.character ? `${item.character} — ` : ""}${item.file}. ${item.reason}`)].join("\n");
+}
+
+function batchList(items, empty, success = false) {
+  return items.length ? `<ul class="batch-list">${items.map((item) => `
+    <li><strong>${escapeHtml(item.character || "Unknown character")}</strong> <span class="helper">${escapeHtml(item.file)}</span>
+      ${item.reason || item.error ? `<span class="${success ? "batch-done" : "batch-reason"}">${escapeHtml(item.reason || item.error)}</span>` : ""}</li>`).join("")}</ul>` : `<p class="helper">${empty}</p>`;
+}
+
+function renderBatch() {
+  const body = document.getElementById("batch-body");
+  if (batch.stage === "select") {
+    let last = null;
+    try { last = JSON.parse(localStorage.getItem(BATCH_REPORT_KEY) || "null"); } catch { last = null; }
+    body.innerHTML = `
+      <p>Choose the folder where you keep the sheet files players sent you. Every <code>.json</code> sheet file in it is checked; other files are ignored.</p>
+      <div class="batch-pickers">
+        <label class="button button-primary">Choose folder…<input type="file" data-batch-files webkitdirectory directory multiple hidden /></label>
+        <label class="button button-secondary">Choose files…<input type="file" data-batch-files accept=".json,application/json" multiple hidden /></label>
+      </div>
+      ${last ? `<details class="batch-last"><summary>Last batch import (${escapeHtml(new Date(last.at).toLocaleString())}): ${last.results.filter((item) => item.status === "imported").length} imported, ${last.results.filter((item) => item.status !== "imported").length} not imported</summary>
+        ${batchList(last.results.filter((item) => item.status !== "imported").map((item) => ({ ...item, reason: `${BATCH_STATUS[item.status]}: ${item.reason}` })), "Everything was imported.")}</details>` : ""}`;
+    return;
+  }
+  if (batch.stage === "summary") {
+    body.innerHTML = `
+      <div class="batch-columns">
+        <section><h3>Ready to review (${batch.ready.length})</h3>
+          ${batch.ready.length ? `<ul class="batch-list">${batch.ready.map((item) => `
+            <li><strong>${escapeHtml(item.character)}</strong> <span class="batch-tag">${item.isNew ? "New" : "Update"}</span>
+              <span class="helper">${escapeHtml(item.file)}${item.savedAt ? ` · saved ${escapeHtml(new Date(item.savedAt).toLocaleString())}` : ""} · ${item.changes.length} change${item.changes.length === 1 ? "" : "s"}</span>
+              ${item.warning ? `<span class="batch-warning">${escapeHtml(item.warning)}</span>` : ""}</li>`).join("")}</ul>` : '<p class="helper">No valid sheet files found.</p>'}
+        </section>
+        <section><h3>Failed validation (${batch.failed.length})</h3>${batchList(batch.failed, "Every file passed.")}</section>
+      </div>
+      ${batch.ignored ? `<p class="helper">${batch.ignored} other file${batch.ignored === 1 ? " was" : "s were"} ignored (not .json).</p>` : ""}
+      <div class="batch-actions">
+        <button type="button" class="button button-secondary" data-batch="restart">Choose again</button>
+        ${batch.ready.length ? `<button type="button" class="button button-primary" data-batch="review">Start review</button>`
+          : '<button type="button" class="button button-primary" data-batch="finish">Finish</button>'}
+      </div>`;
+    return;
+  }
+  if (batch.stage === "review") {
+    const item = batch.ready[batch.index];
+    body.innerHTML = `
+      <p class="batch-progress">Reviewing ${batch.index + 1} of ${batch.ready.length}</p>
+      <div class="batch-card">
+        <h3>${escapeHtml(item.character)} <span class="batch-tag">${item.isNew ? "New character" : "Update"}</span></h3>
+        <p class="helper">${escapeHtml(item.file)}${item.savedAt ? ` · saved by the player ${escapeHtml(new Date(item.savedAt).toLocaleString())}` : ""}${item.envelope.playerName ? ` · player: ${escapeHtml(item.envelope.playerName)}` : ""}</p>
+        ${item.warning ? `<p class="batch-warning">${escapeHtml(item.warning)}</p>` : ""}
+        ${item.changes.length ? `<ul class="batch-changes">${item.changes.map((change) => `<li>${escapeHtml(change)}</li>`).join("")}</ul>` : '<p class="helper">The file matches the current character; approving changes nothing.</p>'}
+        ${typeof item.envelope.summary === "string" && item.envelope.summary.trim() ? `<p class="batch-summary"><span class="field-label">Public summary</span>${escapeHtml(item.envelope.summary.trim())}</p>` : ""}
+      </div>
+      <div class="batch-actions">
+        <button type="button" class="button button-danger" data-batch="deny">Deny</button>
+        <button type="button" class="button button-primary" data-batch="approve">Approve and save</button>
+      </div>`;
+    body.querySelector('[data-batch="approve"]').focus();
+    return;
+  }
+  const imported = batch.results.filter((item) => item.status === "imported");
+  const notImported = batch.results.filter((item) => item.status !== "imported");
+  body.innerHTML = `
+    <div class="batch-columns">
+      <section><h3>Imported (${imported.length})</h3>${batchList(imported, "Nothing was imported.", true)}</section>
+      <section><h3>Not imported (${notImported.length})</h3>
+        ${notImported.length ? `<ul class="batch-list">${notImported.map((item) => `
+          <li><strong>${escapeHtml(item.character || "Unknown character")}</strong> <span class="batch-tag is-${item.status}">${BATCH_STATUS[item.status]}</span>
+            <span class="helper">${escapeHtml(item.file)}</span><span class="batch-reason">${escapeHtml(item.reason)}</span></li>`).join("")}</ul>` : '<p class="helper">Everything was imported.</p>'}
+      </section>
+    </div>
+    <p class="helper">Imported changes are saved in the manager. Sync data or Export to site to publish them. This report stays available under “Last batch import”.</p>
+    <div class="batch-actions">
+      <button type="button" class="button button-secondary" data-batch="copy">Copy report</button>
+      <button type="button" class="button button-primary" data-batch="close">Done</button>
+    </div>`;
+}
+
+function openBatch() {
+  let dialog = document.getElementById("batch-dialog");
+  if (!dialog) {
+    dialog = document.createElement("dialog");
+    dialog.id = "batch-dialog";
+    dialog.className = "batch-dialog";
+    dialog.setAttribute("aria-labelledby", "batch-title");
+    dialog.innerHTML = `<header class="batch-head"><div><span class="eyebrow">CHARACTERS</span><h2 id="batch-title">Batch import sheet files</h2></div>
+      <button type="button" class="button button-secondary" data-batch="close" aria-label="Close">✕</button></header><div id="batch-body"></div>`;
+    document.body.append(dialog);
+    // Esc mid-review behaves like the close button, so unreviewed files are recorded in the report.
+    dialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      dialog.querySelector('[data-batch="close"]').click();
+    });
+    dialog.addEventListener("change", async (event) => {
+      if (!event.target.matches("[data-batch-files]")) return;
+      const files = [...(event.target.files || [])];
+      event.target.value = "";
+      if (files.length) await startBatch(files).catch((error) => showNotice(error.message, true));
+    });
+    dialog.addEventListener("click", async (event) => {
+      const action = event.target.closest("[data-batch]")?.dataset.batch;
+      if (!action) return;
+      if (action === "close") {
+        if (batch.stage === "review" && !confirm("Stop reviewing? Files not reviewed yet are not imported.")) return;
+        if (batch.stage === "review") {
+          batch.ready.slice(batch.index).forEach((item) => batch.results.push({ file: item.file, character: item.character, status: "denied", reason: "Not reviewed (review stopped)." }));
+          finishBatch();
+        }
+        dialog.close();
+      } else if (action === "restart") {
+        batch.stage = "select";
+        renderBatch();
+      } else if (action === "review") {
+        batch.stage = "review";
+        renderBatch();
+      } else if (action === "finish") {
+        finishBatch();
+      } else if (action === "approve" || action === "deny") {
+        event.target.closest(".batch-actions").querySelectorAll("button").forEach((button) => { button.disabled = true; });
+        await decideBatch(action === "approve");
+      } else if (action === "copy") {
+        const text = batchReportText(batch.results, new Date().toISOString());
+        try { await navigator.clipboard.writeText(text); showNotice("Batch import report copied."); } catch { prompt("Copy the report:", text); }
+      }
+    });
+  }
+  Object.assign(batch, { stage: "select", ready: [], failed: [], ignored: 0, index: 0, results: [] });
+  renderBatch();
+  dialog.showModal();
+}
+
 /* ---------- Rendering ---------- */
 
 const hiddenSampleLabel = (collection, id) => {
@@ -993,6 +1269,7 @@ function renderCollection(key) {
     <div class="collection-layout">
       <section class="record-list-panel" aria-label="${config.title} list">
         <div class="panel-head"><h2>${config.panel}</h2><button class="button button-secondary" type="button" data-action="new-record">+ New</button></div>
+        ${key === "characters" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="batch-import" title="Review and import a folder of player sheet files">Batch import sheet files…</button></div>' : ""}
         ${listFilterBar(key)}
         <div class="record-list">${listMarkup}</div>
       </section>
@@ -1401,10 +1678,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (action === "undo-sheet-import") {
       document.getElementById("sheet-editor").innerHTML = sheetEditor(sheetBeforeImport);
       if (stashBeforeImport) rerenderStash(stashBeforeImport);
+      const form = document.getElementById("record-form");
+      Object.entries(fieldsBeforeImport || {}).forEach(([name, value]) => { form.querySelector(`[name="${name}"]`).value = value; });
       const note = document.getElementById("sheet-import-note");
       note.hidden = true;
       note.innerHTML = "";
-      showNotice("Import undone. The sheet is back to how it was before the import.");
+      showNotice("Import undone. The character is back to how it was before the import.");
       return;
     }
     if (action === "add-sheet-row") {
@@ -1432,6 +1711,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedId = null;
       draft = true;
       renderContent();
+    } else if (action === "batch-import") {
+      openBatch();
     } else if (action === "open-preview") {
       setPreviewOpen(true);
     } else if (action === "delete-record") {
