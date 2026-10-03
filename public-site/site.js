@@ -42,8 +42,16 @@ const formatStatus = (status = "UNKNOWN") => {
 
 const slugify = (value = "") => String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-const fetchJson = async (url) => {
-  const response = await fetch(url);
+// A page loads many small data files at once; one retry rides out a dropped connection.
+const fetchJson = async (url, retries = 1) => {
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    if (retries <= 0) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return fetchJson(url, retries - 1);
+  }
   if (!response.ok) {
     throw new Error(`Failed to load ${url}: ${response.status}`);
   }
@@ -261,50 +269,137 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (character)
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 })[character]);
 
-const renderRules = async () => {
-  const root = document.getElementById("rules-list");
-  const search = document.getElementById("rules-search");
-  const count = document.getElementById("rules-count");
-  if (!root || !search || !count) return;
+/* ---------- Game: out-of-character announcements and rules ---------- */
 
-  try {
-    const rules = await fetchJson("data/rules.json");
-    if (!Array.isArray(rules)) throw new Error("Rules data must be a list.");
-    const sortedRules = [...rules].sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
-
-    const renderList = () => {
-      const query = search.value.trim().toLowerCase();
-      const filtered = sortedRules.filter((rule) => {
-        const searchable = [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(query);
-      });
-
-      count.textContent = query ? `Showing ${filtered.length} of ${sortedRules.length} rules` : `${sortedRules.length} rules`;
-      root.innerHTML = filtered.length ? filtered.map((rule) => `
-        <article class="rule-entry">
-          <div class="rule-entry-heading">
-            <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
-            <h2>${escapeHtml(rule.title || "Untitled rule")}</h2>
-          </div>
-          <p class="rule-summary">${escapeHtml(rule.summary || "")}</p>
-          ${rule.details ? `<details class="rule-details"><summary>Read rule</summary><p>${escapeHtml(rule.details)}</p></details>` : ""}
-          ${(Array.isArray(rule.tags) && rule.tags.length) ? `<div class="rule-tags" aria-label="Related topics">${rule.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-        </article>
-      `).join("") : '<p class="empty-state">No rules match this search.</p>';
-    };
-
-    search.addEventListener("input", renderList);
-    renderList();
-  } catch (error) {
-    count.textContent = "Rules unavailable";
-    root.innerHTML = '<p class="empty-state">Campaign rules could not be loaded.</p>';
-    console.error(error);
-  }
+const todayIso = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 };
 
+const fetchGame = async () => {
+  const posts = await fetchJson("data/game.json");
+  if (!Array.isArray(posts)) throw new Error("Game data must be a list.");
+  return posts;
+};
+
+// Announcements past their "show until" date drop off; pinned ones come first, then newest.
+const visibleAnnouncements = (posts) => posts
+  .filter((post) => post.type === "announcement" && (!post.showUntil || post.showUntil >= todayIso()))
+  .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned))
+    || String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")));
+
+const renderGame = async () => {
+  const announcementRoot = document.getElementById("announcement-list");
+  const rulesRoot = document.getElementById("rules-list");
+  const search = document.getElementById("rules-search");
+  const count = document.getElementById("rules-count");
+  if (!announcementRoot || !rulesRoot) return;
+
+  let posts;
+  let campaign;
+  try {
+    [posts, campaign] = await Promise.all([fetchGame(), loadCampaign()]);
+  } catch (error) {
+    announcementRoot.innerHTML = '<p class="empty-state">Announcements could not be loaded.</p>';
+    rulesRoot.innerHTML = '<p class="empty-state">Campaign rules could not be loaded.</p>';
+    count.textContent = "Rules unavailable";
+    console.error(error);
+    return;
+  }
+
+  const announcements = visibleAnnouncements(posts);
+  announcementRoot.innerHTML = announcements.length ? announcements.map((post) => `
+    <article class="announcement${post.pinned ? " is-pinned" : ""}" id="post-${escapeHtml(post.id)}">
+      <div class="announcement-meta">
+        ${post.pinned ? '<span class="pill pill-small status-observed">Pinned</span>' : ""}
+        <span>${escapeHtml(formatDate(post.publishedAt))}</span>
+      </div>
+      <h2>${escapeHtml(post.title)}</h2>
+      ${post.summary ? `<p class="announcement-summary">${richInline(post.summary, campaign)}</p>` : ""}
+      ${post.details ? richText(post.details, campaign) : ""}
+      ${(post.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+    </article>`).join("") : '<p class="empty-state">No announcements right now.</p>';
+
+  const rules = posts.filter((post) => post.type !== "announcement")
+    .sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
+  const renderRules = () => {
+    const query = search.value.trim().toLowerCase();
+    const filtered = rules.filter((rule) => [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
+      .filter(Boolean).join(" ").toLowerCase().includes(query));
+    count.textContent = query ? `Showing ${filtered.length} of ${rules.length} rules` : `${rules.length} rules`;
+    rulesRoot.innerHTML = filtered.length ? filtered.map((rule) => `
+      <article class="rule-entry" id="post-${escapeHtml(rule.id)}">
+        <div class="rule-entry-heading">
+          <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
+          <h2>${escapeHtml(rule.title || "Untitled rule")}</h2>
+        </div>
+        <p class="rule-summary">${richInline(rule.summary || "", campaign)}</p>
+        ${rule.details ? `<details class="rule-details"><summary>Read rule</summary>${richText(rule.details, campaign)}</details>` : ""}
+        ${(Array.isArray(rule.tags) && rule.tags.length) ? `<div class="rule-tags" aria-label="Related topics">${rule.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+      </article>
+    `).join("") : '<p class="empty-state">No rules match this search.</p>';
+  };
+  search.addEventListener("input", renderRules);
+  renderRules();
+
+  // Tabs follow the hash: #rules, #announcements, or #post-<id> (which opens the tab holding that post).
+  const tabs = [...document.querySelectorAll("[data-game-tab]")];
+  const select = (name, { focus = false, updateHash = true } = {}) => {
+    tabs.forEach((tab) => {
+      const active = tab.dataset.gameTab === name;
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
+      if (active && focus) tab.focus();
+    });
+    if (updateHash) window.history.replaceState(null, "", `#${name}`);
+  };
+  const route = () => {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    const post = hash.startsWith("post-") ? posts.find((item) => `post-${item.id}` === hash) : null;
+    if (post) {
+      select(post.type === "announcement" ? "announcements" : "rules", { updateHash: false });
+      const target = document.getElementById(hash);
+      target?.querySelector("details")?.setAttribute("open", "");
+      target?.scrollIntoView({ block: "start" });
+    } else if (hash === "rules" || hash === "announcements") {
+      select(hash, { updateHash: false });
+    } else {
+      select(announcements.length ? "announcements" : "rules", { updateHash: false });
+    }
+  };
+  tabs.forEach((tab) => tab.addEventListener("click", () => select(tab.dataset.gameTab)));
+  document.querySelector(".game-tabs").addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const current = tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    select(tabs[next].dataset.gameTab, { focus: true });
+  });
+  window.addEventListener("hashchange", route);
+  route();
+};
+
+// The Overview shows the newest pinned announcement as a single line.
+const renderAnnouncementBanner = async () => {
+  const banner = document.getElementById("announcement-banner");
+  if (!banner) return;
+  try {
+    const pinned = visibleAnnouncements(await fetchGame()).find((post) => post.pinned);
+    if (!pinned) return;
+    banner.innerHTML = `
+      <a class="announcement-banner-link" href="game.html#post-${encodeURIComponent(pinned.id)}">
+        <span class="kicker">Announcement</span>
+        <strong>${escapeHtml(pinned.title)}</strong>
+        <span class="muted">${escapeHtml(formatDate(pinned.publishedAt))}</span>
+        <span class="announcement-banner-arrow" aria-hidden="true">→</span>
+      </a>`;
+    banner.hidden = false;
+  } catch (error) {
+    console.warn("No announcements available.", error);
+  }
+};
 /* ---------- Campaign records: Characters, Jobs, Archive, Gear ---------- */
 
 const fetchCollection = async (name) => {
@@ -369,41 +464,62 @@ const itemList = (items, fallback = "NO DATA") => Array.isArray(items) && items.
   ? `<ul class="clean-list">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
   : `<p class="muted">${fallback}</p>`;
 
-/* Authored text: one paragraph per line, "## " headings, "- " lists, **bold**, *italic*,
-   [[archive-id]] / [[archive-id|text]] links to Archive entries, and [text](page.html#id) links. */
-const richInline = (text, campaign) => escapeHtml(text)
-  .replace(/\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g, (match, id, label) => {
-    const entry = campaign.archiveById.get(id);
-    if (!entry) return label || "[record unavailable]";
-    return `<a class="inline-link archive-link" href="archive.html#${encodeURIComponent(id)}">${label || escapeHtml(entry.title)}</a>`;
-  })
-  .replace(/\[([^\]]+)\]\(((?:https?:\/\/|[a-z0-9-]+\.html)[^\s)]*)\)/g, (match, label, href) =>
-    `<a class="inline-link" href="${href}"${/^https?:/.test(href) ? ' rel="noopener"' : ""}>${label}</a>`)
-  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-  .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+/* Authored text is Markdown (CommonMark plus tables and ~~strikethrough~~), rendered by the vendored
+   markdown-it (vendor/markdown-it.min.js). Raw HTML is never rendered, and links to javascript: and similar are
+   refused by markdown-it. On top of Markdown, [[archive-id]] / [[archive-id|text]] link to Archive entries.
+   Single line breaks are kept as line breaks, as authors expect from a plain text box. */
+const markdown = (() => {
+  if (!window.markdownit) return null;
+  const md = window.markdownit({ html: false, linkify: true, breaks: true, typographer: true });
+  const renderDefault = (tokens, index, options, env, self) => self.renderToken(tokens, index, options);
+  const linkOpen = md.renderer.rules.link_open || renderDefault;
+  md.renderer.rules.link_open = (tokens, index, options, env, self) => {
+    const token = tokens[index];
+    const href = token.attrGet("href") || "";
+    token.attrJoin("class", href.startsWith("archive.html#") ? "inline-link archive-link" : "inline-link");
+    if (/^https?:/i.test(href)) token.attrSet("rel", "noopener");
+    return linkOpen(tokens, index, options, env, self);
+  };
+  // Headings sit inside sections that already have their own h2/h3, so # starts at h4.
+  md.renderer.rules.heading_open = (tokens, index, options, env, self) => {
+    const token = tokens[index];
+    token.tag = `h${Math.min(6, Number(token.tag.slice(1)) + 3)}`;
+    token.attrJoin("class", "rich-heading");
+    return self.renderToken(tokens, index, options);
+  };
+  md.renderer.rules.heading_close = (tokens, index, options, env, self) => {
+    tokens[index].tag = tokens[index - 2]?.tag || tokens[index].tag;
+    return self.renderToken(tokens, index, options);
+  };
+  const image = md.renderer.rules.image || renderDefault;
+  md.renderer.rules.image = (tokens, index, options, env, self) => {
+    tokens[index].attrSet("loading", "lazy");
+    return image(tokens, index, options, env, self);
+  };
+  md.renderer.rules.table_open = () => '<div class="rich-table"><table>';
+  md.renderer.rules.table_close = () => "</table></div>";
+  return md;
+})();
+
+const escapeMarkdown = (text) => String(text).replace(/([\\`*_{}\[\]()#+!|<>~])/g, "\\$1");
+
+// [[archive-id]] links become ordinary Markdown links; links to records not on the site become plain text.
+const expandArchiveLinks = (text, campaign) => String(text || "").replace(/\[\[([a-z0-9-]+)(?:\|([^\]\n]+))?\]\]/g, (match, id, label) => {
+  const entry = campaign.archiveById.get(id);
+  if (!entry) return escapeMarkdown(label || "[record unavailable]");
+  return `[${escapeMarkdown(label || entry.title)}](archive.html#${encodeURIComponent(id)})`;
+});
+
+// Inline text (card summaries, ledes): Markdown without paragraphs, lists, or headings.
+const richInline = (text, campaign) => markdown
+  ? markdown.renderInline(expandArchiveLinks(text, campaign))
+  : escapeHtml(expandArchiveLinks(text, campaign));
 
 const richText = (text, campaign, fallback = "NO DATA") => {
-  const lines = String(text || "").split("\n").map((line) => line.trim()).filter(Boolean);
-  if (!lines.length) return `<p class="muted">${fallback}</p>`;
-  const output = [];
-  let list = [];
-  const flush = () => {
-    if (list.length) output.push(`<ul class="clean-list">${list.map((item) => `<li>${richInline(item, campaign)}</li>`).join("")}</ul>`);
-    list = [];
-  };
-  lines.forEach((line) => {
-    if (/^[-*] /.test(line)) {
-      list.push(line.slice(2));
-      return;
-    }
-    flush();
-    const heading = /^(#{2,3}) (.+)$/.exec(line);
-    output.push(heading ? `<h4 class="rich-heading">${richInline(heading[2], campaign)}</h4>` : `<p>${richInline(line, campaign)}</p>`);
-  });
-  flush();
-  return `<div class="rich-text">${output.join("")}</div>`;
+  if (!String(text || "").trim()) return `<p class="muted">${fallback}</p>`;
+  if (!markdown) return paragraphs(expandArchiveLinks(text, campaign), fallback);
+  return `<div class="rich-text">${markdown.render(expandArchiveLinks(text, campaign))}</div>`;
 };
-
 const formatDate = (value) => {
   if (!value) return "";
   const date = new Date(`${value}T00:00`);
@@ -1440,15 +1556,13 @@ const setActiveNav = () => {
 };
 
 
+const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster };
+
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
   initializeDestinationCarousel();
-  renderOutpost();
-
   const page = document.body.dataset.page;
-  if (page === "rules") await renderRules();
-  else if (page === "jobs") await renderJobBoard();
-  else if (page === "archive") await renderArchive();
-  else if (page === "marketplace") await renderMarketplace();
-  else if (page === "characters") await renderCharacterRoster();
+  await Promise.all([renderOutpost(), renderAnnouncementBanner(), PAGE_RENDERERS[page]?.()]);
+  // Marks the page as fully rendered; the content manager's preview waits for this before showing an update.
+  document.documentElement.dataset.rendered = "true";
 });

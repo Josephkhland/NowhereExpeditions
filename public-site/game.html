@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game | Nowhere Expeditions</title>
+    <meta name="description" content="Announcements and rules for the Nowhere Expeditions campaign." />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/markdown-it.min.js" defer></script>
+    <script src="site.js" defer></script>
+  </head>
+  <body data-page="game">
+    <header class="site-header">
+      <div class="wrapper topbar">
+        <div class="brand" aria-label="Nowhere Expeditions home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Nowhere Expeditions</span>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="nav-link" href="index.html">Overview</a>
+          <a class="nav-link" href="outpost.html">Outpost</a>
+          <a class="nav-link" href="jobs.html">Job Board</a>
+          <a class="nav-link" href="archive.html">Archive</a>
+          <a class="nav-link" href="marketplace.html">Marketplace</a>
+          <a class="nav-link" href="characters.html">Characters</a>
+          <a class="nav-link nav-meta" href="game.html">Game</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell wrapper">
+      <section aria-labelledby="game-head">
+        <div class="section-header">
+          <span class="kicker">Out of Character</span>
+          <h1 id="game-head">Game</h1>
+          <p class="page-subtitle">Notes about the game itself rather than the world: announcements from the GM and the rules the table plays by.</p>
+        </div>
+        <div class="profile-tabs game-tabs" role="tablist" aria-label="Game notes">
+          <button type="button" class="profile-tab" role="tab" id="tab-announcements" aria-controls="panel-announcements" data-game-tab="announcements">Announcements</button>
+          <button type="button" class="profile-tab" role="tab" id="tab-rules" aria-controls="panel-rules" data-game-tab="rules">Rules</button>
+        </div>
+        <div id="panel-announcements" role="tabpanel" aria-labelledby="tab-announcements">
+          <div id="announcement-list" class="announcement-list" aria-live="polite"><p class="empty-state">Loading announcements...</p></div>
+        </div>
+        <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
+          <div class="rules-search-bar">
+            <label for="rules-search">Search rules</label>
+            <input id="rules-search" class="search-input" type="search" placeholder="Search by topic or keyword" autocomplete="off" />
+            <p id="rules-count" class="muted" aria-live="polite">Loading rules...</p>
+          </div>
+          <div id="rules-list" class="rules-list" aria-live="polite"><p class="empty-state">Loading campaign rules...</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrapper">
+        <span>Nowhere Expeditions</span>
+        <span>Announcements • rules • out of character</span>
+      </div>
+    </footer>
+  </body>
+</html>

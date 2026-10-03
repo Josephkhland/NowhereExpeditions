@@ -22,8 +22,13 @@
         <button type="button" class="nav-item" data-view="jobs"><span class="nav-symbol">J</span>Job Board<span class="nav-count" id="jobs-count">0</span></button>
         <button type="button" class="nav-item" data-view="archive"><span class="nav-symbol">A</span>Archive<span class="nav-count" id="archive-count">0</span></button>
         <button type="button" class="nav-item" data-view="gear"><span class="nav-symbol">M</span>Marketplace / Gear<span class="nav-count" id="gear-count">0</span></button>
-        <button type="button" class="nav-item" data-view="rules"><span class="nav-symbol">R</span>Rules<span class="nav-count" id="rules-count">0</span></button>
+        <button type="button" class="nav-item" data-view="game"><span class="nav-symbol">✦</span>Game<span class="nav-count" id="game-count">0</span></button>
       </nav>
+      <div class="side-label sample-label">PREVIEW</div>
+      <label class="sample-switch" title="Sample records are preview data, not campaign canon">
+        <input type="checkbox" id="include-samples" />
+        <span><strong>Show sample content</strong><small id="sample-count">Loading…</small></span>
+      </label>
       <div class="sidebar-spacer"></div>
       <div class="side-label">STATIC SITE</div>
       <p class="sidebar-note">Local workspace only<br />SQLite-backed content</p>
@@ -46,7 +51,7 @@
               <div class="workflow-popover-heading"><span class="eyebrow">CONTENT TO SITE</span><h2>Publishing workflow</h2></div>
               <ol class="workflow-steps">
                 <li><strong>Save your edits.</strong><span>Save writes changes to the local SQLite database. It does not update the site files. Only records marked <strong>Published</strong> are written to the site.</span></li>
-                <li><strong>Sync data.</strong><span>Replaces only <code>public-site/data</code> with the manager's current Outpost, Character, Job, Archive, Gear, and Rule data. Unmanaged files inside that folder are removed; site pages and assets stay unchanged.</span></li>
+                <li><strong>Sync data.</strong><span>Replaces only <code>public-site/data</code> with the manager's current Outpost, Character, Job, Archive, Gear, and Game data. Unmanaged files inside that folder are removed; site pages and assets stay unchanged.</span></li>
                 <li><strong>Export the full site.</strong><span>Builds a complete replacement folder at <code>site-export/</code>, including site pages, styles, scripts, assets, and current data. It leaves <code>public-site/</code> untouched; copy the generated folder contents when you are ready to replace the site.</span></li>
                 <li><strong>Import site data.</strong><span>Replaces SQLite content with the current <code>public-site/data</code>. Unexported manager changes are discarded.</span></li>
               </ol>
@@ -61,6 +66,28 @@
       <section id="work-area" class="work-area" aria-live="polite"></section>
       <footer class="workspace-footer"><span>Changes are stored locally in SQLite.</span><span id="database-indicator">Initialising local database</span></footer>
     </main>
+    <aside class="preview-panel" id="preview-panel" aria-label="Site preview" hidden>
+      <div class="preview-bar">
+        <div class="preview-heading">
+          <span class="eyebrow">SITE PREVIEW</span>
+          <strong id="preview-title">Preview</strong>
+          <span class="helper" id="preview-status" role="status" aria-live="polite"></span>
+        </div>
+        <div class="preview-actions">
+          <div class="preview-sizes" role="group" aria-label="Preview width">
+            <button type="button" data-preview-size="desktop" aria-pressed="true">Desktop</button>
+            <button type="button" data-preview-size="phone" aria-pressed="false">Phone</button>
+          </div>
+          <button type="button" class="button button-secondary" data-preview-refresh>Refresh</button>
+          <a class="button button-secondary" id="preview-open" href="/preview/" target="_blank" rel="noopener">Open in new tab ↗</a>
+          <button type="button" class="button button-secondary" data-preview-close aria-label="Close preview">✕</button>
+        </div>
+      </div>
+      <div class="preview-frame-wrap">
+        <iframe id="preview-frame" class="is-front" title="Site preview"></iframe>
+        <iframe id="preview-frame-back" title="Site preview (loading)" tabindex="-1" aria-hidden="true"></iframe>
+      </div>
+    </aside>
   </div>
 </body>
 </html>

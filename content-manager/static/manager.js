@@ -1,4 +1,4 @@
-const state = { gear: [], characters: [], archive: [], jobs: [], rules: [], outpost: {} };
+const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpost: {}, settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [] };
 let activeView = "outpost";
 let selectedId = null;
 let draft = false;
@@ -113,11 +113,12 @@ function referenceSelect(label, name, value, key, labelFor, options = {}) {
     .filter(options.filter || (() => true))
     .map((record) => [record.id, `${labelFor(record)}${record.published ? "" : " — unpublished"}`])
     .sort((left, right) => left[1].localeCompare(right[1]));
-  if (value && !choices.some(([id]) => id === value)) choices.unshift([value, `Missing record: ${value}`]);
+  if (value && !choices.some(([id]) => id === value)) choices.unshift([value, hiddenSampleLabel(key, value) || `Missing record: ${value}`]);
   return selectField(label, name, value || "", choices, { emptyLabel: options.emptyLabel || "— None —", ...options });
 }
 
 function participantPicker(selectedIds) {
+  const hiddenCount = selectedIds.filter((id) => !findRecord("characters", id) && hiddenSampleLabel("characters", id)).length;
   const selected = selectedIds.map((id) => findRecord("characters", id)).filter(Boolean);
   const others = [...state.characters].filter((character) => !selectedIds.includes(character.id))
     .sort((left, right) => String(left.name).localeCompare(String(right.name)));
@@ -130,6 +131,7 @@ function participantPicker(selectedIds) {
   return `<div class="field full"><span class="field-label">Participants <span class="participant-count">(${selectedIds.length} selected)</span></span>
     <input type="search" class="reference-filter" data-filter-list="participant-list" placeholder="Filter characters" aria-label="Filter participants" />
     <div class="check-list" id="participant-list">${list}</div>
+    ${hiddenCount ? `<span class="helper">+ ${hiddenCount} hidden sample participant${hiddenCount > 1 ? "s" : ""}, kept when you save.</span>` : ""}
     <span class="helper">Crew count on the board is the number of participants. Include the organizer here if they are going.</span></div>`;
 }
 
@@ -485,7 +487,7 @@ function stashEditor(stash) {
   const rows = stash.map((item) => {
     const gear = findRecord("gear", item.gearId);
     return `<tr data-stash-row data-gear-id="${escapeHtml(item.gearId)}">
-      <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`}
+      <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : (hiddenSampleLabel("gear", item.gearId) ? `<span class="helper">${escapeHtml(hiddenSampleLabel("gear", item.gearId))}</span>` : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`)}
         ${gear && !gear.published ? '<span class="record-draft">Unpublished</span>' : ""}</td>
       <td>${escapeHtml(humanize(gear?.category || ""))}</td>
       <td class="numeric">${weightText(gear?.weight)}</td>
@@ -589,7 +591,7 @@ const collections = {
       ${field("Posted by", "postedBy", record.postedBy || "", { placeholder: "e.g. Harbor Authority", help: "Optional. The in-world client or notice issuer." })}
       ${textarea("Summary", "summary", record.summary || "", { full: true, help: "One or two sentences for the Job Board card. The objective is used when this is empty." })}
       ${textarea("Objective", "objective", record.objective || "", { full: true })}
-      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, rows: 7, help: "Optional. Link lore with [[archive-id]] or [[archive-id|link text]]." })}
+      ${textarea("Briefing", "briefing", record.briefing || "", { full: true, rows: 7, help: "Optional. Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       <div class="form-section">Schedule and crew</div>
       ${field("Scheduled", "scheduledAt", record.scheduledAt || "", { type: "datetime-local" })}
       ${field("Expected duration", "expectedDuration", record.expectedDuration || "", { placeholder: "e.g. 3 hours" })}
@@ -630,7 +632,7 @@ const collections = {
       ${field("Title", "title", record.title || "", { required: true })}
       ${field("Subtitle", "subtitle", record.subtitle || "", { full: true })}
       ${textarea("Summary", "summary", record.summary || "", { full: true, help: "Optional teaser shown in Archive listings." })}
-      ${textarea("Content", "content", record.content || "", { full: true, rows: 12, help: "Paragraphs separated by blank lines. ## Heading, - list item, **bold**, *italic*. Link entries with [[archive-id]] or [[archive-id|link text]]; other pages with [text](jobs.html#id)." })}
+      ${textarea("Content", "content", record.content || "", { full: true, rows: 12, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       ${field("Author", "author", record.author || "", { placeholder: "e.g. Harbor Gazette" })}
       ${field("Published", "publishedAt", record.publishedAt || "", { type: "date", help: "When the document appeared in the world." })}
       ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
@@ -718,41 +720,91 @@ const collections = {
       discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") }
     })
   },
-  rules: {
-    title: "Campaign Rules", panel: "CAMPAIGN RULES", singular: "Rule",
+  game: {
+    title: "Game", panel: "GAME POSTS", singular: "Game post",
     name: (record) => record.title,
-    meta: (record) => [record.category || "Uncategorized"],
-    idHelp: "Generated from the title when left blank.",
+    meta: (record) => record.type === "announcement"
+      ? ["Announcement", record.pinned ? "Pinned" : "", record.publishedAt]
+      : ["Rule", record.category || "Uncategorized"],
+    // Announcements first, newest at the top; then rules by title.
+    sortKey: (record) => record.type === "announcement"
+      ? `0 ${String(99999999 - Number(String(record.publishedAt || "0").replace(/-/g, ""))).padStart(8, "0")}`
+      : `1 ${record.title || ""}`,
+    filters: [["type", "Announcements and rules", [["announcement", "Announcements"], ["rule", "Rules"]]]],
+    idHelp: "Generated from the title when left blank. Announcements are linked as game.html#post-<id>.",
     fields: (record) => {
+      const type = record.type || listFilters.game?.type || "announcement";
       const categories = ["Campaign", "Jobs", "Outpost", "Information"];
       if (record.category && !categories.includes(record.category)) categories.push(record.category);
+      const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
-      ${field("Title", "title", record.title || "", { required: true, full: true })}
-      ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]), { required: true })}
+      ${selectField("Type", "type", type, [["announcement", "Announcement"], ["rule", "Rule"]], { help: "Announcements are dated notices; rules are reference material." })}
+      ${field("Title", "title", record.title || "", { required: true })}
+      ${section("announcement", `
+        ${field("Posted", "publishedAt", record.publishedAt || new Date().toISOString().slice(0, 10), { type: "date", help: "Required for announcements." })}
+        ${field("Show until", "showUntil", record.showUntil || "", { type: "date", help: "Optional. After this date the announcement is hidden from the site." })}
+        <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
+      ${section("rule", `
+        ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}`)}
       ${textarea("Short summary", "summary", record.summary || "", { full: true })}
-      ${textarea("Rule details", "details", record.details || "", { full: true, rows: 8 })}
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
       ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}`;
     },
-    read: (formData) => ({
-      title: formText(formData, "title"), category: formText(formData, "category"),
-      summary: formText(formData, "summary"), details: formText(formData, "details"),
-      tags: linesToArray(formData.get("tags"))
-    })
+    related: (record) => linkCheck([record.summary, record.details]) + legacyNote(record),
+    read: (formData) => {
+      const type = formText(formData, "type");
+      return {
+        type, title: formText(formData, "title"),
+        category: type === "rule" ? formText(formData, "category") : "",
+        publishedAt: type === "announcement" ? formText(formData, "publishedAt") : "",
+        showUntil: type === "announcement" ? formText(formData, "showUntil") : "",
+        pinned: type === "announcement" && formData.get("pinned") === "on",
+        summary: formText(formData, "summary"), details: formText(formData, "details"),
+        tags: linesToArray(formData.get("tags"))
+      };
+    }
   }
 };
 
 function legacyNote(record) {
   if (!record.legacy) return "";
-  const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report" }[record.legacy.source] || record.legacy.source;
+  const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report", rules: "Rule" }[record.legacy.source] || record.legacy.source;
   return `<div class="field full"><span class="helper">Migrated from a v3 ${escapeHtml(source)}. The original record is kept in the database's legacy_records table.</span></div>`;
 }
 
 /* ---------- Rendering ---------- */
 
+const hiddenSampleLabel = (collection, id) => {
+  const sample = state.hiddenSamples.find((item) => item.collection === collection && item.id === id);
+  return sample ? `${sample.label} — hidden sample` : "";
+};
+
+function renderSampleSwitch() {
+  const toggle = document.getElementById("include-samples");
+  toggle.checked = state.settings.includeSamples;
+  const count = state.settings.sampleCount;
+  document.getElementById("sample-count").textContent = count
+    ? `${count} sample record${count === 1 ? "" : "s"} ${state.settings.includeSamples ? "shown" : "hidden"}`
+    : "No sample records yet";
+}
+
+async function setIncludeSamples(include) {
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ includeSamples: include }) });
+  selectedId = null;
+  draft = false;
+  await loadState();
+  showNotice(include
+    ? "Sample content is shown. Sync data or Export to include published samples on the site."
+    : "Sample content is hidden. Sync data or Export to remove it from the site.");
+}
+
 async function loadState() {
   const loaded = await api("/api/state");
   for (const key of Object.keys(collections)) state[key] = loaded[key] || [];
   state.outpost = loaded.outpost || {};
+  state.settings = loaded.settings || { includeSamples: false, sampleCount: 0 };
+  state.hiddenSamples = loaded.hiddenSamples || [];
+  renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
   renderContent();
@@ -779,12 +831,148 @@ function filteredRecords(key) {
   return state[key]
     .filter((record) => Object.entries(filters).every(([field, value]) => !value || record[field] === value))
     .filter((record) => !query || JSON.stringify(record).toLowerCase().includes(query))
-    .sort((left, right) => String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
+    .sort((left, right) => config.sortKey
+      ? config.sortKey(left).localeCompare(config.sortKey(right))
+      : String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
 }
 
 function renderContent() {
   if (activeView === "outpost") renderOutpostEditor();
   else renderCollection(activeView);
+  if (preview.open) schedulePreview(0);
+}
+
+/* ---------- Site preview: the real public pages, fed by the database and the unsaved form ---------- */
+
+const preview = { open: false, timer: null, size: "desktop", page: "", counter: 0, latest: 0 };
+
+// Which public page shows a record of each kind.
+const PREVIEW_PAGES = {
+  outpost: () => "outpost.html",
+  characters: (id, data) => `characters.html#${encodeURIComponent(id)}${data?.sheet ? "#sheet" : ""}`,
+  jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
+  archive: (id) => `archive.html#${encodeURIComponent(id)}`,
+  gear: (id) => `marketplace.html#gear-${encodeURIComponent(id)}`,
+  game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`
+};
+
+function currentDraft() {
+  if (activeView === "outpost") {
+    const form = document.getElementById("outpost-form");
+    return form ? { collection: "outpost", data: readOutpost(form) } : null;
+  }
+  const form = document.getElementById("record-form");
+  if (!form) return null;
+  const config = collections[activeView];
+  const formData = new FormData(form);
+  const data = { ...config.read(formData, form), published: form.elements.published.checked };
+  if (form.elements.sample) data.sample = form.elements.sample.checked;
+  return { collection: activeView, id: form.dataset.editingId || formText(formData, "recordId"), data };
+}
+
+function schedulePreview(delay = 600) {
+  clearTimeout(preview.timer);
+  preview.timer = setTimeout(() => refreshPreview().catch((error) => setPreviewStatus(error.message === "Not found."
+    // The page loads fresh scripts on refresh, but the Python server only loads new code when restarted.
+    ? "The running content manager is older than this page and has no preview yet. Restart it (stop and start the Content manager task), then refresh this tab."
+    : error.message, true)), delay);
+}
+
+function setPreviewStatus(text, isError = false) {
+  const status = document.getElementById("preview-status");
+  status.textContent = text;
+  status.classList.toggle("is-error", isError);
+}
+
+async function refreshPreview() {
+  // Refreshes can overlap when records change quickly; only the newest one may update the frame.
+  const ticket = ++preview.latest;
+  const frame = document.getElementById("preview-frame");
+  let draft;
+  try {
+    draft = currentDraft();
+  } catch (error) {
+    setPreviewStatus(`Not valid yet: ${error.message} The preview shows the saved version.`, true);
+    return;
+  }
+  if (!draft) {
+    await api("/api/preview", { method: "POST", body: JSON.stringify({ data: null }) });
+    preview.page = "";
+    document.querySelectorAll(".preview-frame-wrap iframe").forEach((item) => item.removeAttribute("src"));
+    document.getElementById("preview-title").textContent = "Nothing to preview";
+    setPreviewStatus("Choose or create a record to see it on the site.");
+    return;
+  }
+  const result = await api("/api/preview", { method: "POST", body: JSON.stringify(draft) });
+  if (ticket !== preview.latest) return;
+  const page = PREVIEW_PAGES[draft.collection](result.id, draft.data);
+  document.getElementById("preview-title").textContent = draft.collection === "outpost" ? "Outpost Sheet"
+    : collections[draft.collection].name(draft.data) || `New ${collections[draft.collection].singular.toLowerCase()}`;
+  setPreviewStatus(result.error
+    ? `Not valid yet: ${result.error} The preview shows the saved version.`
+    : "Shows unsaved changes and unpublished records. Nothing reaches the public site until you save and sync.", Boolean(result.error));
+  // Keep the reader's place when the same page is shown again after an edit.
+  let scroll = 0;
+  try { scroll = page === preview.page ? frame.contentWindow.scrollY : 0; } catch { scroll = 0; }
+  preview.page = page;
+  document.getElementById("preview-open").href = `/preview/${page}`;
+  const hashAt = page.indexOf("#");
+  const [file, hash] = hashAt < 0 ? [page, ""] : [page.slice(0, hashAt), page.slice(hashAt)];
+  preview.counter += 1;
+  // A changing query string forces a full load, so the page fetches the new draft data.
+  await showInPreview(`/preview/${file}?v=${preview.counter}${hash}`, scroll, ticket);
+}
+
+// Double buffering: the new version loads in the hidden frame, renders, and gets its scroll position back;
+// only then does it swap to the front. The visible preview never blanks or jumps while it updates.
+function showInPreview(url, scroll, ticket) {
+  const front = document.querySelector(".preview-frame-wrap iframe.is-front");
+  const back = [...document.querySelectorAll(".preview-frame-wrap iframe")].find((item) => item !== front);
+  return new Promise((resolve) => {
+    back.onload = () => {
+      back.onload = null;
+      const started = Date.now();
+      const settle = () => {
+        if (ticket !== preview.latest) return resolve();
+        let rendered = false;
+        try { rendered = back.contentDocument.documentElement.dataset.rendered === "true"; } catch { /* navigated away */ }
+        // site.js marks the page once it has fetched its data and rendered (including its own scrolling).
+        if (!rendered && Date.now() - started < 5000) return setTimeout(settle, 50);
+        // instant: the site uses smooth scrolling, which would still be gliding after the swap.
+        try { back.contentWindow.scrollTo({ top: scroll, behavior: "instant" }); } catch { /* navigated away */ }
+        back.classList.add("is-front");
+        back.removeAttribute("aria-hidden");
+        back.removeAttribute("tabindex");
+        back.title = "Site preview";
+        front.classList.remove("is-front");
+        front.setAttribute("aria-hidden", "true");
+        front.setAttribute("tabindex", "-1");
+        front.title = "Site preview (loading)";
+        back.id = "preview-frame";
+        front.id = "preview-frame-back";
+        resolve();
+      };
+      settle();
+    };
+    back.src = url;
+  });
+}
+
+function setPreviewOpen(open) {
+  preview.open = open;
+  document.getElementById("preview-panel").hidden = !open;
+  document.querySelector(".app-shell").classList.toggle("with-preview", open);
+  if (open) schedulePreview(0);
+  else {
+    clearTimeout(preview.timer);
+    api("/api/preview", { method: "POST", body: JSON.stringify({ data: null }) }).catch(() => {});
+  }
+}
+
+function setPreviewSize(size) {
+  preview.size = size;
+  document.querySelector(".preview-frame-wrap").classList.toggle("is-phone", size === "phone");
+  document.querySelectorAll("[data-preview-size]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.previewSize === size)));
 }
 
 function renderCollection(key) {
@@ -795,7 +983,7 @@ function renderCollection(key) {
   const listMarkup = items.length ? items.map((record) => `
     <button type="button" class="record-button ${selected?.id === record.id ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
       <span class="record-name">${escapeHtml(config.name(record) || "Untitled")}</span>
-      <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}</span>
+      <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}${record.sample ? '<span class="record-sample">Sample</span>' : ""}</span>
     </button>
   `).join("") : '<div class="empty-list">No matching records yet.</div>';
   const editor = draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
@@ -834,11 +1022,13 @@ function recordForm(key, record) {
           <div><h2>${record ? escapeHtml(config.name(record) || `Edit ${singular}`) : `New ${singular}`}</h2><p>${record ? `ID: ${escapeHtml(record.id)}` : "Create a new record"}</p></div>
           <div class="editor-actions">
             ${record ? '<button type="button" class="button button-danger" data-action="delete-record">Delete</button>' : ""}
+            <button type="button" class="button button-secondary" data-action="open-preview" title="See this record on the site, including unsaved changes">Preview</button>
             <button type="submit" class="button button-primary">Save ${singular}</button>
           </div>
         </div>
         <div class="form-grid">
           <label class="publish-toggle field full"><input type="checkbox" name="published" ${published ? "checked" : ""} /><span><strong>Published</strong><span class="helper">When unchecked, Sync data and Export to site leave this record out of the public site.</span></span></label>
+          ${state.settings.includeSamples ? `<label class="publish-toggle field full sample-flag"><input type="checkbox" name="sample" ${record?.sample ? "checked" : ""} /><span><strong>Sample content</strong><span class="helper">Preview data, not campaign canon. While <em>Show sample content</em> is off, it is hidden here and left out of Sync data and Export.</span></span></label>` : ""}
           ${record ? "" : field("ID / URL slug", "recordId", "", { full: true, help: `Optional. ${config.idHelp} It cannot be changed later.` })}
           ${config.fields(record || {})}
           ${record && config.related ? config.related(record) : ""}
@@ -977,7 +1167,7 @@ function renderOutpostEditor() {
     <form id="outpost-form" class="outpost-layout">
       <header class="outpost-editor-head">
         <div><h2>Outpost Sheet</h2><p>Manage profile, stress, capabilities, and current Outpost records.</p></div>
-        <button type="submit" class="button button-primary">Save Outpost Sheet</button>
+        <div class="editor-actions"><button type="button" class="button button-secondary" data-action="open-preview">Preview</button><button type="submit" class="button button-primary">Save Outpost Sheet</button></div>
       </header>
       <div class="outpost-tabs" role="tablist" aria-label="Outpost Sheet sections">
         ${tabs.map(([key, label]) => `<button id="outpost-tab-${key}" class="outpost-tab" type="button" role="tab" data-outpost-tab="${key}" aria-controls="outpost-panel-${key}" aria-selected="${activeOutpostTab === key}" tabindex="${activeOutpostTab === key ? "0" : "-1"}">${label}</button>`).join("")}
@@ -1016,6 +1206,8 @@ async function saveRecord(form) {
   const formData = new FormData(form);
   const existing = findRecord(key, form.dataset.editingId);
   const data = { ...config.read(formData, form), published: form.elements.published.checked };
+  // The flag is only sent while samples are shown; otherwise the server keeps whatever the record had.
+  if (form.elements.sample) data.sample = form.elements.sample.checked;
   if (!existing && formText(formData, "recordId")) data.id = formText(formData, "recordId");
   const result = existing
     ? await api(`/api/${key}/${encodeURIComponent(existing.id)}`, { method: "PUT", body: JSON.stringify({ data }) })
@@ -1026,7 +1218,7 @@ async function saveRecord(form) {
   showNotice(`${config.name(data) || config.singular} saved in the local manager${data.published ? "" : " (unpublished)"}.`);
 }
 
-async function saveOutpost(form) {
+function readOutpost(form) {
   const formData = new FormData(form);
   const outpost = {
     ...state.outpost,
@@ -1046,6 +1238,11 @@ async function saveOutpost(form) {
   if (outpost.stress.current < 0 || outpost.stress.max < 1 || outpost.stress.current > outpost.stress.max) {
     throw new Error("Stress must be between zero and the maximum box count.");
   }
+  return outpost;
+}
+
+async function saveOutpost(form) {
+  const outpost = readOutpost(form);
   await api("/api/outpost", { method: "POST", body: JSON.stringify({ data: outpost }) });
   await loadState();
   showNotice("Outpost Sheet saved in the local manager.");
@@ -1077,7 +1274,7 @@ async function uploadImage(input) {
   showNotice("Image uploaded. Save the record to keep it.");
 }
 
-const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.rules} rules${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}`;
+const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.game} Game posts${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}${result.samplesHidden ? `; ${result.samplesHidden} hidden sample records left out` : ""}`;
 
 async function exportToSite() {
   const result = await api("/api/export", { method: "POST", body: "{}" });
@@ -1235,6 +1432,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedId = null;
       draft = true;
       renderContent();
+    } else if (action === "open-preview") {
+      setPreviewOpen(true);
     } else if (action === "delete-record") {
       try { await deleteSelected(); } catch (error) { showNotice(error.message, true); }
     } else if (action === "clear-image") {
@@ -1291,7 +1490,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
     const form = event.target.closest("#record-form");
-    if (form?.dataset.collection === "archive" && event.target.name === "type") {
+    if (form && event.target.name === "type" && form.querySelector("[data-type-section]")) {
       form.querySelectorAll("[data-type-section]").forEach((section) => {
         section.hidden = section.dataset.typeSection !== event.target.value;
       });
@@ -1329,6 +1528,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("sync-button").addEventListener("click", async () => {
     try { await syncDataToSite(); } catch (error) { showNotice(error.message, true); }
+  });
+  document.getElementById("preview-panel").addEventListener("click", (event) => {
+    if (event.target.closest("[data-preview-close]")) setPreviewOpen(false);
+    else if (event.target.closest("[data-preview-refresh]")) schedulePreview(0);
+    else if (event.target.closest("[data-preview-size]")) setPreviewSize(event.target.closest("[data-preview-size]").dataset.previewSize);
+  });
+  workArea.addEventListener("input", () => { if (preview.open) schedulePreview(); });
+  workArea.addEventListener("change", () => { if (preview.open) schedulePreview(); });
+  document.getElementById("include-samples").addEventListener("change", async (event) => {
+    try { await setIncludeSamples(event.target.checked); } catch (error) { showNotice(error.message, true); event.target.checked = !event.target.checked; }
   });
   document.getElementById("import-button").addEventListener("click", async () => {
     try { await importFromSite(); } catch (error) { showNotice(error.message, true); }

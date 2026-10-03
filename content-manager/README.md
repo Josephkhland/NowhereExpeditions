@@ -31,13 +31,13 @@ Character ──< Stash entry ──> Gear
 - **Jobs**: the Job Board. A job has a type (`expedition`, `recovery`, `investigation`, `escort`, `bounty`, `outpost`, `other`), a status (`open`, `scheduled`, `in-progress`, `completed`, `failed`, `cancelled`), summary, objective, briefing, schedule, crew limits, organizer, participants, and optionally the **Session Record** describing what happened when it was played. Jobs do not need a Gate; lore is linked from the briefing.
 - **Archive**: one general lore model. Every entry has a type, title, subtitle, summary, content, author, published date, event date (free text), image, and tags. Type-specific metadata lives in `details`: Gate Records keep designation, Gate status, discovery date, environment, and known traits, hazards, and locations; Session Records keep a session date and outcome, plus participants. New types can be added in `ARCHIVE_TYPES` (app.py and both front ends) without changing the schema.
 - **Gear**: the Marketplace catalogue: name, category, description, price, weight, availability (`common`, `restricted`, `rare`, `unavailable`), image, tags, **featured**, an optional promotional label (e.g. NEW, LIMITED), and an optional discount (`{active, salePrice}`; the regular price stays in `price`). The Marketplace is informational: nothing is bought or charged.
-- **Rules**.
+- **Game**: out-of-character posts. `type` is `announcement` (posted date, optional **Pinned** and **Show until** date) or `rule` (category). Pinned announcements are listed first on the public Game page, and the newest pinned one appears as a banner on the Overview. Announcements past their show-until date are hidden on the site but stay in the manager. Rules from before schema v5 move into Game automatically as `rule` posts, keeping their IDs; the originals are kept in `legacy_records`.
 
 Structured references are stored as IDs in SQLite foreign-key columns and link tables (`jobs.session_record_id`, `job_participants`, `archive_participants`, `character_stash`). Reverse relationships (a Session Record's Job, a Gear's owners, what links to an Archive entry) are derived, never stored. A record that is still referenced cannot be deleted; the manager lists what refers to it.
 
 ### Links between records
 
-Authored text (Archive summary and content, Job summary, objective, and briefing) can link Archive entries with `[[entry-id]]` or `[[entry-id|link text]]`, and other pages with `[text](jobs.html#e-17)`. Content also understands `## headings`, `- list items`, `**bold**`, and `*italic*`. The editor lists every Archive link in a record and flags missing or unpublished targets. On export, links to unpublished entries become plain text so their IDs never reach the site.
+Authored text (Archive summary and content; Job summary, objective, and briefing; Game summary and details; Gear descriptions) is **Markdown**: CommonMark plus tables and `~~strikethrough~~`, rendered on the site by the vendored [markdown-it](https://github.com/markdown-it/markdown-it) (`public-site/vendor/`, MIT). Single line breaks are kept, raw HTML is shown as text, and `javascript:` links are refused. `#` headings start one level below the section they sit in. On top of Markdown, `[[entry-id]]` or `[[entry-id|link text]]` links an Archive entry; other pages use normal links such as `[text](jobs.html#e-17)`. The editor lists every Archive link in a record and flags missing or unpublished targets. On export, links to unpublished entries become plain text so their IDs never reach the site.
 
 ### Explore mode
 
@@ -58,7 +58,26 @@ Only the data a future Load system needs is stored: `Gear.weight` and each stash
 - **Sync data** atomically replaces only `../public-site/data`. **Export to site** builds a complete replacement site in `../site-export`. **Import site data** replaces the database with the published JSON, which discards unpublished records.
 - Uploaded images are stored in SQLite: portraits are published to `data/portraits/`, Archive and Gear images to `data/images/`.
 
-Public data layout: `data/{gear,characters,archive,jobs}/index.json` manifests plus one `<id>.json` per record, alongside `outpost.json` and `rules.json`. Record IDs are stable slugs and double as public URL fragments (`archive.html#g-03`, `jobs.html#e-17`, `marketplace.html#gear-rope`, `characters.html#varga`). The old pages `island.html`, `gates.html`, and `expeditions.html` redirect to their replacements, keeping the record ID.
+Public data layout: `data/{gear,characters,archive,jobs}/index.json` manifests plus one `<id>.json` per record, alongside `outpost.json` and `game.json` (all Game posts in one file). Record IDs are stable slugs and double as public URL fragments (`archive.html#g-03`, `jobs.html#e-17`, `marketplace.html#gear-rope`, `characters.html#varga`). The old pages `island.html`, `gates.html`, `expeditions.html`, and `rules.html` redirect to their replacements, keeping the record ID.
+
+## Preview
+
+**Preview** (next to Save on every record and on the Outpost Sheet) opens a panel showing the record on the real public site, with the same pages, styles, and scripts. The manager serves `public-site` under `/preview/` but answers its `data/` requests from the database instead of the files, so the preview:
+
+- shows **unsaved** form changes, updating as you type, and unpublished records;
+- follows the **Show sample content** switch;
+- never writes anything: `public-site/data` changes only with Sync data or Export.
+
+If the form is not valid yet (for example a missing title), the preview keeps showing the saved version and says why. **Desktop / Phone** switches the width, and **Open in new tab** opens the same preview full size; you can click around the whole site from there.
+
+## Sample content
+
+Any Character, Job, Archive entry, Gear item, or Game post can be flagged as **Sample content**: preview data that is not campaign canon. The **Show sample content** switch under *Preview* in the sidebar decides whether those records exist as far as the manager and the site are concerned:
+
+- **On:** sample records appear in the lists with a *Sample* badge, each form shows a *Sample content* checkbox, and Sync data / Export include published samples.
+- **Off** (the default for a new database): sample records are hidden from every list and from Sync data / Export, so the public site shows only real content. Nothing is deleted. References from real records to hidden samples are labelled as such and kept when the real record is saved.
+
+Turning the switch off or on does not touch the site files by itself; press **Sync data** afterwards. The Outpost Sheet is a single record and cannot be flagged.
 
 ## Upgrading a schema v3 database
 
