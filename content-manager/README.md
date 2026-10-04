@@ -60,6 +60,19 @@ Only the data a future Load system needs is stored: `Gear.weight` and each stash
 
 Public data layout: `data/{gear,characters,archive,jobs}/index.json` manifests plus one `<id>.json` per record, alongside `outpost.json` and `game.json` (all Game posts in one file). Record IDs are stable slugs and double as public URL fragments (`archive.html#g-03`, `jobs.html#e-17`, `marketplace.html#gear-rope`, `characters.html#varga`). The old pages `island.html`, `gates.html`, `expeditions.html`, and `rules.html` redirect to their replacements, keeping the record ID.
 
+## Site & launch
+
+**Site & launch** (last in the sidebar) holds the site-wide settings, published as `data/site.json`:
+
+- **Launch:** the time of the first session with its UTC offset (`2026-11-06T20:00+02:00`; Athens is +02:00 in winter and +03:00 in summer), a heading, and a short introduction. While **Show the launch panel** is on and the time has not passed, the Overview shows a live countdown, the time in Athens and in the visitor's own time zone, and the roadmap. The panel hides itself once the launch time passes.
+- **Roadmap:** steps with *To do*, *In progress*, or *Done*, reordered with the arrows. The Overview shows them with a progress bar.
+- **Discord invite:** a *Join our Discord* button on the launch panel and in every page footer.
+- **Community:** the *A campaign of Game of Adventuring* credit in every page footer, linked to the Discord invite, with a small logo.
+- **Sponsor:** name, link, and logo, credited as *Supported by …* in every page footer.
+- **Logos** can be a file dropped into `public-site/assets/images/` (the defaults expect `game-of-adventuring.png` and `cozy-house-games.png`), an uploaded image (hosted with the site under `data/images/`), or a full `https://` address. A missing file just leaves the name without a logo.
+
+Every page footer also carries the copyright line, written into the pages themselves.
+
 ## Preview
 
 **Preview** (next to Save on every record and on the Outpost Sheet) opens a panel showing the record on the real public site, with the same pages, styles, and scripts. The manager serves `public-site` under `/preview/` but answers its `data/` requests from the database instead of the files, so the preview:

@@ -796,6 +796,98 @@ details[open] summary {
   color: var(--muted);
 }
 
+/* ---------- Launch panel, Discord, sponsor ---------- */
+
+.launch-panel {
+  display: grid;
+  gap: 1.4rem;
+  margin-top: 1.4rem;
+  padding: 1.4rem 1.5rem;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent-2);
+  background: var(--panel);
+}
+
+.launch-head { display: grid; gap: 0.3rem; }
+.launch-head h2 { margin: 0.1rem 0 0.2rem; font-family: Georgia, "Times New Roman", serif; font-size: 2rem; font-weight: 500; }
+.launch-summary { max-width: 62ch; margin: 0; color: var(--muted); }
+
+/* Vertical timeline: date | node on the line | milestone. */
+.timeline { --tl-date: 7rem; --tl-node: 1.9rem; --tl-gap: 1.1rem; margin: 0.4rem 0 0; padding: 0; list-style: none; }
+.timeline-step { position: relative; display: grid; grid-template-columns: var(--tl-date) var(--tl-node) minmax(0, 1fr); grid-template-areas: "date node body";
+  column-gap: var(--tl-gap); padding-bottom: 1.5rem; }
+.timeline-step:last-child { padding-bottom: 0; }
+.timeline-step::before { content: ""; position: absolute; left: calc(var(--tl-date) + var(--tl-gap) + var(--tl-node) / 2 - 1px); top: 0; bottom: 0; width: 2px; background: var(--line); }
+.timeline-step:first-child::before { top: calc(var(--tl-node) / 2); }
+.timeline-step:last-child::before { bottom: auto; height: calc(var(--tl-node) / 2); }
+.timeline-step:only-child::before { display: none; }
+.timeline-step.is-done::before { background: var(--success); }
+.timeline-step.is-in-progress::before { background: linear-gradient(var(--success) 0 calc(var(--tl-node) / 2), var(--line) calc(var(--tl-node) / 2)); }
+.timeline-step.is-in-progress:first-child::before { background: var(--line); }
+.timeline-step.is-done:last-child::before { background: var(--success); }
+.timeline-date { grid-area: date; display: grid; justify-items: end; align-content: start; gap: 0.1rem; padding-top: 0.2rem; text-align: right; }
+.timeline-date time { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.timeline-state { color: var(--muted); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.timeline-node { grid-area: node; position: relative; z-index: 1; display: grid; place-items: center; width: var(--tl-node); height: var(--tl-node);
+  border: 2px solid var(--line); border-radius: 50%; background: #0d1416; color: #0d1416; font-size: 0.95rem; font-weight: 800; }
+.timeline-body { grid-area: body; padding-top: 0.15rem; }
+.timeline-title { margin: 0; color: var(--text); font-size: 1.08rem; font-weight: 600; }
+.timeline-detail { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.timeline-step.is-done .timeline-node { border-color: var(--success); background: var(--success); }
+.timeline-step.is-done .timeline-state { color: var(--success); }
+.timeline-step.is-done .timeline-date time { color: var(--muted); }
+.timeline-step.is-in-progress .timeline-node { border-color: var(--accent-2); box-shadow: 0 0 0 4px rgba(224, 168, 86, 0.18); }
+.timeline-step.is-in-progress .timeline-node::after { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--accent-2); animation: timeline-pulse 1.8s ease-in-out infinite; }
+.timeline-step.is-in-progress .timeline-state,
+.timeline-step.is-in-progress .timeline-date time { color: var(--accent-2); }
+.timeline-step:last-child .timeline-title { font-family: Georgia, "Times New Roman", serif; font-size: 1.3rem; font-weight: 500; }
+@keyframes timeline-pulse { 50% { opacity: 0.35; transform: scale(0.7); } }
+@media (prefers-reduced-motion: reduce) { .timeline-step.is-in-progress .timeline-node::after { animation: none; } }
+
+/* The countdown sits under the timeline in big numbers. */
+.launch-countdown { display: grid; justify-items: center; gap: 1rem; padding-top: 1.6rem; border-top: 1px solid var(--line); text-align: center; }
+.launch-when { display: grid; gap: 0.25rem; margin: 0; }
+.launch-when .muted { font-size: 0.88rem; }
+.countdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(100%, 44rem); gap: 1px; border: 1px solid var(--line); background: var(--line); }
+.countdown div { display: grid; justify-items: center; gap: 0.4rem; padding: 1.1rem 0.4rem 0.9rem; background: rgba(9, 14, 16, 0.9); }
+.countdown-value { color: var(--accent-2); font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.4rem, 8vw, 4.6rem); font-variant-numeric: tabular-nums; line-height: 1; }
+.countdown-label { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; }
+.discord-cta { display: inline-flex; align-items: center; gap: 0.6rem; }
+
+.chat-icon { width: 1.15em; height: 1.15em; flex: 0 0 auto; }
+
+.footer .footer-community {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem 2rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.discord-link { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.9rem; border: 1px solid var(--line-strong); color: var(--text); }
+.discord-link:hover,
+.discord-link:focus-visible { border-color: var(--accent); color: var(--accent); }
+.footer-credit { display: inline-flex; align-items: center; gap: 0.6rem; }
+.footer-credit-label { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.footer-credit-link { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--text); }
+a.footer-credit-link:hover,
+a.footer-credit-link:focus-visible { color: var(--accent-2); }
+.community-logo,
+.sponsor-logo { height: 1.5rem; width: 1.5rem; object-fit: contain; border-radius: 4px; }
+
+@media (max-width: 800px) {
+  .launch-panel { padding: 1.1rem; }
+  .launch-head h2 { font-size: 1.6rem; }
+  .timeline { --tl-node: 1.6rem; --tl-gap: 0.8rem; }
+  .timeline-step { grid-template-columns: var(--tl-node) minmax(0, 1fr); grid-template-areas: "node date" "node body"; }
+  .timeline-step::before { left: calc(var(--tl-node) / 2 - 1px); }
+  .timeline-date { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: start; gap: 0.5rem; padding-top: 0; text-align: left; }
+  .countdown div { padding: 0.8rem 0.2rem 0.7rem; }
+}
+
 /* ---------- Game: out-of-character notes ---------- */
 
 /* Game is the one out-of-character section, set slightly apart from the in-world ones. */
