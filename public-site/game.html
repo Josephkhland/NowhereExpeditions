@@ -43,12 +43,21 @@
           <div id="announcement-list" class="announcement-list" aria-live="polite"><p class="empty-state">Loading announcements...</p></div>
         </div>
         <div id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
-          <div class="rules-search-bar">
-            <label for="rules-search">Search rules</label>
-            <input id="rules-search" class="search-input" type="search" placeholder="Search by topic or keyword" autocomplete="off" />
-            <p id="rules-count" class="muted" aria-live="polite">Loading rules...</p>
+          <div id="rules-layout" class="rules-layout">
+            <aside class="rules-sidebar" aria-label="Rules list">
+              <div id="rules-topics" class="rules-topics" hidden>
+                <label for="rules-topic">Topic</label>
+                <select id="rules-topic" class="search-input"></select>
+              </div>
+              <div class="rules-search-bar">
+                <label for="rules-search">Search rules</label>
+                <input id="rules-search" class="search-input" type="search" placeholder="Search by topic or keyword" autocomplete="off" />
+                <p id="rules-count" class="muted" aria-live="polite">Loading rules...</p>
+              </div>
+              <ol id="rules-list" class="rules-nav"><li class="empty-state">Loading campaign rules...</li></ol>
+            </aside>
+            <article id="rule-view" class="rule-view" aria-live="polite" aria-labelledby="rule-view-title"></article>
           </div>
-          <div id="rules-list" class="rules-list" aria-live="polite"><p class="empty-state">Loading campaign rules...</p></div>
         </div>
       </section>
     </main>

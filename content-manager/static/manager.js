@@ -2,6 +2,8 @@ const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpo
 let activeView = "outpost";
 let selectedId = null;
 let draft = false;
+// The reading path being edited (ordered rule IDs), or null when the Game view shows a record instead.
+let pathEditor = null;
 let filterText = "";
 let listFilters = {};
 let activeOutpostTab = "profile";
@@ -420,7 +422,7 @@ async function importSheetFile(input) {
     && !confirm(`This is a new-character file for “${envelope.characterName || "an unnamed character"}”. Import it over the existing character ${currentName}? To add it as a new character, press + New first.`)) return;
 
   const identityChanges = [];
-  fieldsBeforeImport = Object.fromEntries(["name", "playerName", "summary", "type"].map((name) => [name, form.querySelector(`[name="${name}"]`).value]));
+  fieldsBeforeImport = Object.fromEntries(["name", "playerName", "summary", "type", "coins", "carryLimit"].map((name) => [name, form.querySelector(`[name="${name}"]`).value]));
   if (envelope.newCharacter) {
     const fill = (name, value, label) => {
       const control = form.querySelector(`[name="${name}"]`);
@@ -441,6 +443,16 @@ async function importSheetFile(input) {
       summary.value = envelope.summary.trim();
     }
   }
+
+  [["coins", "Coins", 999999], ["carryLimit", "Carry limit", 99]].forEach(([name, label, max]) => {
+    const value = envelope[name];
+    if (!Number.isInteger(value) || value < 0 || value > max) return;
+    const control = form.querySelector(`[name="${name}"]`);
+    if (Number(control.value) !== value) {
+      identityChanges.push(`${label}: ${control.value || 0} → ${value}`);
+      control.value = value;
+    }
+  });
 
   const before = readSheet(form);
   document.getElementById("sheet-editor").innerHTML = sheetEditor({ ...normalizeImportedSheet(envelope.sheet), public: before ? before.public : true });
@@ -493,7 +505,28 @@ function readStash(root = document) {
   }));
 }
 
-function stashEditor(stash) {
+// Total weight of the Gear brought into action, against the character's carry limit (6 unless a stunt or situation changes it).
+const DEFAULT_CARRY_LIMIT = 6;
+const carryLimit = () => {
+  const value = document.querySelector('#record-form [name="carryLimit"]')?.value;
+  return value === undefined || value === "" ? DEFAULT_CARRY_LIMIT : Number(value);
+};
+const carriedWeight = (stash) => stash.filter((item) => item.broughtIntoAction)
+  .reduce((total, item) => total + (Number(findRecord("gear", item.gearId)?.weight) || 0) * item.quantity, 0);
+const carriedText = (stash, limit = carryLimit()) => {
+  const carried = carriedWeight(stash);
+  return `Carried into action: <strong>${carried} / ${limit}</strong>${carried > limit ? " · over the limit" : ""}`;
+};
+function updateCarried() {
+  const line = document.querySelector("[data-carried]");
+  const stash = readStash();
+  if (!line || !stash) return;
+  line.innerHTML = carriedText(stash);
+  line.classList.toggle("is-over", carriedWeight(stash) > carryLimit());
+}
+
+// `limit` is passed when the form is being built (its carry limit field is not on the page yet).
+function stashEditor(stash, limit = carryLimit()) {
   const owned = new Map(stash.map((item) => [item.gearId, item]));
   const rows = stash.map((item) => {
     const gear = findRecord("gear", item.gearId);
@@ -523,6 +556,7 @@ function stashEditor(stash) {
   return `<div class="stash-editor" data-stash>
     <div class="outpost-tabs" role="tablist" aria-label="Inventory">${tab("stash", `My Stash (${stash.length})`)}${tab("market", "Marketplace")}</div>
     <div class="stash-panel" ${stashView.tab === "stash" ? "" : "hidden"}>
+      <p class="stash-carried${carriedWeight(stash) > limit ? " is-over" : ""}" data-carried>${carriedText(stash, limit)}</p>
       ${stash.length ? `<table class="stash-table"><thead><tr><th>Gear</th><th>Category</th><th class="numeric">Weight</th><th>Qty</th><th>Brought into action</th><th><span class="sr-only">Remove</span></th></tr></thead><tbody>${rows}</tbody></table>`
         : '<p class="nested-empty">The stash is empty. Add Gear from the Marketplace tab.</p>'}
       <p class="helper">Removing an entry only removes it from this character; the Gear stays in the Marketplace. No Load limit is enforced yet.</p>
@@ -720,6 +754,10 @@ const collections = {
       ${selectField("Status", "status", record.status || "active", enumChoices(["active", "inactive", "missing", "deceased"]))}
       ${imageField("Portrait", "portrait", record.portrait, "portrait")}
       ${textarea("Public summary", "summary", record.summary || "", { full: true, help: "A short, player-facing description." })}
+      <div class="form-section">Between expeditions</div>
+      ${field("Downtime", "downtime", record.downtime ?? 0, { type: "number", min: 0, help: "0 to 8. After each expedition: +2 for the crew, +3 for everyone else, up to 8. Shown on the character's page." })}
+      ${field("Coins", "coins", record.coins ?? 0, { type: "number", min: 0, help: "After each expedition, raise to the Resources rating if lower, then add any reward." })}
+      ${field("Carry limit", "carryLimit", record.carryLimit ?? 6, { type: "number", min: 0, help: "Most total weight brought into action. 6 by default; stunts may raise it and situations lower it." })}
       <div class="form-section">Fate Core character sheet</div>
       <div class="field full sheet-import-bar">
         <label class="button button-secondary">Import sheet file<input type="file" accept=".html,.htm,.json,text/html,application/json" data-sheet-import hidden /></label>
@@ -728,7 +766,7 @@ const collections = {
       <div class="field full" id="sheet-import-note" hidden></div>
       <div class="field full" id="sheet-editor">${sheetEditor(record.sheet)}</div>
       <div class="form-section">Inventory</div>
-      <div class="field full">${stashEditor(record.stash || [])}</div>`,
+      <div class="field full">${stashEditor(record.stash || [], record.carryLimit ?? DEFAULT_CARRY_LIMIT)}</div>`,
     related: (record) => {
       const jobs = state.jobs.filter((job) => job.organizerId === record.id || job.participantIds.includes(record.id));
       const sessions = state.archive.filter((entry) => entry.participantIds.includes(record.id));
@@ -742,7 +780,8 @@ const collections = {
       name: formText(formData, "name"), playerName: formText(formData, "playerName"),
       type: formText(formData, "type"), status: formText(formData, "status"),
       portrait: formText(formData, "portrait"), summary: formText(formData, "summary"),
-      sheet: readSheet(form), stash: readStash(form) || []
+      sheet: readSheet(form), stash: readStash(form) || [], coins: formText(formData, "coins"),
+      downtime: formText(formData, "downtime"), carryLimit: formText(formData, "carryLimit")
     })
   },
   jobs: {
@@ -897,15 +936,15 @@ const collections = {
     meta: (record) => record.type === "announcement"
       ? ["Announcement", record.pinned ? "Pinned" : "", record.publishedAt]
       : ["Rule", record.category || "Uncategorized"],
-    // Announcements first, newest at the top; then rules by title.
+    // Announcements first, newest at the top; then rules in reading order, the rest by title.
     sortKey: (record) => record.type === "announcement"
       ? `0 ${String(99999999 - Number(String(record.publishedAt || "0").replace(/-/g, ""))).padStart(8, "0")}`
-      : `1 ${record.title || ""}`,
+      : `1 ${String(record.order || 999).padStart(3, "0")} ${record.title || ""}`,
     filters: [["type", "Announcements and rules", [["announcement", "Announcements"], ["rule", "Rules"]]]],
     idHelp: "Generated from the title when left blank. Announcements are linked as game.html#post-<id>.",
     fields: (record) => {
       const type = record.type || listFilters.game?.type || "announcement";
-      const categories = ["Campaign", "Jobs", "Outpost", "Information"];
+      const categories = ["Campaign", "Recruitment Factions", "Campaign Systems", "For Crafters & Artificers", "For Settlement Builders", "Jobs", "Outpost", "Information"];
       if (record.category && !categories.includes(record.category)) categories.push(record.category);
       const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
@@ -916,22 +955,29 @@ const collections = {
         ${field("Show until", "showUntil", record.showUntil || "", { type: "date", help: "Optional. After this date the announcement is hidden from the site." })}
         <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
       ${section("rule", `
-        ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}`)}
+        ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}
+        <div class="field"><span class="field-label">Reading path</span><p class="path-status">${Number.isInteger(record.order)
+          ? `Step ${record.order} of the Onboarding reading path.` : "Not on the reading path."}</p>
+          <span class="helper">Change it with <strong>Edit reading path…</strong> above the list of Game posts.</span></div>`)}
       ${textarea("Short summary", "summary", record.summary || "", { full: true })}
-      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]." })}
-      ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}`;
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]. Put <code>{{reading-path}}</code> on its own line to show the numbered Onboarding reading path there." })}
+      ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}
+      ${imageField("Art", "image", record.image)}
+      <p class="helper field full">Optional. Shown on the right of the post on wide screens, fading into the page, and as a faded banner above it on phones. Wide landscape images work best.</p>`;
     },
     related: (record) => linkCheck([record.summary, record.details]) + legacyNote(record),
-    read: (formData) => {
+    read: (formData, form) => {
       const type = formText(formData, "type");
       return {
         type, title: formText(formData, "title"),
         category: type === "rule" ? formText(formData, "category") : "",
+        // Kept as saved: the reading path editor is the one place that changes it.
+        order: type === "rule" ? state.game.find((post) => post.id === form?.dataset.editingId)?.order ?? null : null,
         publishedAt: type === "announcement" ? formText(formData, "publishedAt") : "",
         showUntil: type === "announcement" ? formText(formData, "showUntil") : "",
         pinned: type === "announcement" && formData.get("pinned") === "on",
         summary: formText(formData, "summary"), details: formText(formData, "details"),
-        tags: linesToArray(formData.get("tags"))
+        tags: linesToArray(formData.get("tags")), image: formText(formData, "image")
       };
     }
   }
@@ -1001,11 +1047,15 @@ async function validateBatchFile(file) {
   }
   changes.push(...describeSheetChanges(before, after).filter((line) => !(isNew && line.startsWith("New sheet"))));
   if (stash) changes.push(...describeStashChanges(existing?.stash || [], stash));
+  const coins = Number.isInteger(envelope.coins) && envelope.coins >= 0 && envelope.coins <= 999999 ? envelope.coins : null;
+  if (coins !== null && coins !== (existing?.coins ?? 0)) changes.push(`Coins: ${existing?.coins ?? 0} → ${coins}`);
+  const carryLimit = Number.isInteger(envelope.carryLimit) && envelope.carryLimit >= 0 && envelope.carryLimit <= 99 ? envelope.carryLimit : null;
+  if (carryLimit !== null && carryLimit !== (existing?.carryLimit ?? 6)) changes.push(`Carry limit: ${existing?.carryLimit ?? 6} → ${carryLimit}`);
   skipped.forEach((gearId) => changes.push(`Skipped unknown Gear “${gearId}”`));
   // New-character files carry no ID, so importing the same file twice would create a second character.
   const namesake = isNew ? state.characters.find((character) => String(character.name || "").trim().toLowerCase() === name.toLowerCase()) : null;
   return {
-    file: file.name, envelope, isNew, existing, stash, changes,
+    file: file.name, envelope, isNew, existing, stash, coins, carryLimit, changes,
     warning: namesake ? `A character named “${namesake.name}” already exists (${namesake.id}). Approving creates a second one; deny it if this file was already imported.` : "",
     character: isNew ? name : existing.name,
     key: isNew ? `new:${name.toLowerCase()}` : `id:${existing.id}`,
@@ -1048,12 +1098,13 @@ async function decideBatch(approve) {
       if (item.isNew) {
         await api("/api/characters", { method: "POST", body: JSON.stringify({ data: {
           name: item.character, playerName: String(envelope.playerName || "").trim(), type: "player", status: "active",
-          summary, sheet, stash: item.stash || [], published: false
+          summary, sheet, stash: item.stash || [], coins: item.coins ?? 0, carryLimit: item.carryLimit ?? 6, published: false
         } }) });
       } else {
         const { id, legacy, sample, ...record } = item.existing;
         await api(`/api/characters/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ data: {
-          ...record, summary, sheet, ...(item.stash ? { stash: item.stash } : {})
+          ...record, summary, sheet, ...(item.stash ? { stash: item.stash } : {}), ...(item.coins !== null ? { coins: item.coins } : {}),
+          ...(item.carryLimit !== null ? { carryLimit: item.carryLimit } : {})
         } }) });
       }
       batch.results.push({ file: item.file, character: item.character, status: "imported", reason: item.isNew ? "Created (unpublished)." : "Updated." });
@@ -1515,12 +1566,12 @@ function renderCollection(key) {
   const selected = draft ? null : items.find((record) => record.id === selectedId) || items[0] || null;
   if (!draft) selectedId = selected?.id || null;
   const listMarkup = items.length ? items.map((record) => `
-    <button type="button" class="record-button ${selected?.id === record.id ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
+    <button type="button" class="record-button ${selected?.id === record.id && !(key === "game" && pathEditor) ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
       <span class="record-name">${escapeHtml(config.name(record) || "Untitled")}</span>
       <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}${record.sample ? '<span class="record-sample">Sample</span>' : ""}</span>
     </button>
   `).join("") : '<div class="empty-list">No matching records yet.</div>';
-  const editor = draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
+  const editor = key === "game" && pathEditor ? readingPathEditor() : draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
     <div class="editor-content"><div class="empty-list">Choose a record to edit, or create a new ${config.singular.toLowerCase()}.</div></div>`;
 
   document.getElementById("work-area").innerHTML = `
@@ -1528,11 +1579,68 @@ function renderCollection(key) {
       <section class="record-list-panel" aria-label="${config.title} list">
         <div class="panel-head"><h2>${config.panel}</h2><button class="button button-secondary" type="button" data-action="new-record">+ New</button></div>
         ${key === "characters" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="batch-import" title="Review and import a folder of player sheet files">Batch import sheet files…</button></div>' : ""}
+        ${key === "game" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="path-edit" title="Choose and order the rules new players should read">Edit reading path…</button></div>' : ""}
         ${listFilterBar(key)}
         <div class="record-list">${listMarkup}</div>
       </section>
       <section class="editor-panel" aria-label="${config.singular} editor">${editor}</section>
     </div>`;
+}
+
+/* ---------- Reading path: the ordered rules new players read (the Onboarding topic) ---------- */
+
+const currentReadingPath = () => state.game.filter((post) => post.type !== "announcement" && Number.isInteger(post.order))
+  .sort((left, right) => left.order - right.order).map((post) => post.id);
+
+function readingPathEditor() {
+  const rules = state.game.filter((post) => post.type !== "announcement");
+  const byId = Object.fromEntries(rules.map((rule) => [rule.id, rule]));
+  const available = rules.filter((rule) => !pathEditor.includes(rule.id))
+    .sort((left, right) => String(left.title).localeCompare(String(right.title)));
+  const rows = pathEditor.filter((id) => byId[id]).map((id, index, ids) => {
+    const rule = byId[id];
+    return `<li class="path-row" data-path-id="${escapeHtml(id)}">
+      <span class="path-number">${index + 1}</span>
+      <span class="path-title"><strong>${escapeHtml(rule.title || id)}</strong>
+        <span class="record-meta"><span>${escapeHtml(rule.category || "Uncategorized")}</span>${rule.published ? "" : '<span class="record-draft">Unpublished</span>'}</span></span>
+      <span class="roadmap-move">
+        <button type="button" class="button button-secondary" data-action="path-up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="button button-secondary" data-action="path-down" aria-label="Move down" ${index === ids.length - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" class="button button-secondary" data-action="path-remove">Remove</button>
+      </span>
+    </li>`;
+  }).join("");
+  return `
+    <div class="editor-content">
+      <div class="editor-title">
+        <div><h2>Reading path</h2><p>The Onboarding topic on the Rules tab</p></div>
+        <div class="editor-actions">
+          <button type="button" class="button button-secondary" data-action="path-cancel">Cancel</button>
+          <button type="button" class="button button-primary" data-action="path-save">Save reading path</button>
+        </div>
+      </div>
+      <div class="path-help helper">
+        <p>The rules new players should read, in order. On the site they are listed under the <strong>Onboarding</strong> topic on the Rules tab,
+          and each one ends with <em>Previous</em> and <em>Next</em> links.</p>
+        <p>To show this list inside a post, such as the Game Listing, put <code>{{reading-path}}</code> on its own line in that post's Details.
+          Write the text around it in the post itself. The list is grouped under each rule's category; unpublished rules are left out on the site.</p>
+      </div>
+      ${rows ? `<ol class="path-rows">${rows}</ol>` : '<div class="empty-list">No rules on the reading path yet.</div>'}
+      <div class="path-add">
+        <select id="path-add-select" aria-label="Rule to add">
+          ${available.length ? available.map((rule) => `<option value="${escapeHtml(rule.id)}">${escapeHtml(rule.title || rule.id)} (${escapeHtml(rule.category || "Uncategorized")})</option>`).join("")
+            : "<option value=\"\">Every rule is already on the path</option>"}
+        </select>
+        <button type="button" class="button button-secondary" data-action="path-add" ${available.length ? "" : "disabled"}>Add to the end</button>
+      </div>
+    </div>`;
+}
+
+async function saveReadingPath() {
+  await api("/api/reading-path", { method: "POST", body: JSON.stringify({ ruleIds: pathEditor }) });
+  pathEditor = null;
+  await loadState();
+  showNotice("Reading path saved in the local manager. Sync data to publish it.");
 }
 
 function listFilterBar(key) {
@@ -1944,12 +2052,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (navRecord) {
       selectedId = navRecord.dataset.recordId;
       draft = false;
+      pathEditor = null;
       renderContent();
       return;
     }
     if (action === "new-record") {
       selectedId = null;
       draft = true;
+      pathEditor = null;
+      renderContent();
+    } else if (action === "path-edit") {
+      pathEditor = currentReadingPath();
+      draft = false;
+      renderContent();
+    } else if (action === "path-cancel") {
+      pathEditor = null;
+      renderContent();
+    } else if (action === "path-save") {
+      try { await saveReadingPath(); } catch (error) { showNotice(error.message, true); }
+    } else if (action === "path-add") {
+      const ruleId = document.getElementById("path-add-select").value;
+      if (ruleId) pathEditor.push(ruleId);
+      renderContent();
+    } else if (action === "path-up" || action === "path-down" || action === "path-remove") {
+      const index = pathEditor.indexOf(actionButton.closest("[data-path-id]").dataset.pathId);
+      if (action === "path-remove") pathEditor.splice(index, 1);
+      else {
+        const target = action === "path-up" ? index - 1 : index + 1;
+        if (target >= 0 && target < pathEditor.length) [pathEditor[index], pathEditor[target]] = [pathEditor[target], pathEditor[index]];
+      }
       renderContent();
     } else if (action === "add-prerequisite" || action === "add-complication") {
       const list = document.getElementById(action === "add-prerequisite" ? "prerequisite-rows" : "complication-rows");
@@ -2074,7 +2205,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (event.target.closest("[data-preview-refresh]")) schedulePreview(0);
     else if (event.target.closest("[data-preview-size]")) setPreviewSize(event.target.closest("[data-preview-size]").dataset.previewSize);
   });
-  workArea.addEventListener("input", () => { if (preview.open) schedulePreview(); });
+  workArea.addEventListener("input", (event) => {
+    if (event.target.matches('[data-stash-quantity], [data-stash-action], [name="carryLimit"]')) updateCarried();
+    if (preview.open) schedulePreview();
+  });
   workArea.addEventListener("change", (event) => {
     const resolved = event.target.closest('[data-complication="resolved"]');
     if (resolved) {

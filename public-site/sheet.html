@@ -69,6 +69,12 @@
   .tab { padding: 0.5rem 0.9rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
   .tab[aria-selected="true"] { border-bottom-color: var(--accent-2); color: var(--text); }
   .row-stash { grid-template-columns: minmax(0, 1fr) 5rem 9.5rem 2.2rem; }
+  .purse { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 2rem; margin: 0 0 0.9rem; }
+  .purse-label { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .purse .counter input { width: 5.5rem; }
+  .purse .limit-input { width: 3.6rem; padding: 0.25rem 0.4rem; text-align: center; }
+  .purse .hint { display: block; margin-top: 0.2rem; color: var(--muted); font-size: 0.78rem; }
+  .carried.over { color: #e07a6f; font-weight: 700; }
   .row-market { grid-template-columns: minmax(0, 1fr) 4.5rem 5rem 9rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
   .item-name { display: block; }
   .item-meta { display: block; color: var(--muted); font-size: 0.8rem; }
@@ -208,7 +214,8 @@
       const character = await fetchJson(`data/characters/${encodeURIComponent(characterParam)}.json`);
       if (!character.sheet) throw new Error("This character has no public sheet.");
       base = { characterId: character.id, characterName: character.name, playerName: character.playerName || "",
-        summary: character.summary || "", sheet: character.sheet, stash: character.stash || [] };
+        summary: character.summary || "", sheet: character.sheet, stash: character.stash || [], coins: Number(character.coins) || 0,
+        carryLimit: Number.isInteger(character.carryLimit) ? character.carryLimit : 6 };
     } else if (creating) {
       base = { newCharacter: true, characterId: null, characterName: "", playerName: "", summary: "",
         sheet: {
@@ -220,7 +227,7 @@
           consequences: [{ label: "Mild", shift: 2, aspect: "" }, { label: "Moderate", shift: 4, aspect: "" }, { label: "Severe", shift: 6, aspect: "" }],
           extras: ""
         },
-        stash: [] };
+        stash: [], coins: 0, carryLimit: 6 };
     }
   } catch (error) {
     app.innerHTML = `<p class="empty">The sheet could not be loaded (${escapeHtml(error.message)}). Open it again from the character's page.</p>`;
@@ -256,6 +263,8 @@
     storageSet(key, {
       at: data.savedAt || new Date().toISOString(), savedAt: data.savedAt || null, sheet: data.sheet,
       stash: Array.isArray(data.stash) ? data.stash : undefined,
+      coins: Number.isInteger(data.coins) ? data.coins : undefined,
+      carryLimit: Number.isInteger(data.carryLimit) ? data.carryLimit : undefined,
       identity: { name: data.characterName || "", playerName: data.playerName || "", summary: typeof data.summary === "string" ? data.summary : undefined },
       basedOn: null, openedFrom: file.name
     });
@@ -294,12 +303,16 @@
     .filter((item) => item && typeof item.gearId === "string")
     .map((item) => ({ gearId: item.gearId, quantity: Math.max(1, Math.round(Number(item.quantity)) || 1), broughtIntoAction: Boolean(item.broughtIntoAction) }));
   // Identifies the published version a draft started from, so a newer GM version can be noticed.
-  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || [], source.summary || ""]);
+  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || [], source.summary || "", source.coins ?? 0, source.carryLimit ?? 6]);
   const publishedFingerprint = fingerprint(base);
 
   const draftKey = draftKeyFor(base.characterId);
   let state = normalize(base.sheet);
   let stash = normalizeStash(base.stash);
+  const cleanCoins = (value) => Math.max(0, Math.min(999999, Math.round(Number(value)) || 0));
+  let coins = cleanCoins(base.coins);
+  const cleanLimit = (value) => Math.max(0, Math.min(99, Math.round(Number(value)) || 0));
+  let carryLimit = cleanLimit(base.carryLimit ?? 6);
   const identity = { name: base.characterName || "", playerName: base.playerName || "", summary: base.summary || "" };
   const characterName = () => identity.name.trim() || (base.newCharacter ? "New character" : "Character");
   let dirty = false;
@@ -311,6 +324,8 @@
   if (draft?.sheet) {
     state = normalize(draft.sheet);
     if (Array.isArray(draft.stash)) stash = normalizeStash(draft.stash);
+    if (Number.isInteger(draft.coins)) coins = cleanCoins(draft.coins);
+    if (Number.isInteger(draft.carryLimit)) carryLimit = cleanLimit(draft.carryLimit);
     if (draft.identity) {
       if (base.newCharacter) {
         identity.name = draft.identity.name ?? identity.name;
@@ -340,6 +355,38 @@
   const weight = (amount, suffix = "") => `<span class="weight" title="Weight"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 10h1.5V8H1zM2.5 5h3v14h-3zM5.5 7.5h2.5v9H5.5zM8 10.75h8v2.5H8zM16 7.5h2.5v9H16zM18.5 5h3v14h-3zM21.5 8H23v2h-1.5zM21.5 14H23v2h-1.5zM1 14h1.5v2H1z" fill="currentColor"/></svg><span class="visually-hidden">Weight </span>${escapeHtml(amount)}${suffix}</span>`;
   const priceText = (gear) => gear.discount?.active && Number.isFinite(gear.discount.salePrice)
     ? `<span class="sale">${coin(gear.discount.salePrice)}</span> <s>${coin(gear.price)}</s>` : coin(Number(gear.price) || 0);
+  const priceOf = (gear) => gear.discount?.active && Number.isFinite(gear.discount.salePrice) ? gear.discount.salePrice : Number(gear.price) || 0;
+  // Gear brought into action counts against the carry limit: 6 by default, changed here when a stunt or situation says so.
+  const carriedWeight = () => stash.filter((item) => item.broughtIntoAction)
+    .reduce((total, item) => total + (Number(gearById.get(item.gearId)?.weight) || 0) * item.quantity, 0);
+  const carriedMarkup = () => `<span class="carried${carriedWeight() > carryLimit ? " over" : ""}" id="carried">${weight(carriedWeight())}${carriedWeight() > carryLimit ? " · over the limit" : ""}</span>`;
+  const updateCarried = () => { const line = app.querySelector("#carried"); if (line) line.outerHTML = carriedMarkup(); };
+  const purse = (editable) => `<div class="purse">
+      <div><span class="purse-label">Coins</span>
+        <div class="counter">
+          <button type="button" class="small" data-action="coins" data-step="-1" aria-label="Spend a coin">−</button>
+          ${editable ? `<input type="number" min="0" data-coins value="${coins}" aria-label="Coins" />` : `<span class="view-value" aria-live="polite">${coin(coins)}</span>`}
+          <button type="button" class="small" data-action="coins" data-step="1" aria-label="Gain a coin">+</button>
+        </div></div>
+      <div><span class="purse-label">Carried into action</span>
+        <div>${carriedMarkup()} / ${editable
+          ? `<input type="number" class="limit-input" min="0" max="99" data-carry-limit value="${carryLimit}" aria-label="Carry limit" />
+            <span class="hint">Carry limit: 6 unless a stunt or situation changes it.</span>`
+          : `<strong>${carryLimit}</strong>`}</div></div>
+    </div>`;
+  const resourcesRating = () => Math.max(0, Number(state.skills.find((skill) => skill.name.trim().toLowerCase() === "resources")?.rating) || 0);
+  const followResources = (change) => {
+    const following = base.newCharacter && coins === resourcesRating();
+    const before = coins;
+    change();
+    // Coins typed or spent by the player stop the following; only a Resources change moves them.
+    if (!following || coins !== before || coins === resourcesRating()) return;
+    coins = resourcesRating();
+    const coinInput = app.querySelector("[data-coins]");
+    if (coinInput) coinInput.value = coins;
+    const market = document.getElementById("market-list");
+    if (market) market.innerHTML = renderMarket();
+  };
   const dieIcon = () => window.NowhereDice ? window.NowhereDice.icon : "🎲";
 
   /* ---------- Header ---------- */
@@ -349,7 +396,7 @@
     document.title = `${characterName()} — Character Sheet`;
   };
   document.getElementById("help").innerHTML = base.newCharacter
-    ? "Build your character here: name them, write a public summary, set aspects, rate skills (all start at Mediocre +0), and pick starting Gear. Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
+    ? "Build your character here: name them, write a public summary, set aspects, rate skills (all start at Mediocre +0), and buy starting Gear (you start with Coins equal to your Resources rating). Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
     : "Edit anything during play; your changes are kept in this browser, even if you close the tab. Switch to <strong>View sheet</strong> for a play layout. Press <strong>Save file</strong> after the session and send the file to the GM.";
   resetButton.textContent = base.newCharacter ? "Start over" : "Reset to published";
   [resetButton, saveButton, modeButton].forEach((button) => { button.hidden = false; });
@@ -365,7 +412,7 @@
       : lastSavedAt ? `Saved to file ${timeText(lastSavedAt)}` : "No changes yet";
   };
   const persist = () => storageSet(draftKey, {
-    at: new Date().toISOString(), sheet: state, stash, identity, savedAt: lastSavedAt,
+    at: new Date().toISOString(), sheet: state, stash, coins, carryLimit, identity, savedAt: lastSavedAt,
     basedOn: draft?.basedOn || publishedFingerprint
   });
   const changed = () => {
@@ -544,6 +591,7 @@
 
       <section aria-labelledby="h-v-gear">
         <h2 id="h-v-gear">Gear</h2>
+        ${purse(false)}
         <div class="view-gear">
           <div><h2>Brought into action</h2>${gearList(owned.filter((item) => item.broughtIntoAction), "Nothing marked for this job.")}</div>
           <div><h2>Stored in stash</h2>${gearList(owned.filter((item) => !item.broughtIntoAction), "Nothing in storage.")}</div>
@@ -567,10 +615,11 @@
     }).join("");
     return `<section aria-labelledby="h-inventory">
       <h2 id="h-inventory">Inventory</h2>
+      ${purse(true)}
       <div class="tabs" role="tablist" aria-label="Inventory">${tab("stash", `My Stash (${stash.length})`)}${tab("market", "Marketplace")}</div>
       <div id="panel-stash" role="tabpanel" aria-labelledby="tab-stash" ${inventoryView.tab === "stash" ? "" : "hidden"}>
         <div class="rows">${rows || '<p class="empty">Your stash is empty. Add Gear from the Marketplace tab.</p>'}</div>
-        <p class="help">Mark what you bring into action before a job. Removing an entry only takes it out of your stash.</p>
+        <p class="help">Before a job, mark what you bring into action; together it can weigh up to your carry limit. Forgot something? During the expedition you can still bring an item: 1 stress (any track) if it fits, or 1 Fate Point if it takes you over your limit. Removing an entry only takes it out of your stash, it does not refund anything.</p>
       </div>
       <div id="panel-market" role="tabpanel" aria-labelledby="tab-market" ${inventoryView.tab === "market" ? "" : "hidden"}>
         <div class="market-tools">
@@ -578,7 +627,7 @@
           <select data-market="category" aria-label="Gear category"><option value="">All categories</option>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${inventoryView.category === category ? "selected" : ""}>${escapeHtml(humanize(category))}</option>`).join("")}</select>
         </div>
         <div class="market-list" id="market-list">${renderMarket()}</div>
-        <p class="help">Adding Gear does not spend anything; settle the price with the GM.</p>
+        <p class="help">Buying puts the item in your stash and takes its price from your Coins. Use the Coins counter for rewards and anything the GM hands out.</p>
       </div>
     </section>`;
   };
@@ -594,11 +643,14 @@
       .map((gear) => {
         const item = owned.get(gear.id);
         const unavailable = gear.availability === "unavailable";
+        const price = priceOf(gear);
+        const affordable = price <= coins;
         return `<div class="row row-market">
           <span><span class="item-name">${escapeHtml(gear.name)}</span><span class="item-meta">${escapeHtml(humanize(gear.category))}${gear.availability && gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}</span></span>
           <span class="num">${priceText(gear)}</span>
           <span class="num">${weight(gear.weight)}</span>
-          <button type="button" class="small" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable && !item ? "disabled" : ""}>${item ? `In stash (${item.quantity}) · +1` : unavailable ? "Unavailable" : "+ Add to stash"}</button>
+          <button type="button" class="small" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable || !affordable ? "disabled" : ""}
+            title="${unavailable ? "Not available right now" : affordable ? `Costs ${price} coins` : `Costs ${price} coins; you have ${coins}`}">${unavailable ? "Unavailable" : !affordable ? "Not enough coins" : item ? `Buy another (${item.quantity} owned)` : "Buy"}</button>
         </div>`;
       }).join("") || '<p class="empty">No Gear matches.</p>';
   };
@@ -626,7 +678,8 @@
     consequences: () => ({ label: "", shift: 2, aspect: "" })
   };
 
-  app.addEventListener("input", (event) => {
+  app.addEventListener("input", (event) => followResources(() => handleInput(event)));
+  const handleInput = (event) => {
     const target = event.target;
     const number = (value) => value === "" ? null : Number(value);
     if (target.dataset.identity) {
@@ -639,16 +692,26 @@
       inventoryView[target.dataset.market] = target.value;
       document.getElementById("market-list").innerHTML = renderMarket();
       return;
+    } else if (target.dataset.carryLimit !== undefined) {
+      carryLimit = cleanLimit(target.value);
+      updateCarried();
+    } else if (target.dataset.coins !== undefined) {
+      coins = cleanCoins(target.value);
+      document.getElementById("market-list").innerHTML = renderMarket();
     } else if (target.dataset.stashIndex !== undefined) {
       stash[Number(target.dataset.stashIndex)].quantity = Math.max(1, Math.min(999, Math.round(Number(target.value)) || 1));
-    } else if (target.dataset.stashAction !== undefined) stash[Number(target.dataset.stashAction)].broughtIntoAction = target.checked;
+      updateCarried();
+    } else if (target.dataset.stashAction !== undefined) {
+      stash[Number(target.dataset.stashAction)].broughtIntoAction = target.checked;
+      updateCarried();
+    }
     else if (target.dataset.list === "other") state.aspects.other[Number(target.dataset.index)] = target.value;
     else if (target.dataset.list) {
       const key = target.dataset.key;
       lists[target.dataset.list]()[Number(target.dataset.index)][key] = key === "rating" || key === "shift" ? Number(target.value) : target.value;
     } else return;
     changed();
-  });
+  };
 
   app.addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");
@@ -673,17 +736,24 @@
       if (Number(button.dataset.step) < 0 && boxes.length) boxes.pop();
     } else if (action === "fate") {
       state.fatePoints = Math.max(0, (Number(state.fatePoints) || 0) + Number(button.dataset.step));
+    } else if (action === "coins") {
+      coins = cleanCoins(coins + Number(button.dataset.step));
     } else if (action === "inventory-tab") {
       inventoryView.tab = button.dataset.tab;
       render();
       app.querySelector(`#tab-${inventoryView.tab}`)?.focus();
       return;
     } else if (action === "add-gear") {
+      const gear = gearById.get(button.dataset.gearId);
+      if (!gear || priceOf(gear) > coins) return;
+      coins -= priceOf(gear);
       const existing = stash.find((item) => item.gearId === button.dataset.gearId);
       if (existing) existing.quantity = Math.min(999, existing.quantity + 1);
       else stash.push({ gearId: button.dataset.gearId, quantity: 1, broughtIntoAction: false });
       document.getElementById("market-list").innerHTML = renderMarket();
       app.querySelector("#tab-stash").textContent = `My Stash (${stash.length})`;
+      const coinInput = app.querySelector("[data-coins]");
+      if (coinInput) coinInput.value = coins;
       changed();
       app.querySelector(`[data-action="add-gear"][data-gear-id="${CSS.escape(button.dataset.gearId)}"]`)?.focus();
       return;
@@ -692,7 +762,8 @@
       if (!confirm(`Remove ${gear ? gear.name : stash[index].gearId} from your stash?`)) return;
       stash.splice(index, 1);
     } else return;
-    const focusSelector = action === "box" ? `[data-action="box"][data-index="${index}"][data-box="${button.dataset.box}"]` : action === "fate" ? `[data-action="fate"][data-step="${button.dataset.step}"]` : null;
+    const focusSelector = action === "box" ? `[data-action="box"][data-index="${index}"][data-box="${button.dataset.box}"]`
+      : action === "fate" || action === "coins" ? `[data-action="${action}"][data-step="${button.dataset.step}"]` : null;
     render();
     changed();
     if (focusSelector) app.querySelector(focusSelector)?.focus();
@@ -735,7 +806,9 @@
       playerName: base.newCharacter ? identity.playerName.trim() : base.playerName,
       summary: identity.summary.trim(),
       sheet: clone(state),
-      stash: clone(stash)
+      stash: clone(stash),
+      coins,
+      carryLimit
     };
     const slug = identity.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "character";
     const fileName = base.newCharacter ? `new-character-${slug}-sheet.json` : `${base.characterId}-sheet.json`;

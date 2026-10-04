@@ -488,7 +488,50 @@ class ContentStoreTests(unittest.TestCase):
         latest = game[0]
         self.assertEqual((latest["pinned"], latest["showUntil"]), (True, "2026-10-10"))
         self.assertEqual(latest["details"], "See [[g-03]] and [record unavailable].")
-        self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil"})
+        self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image"})
+
+    def test_characters_keep_a_coin_count(self) -> None:
+        crew = self.store.save_record("characters", None, {"name": "Coin keeper", "published": True})["id"]
+        self.assertEqual(self.record("characters", crew)["coins"], 0, "no coins given means none")
+        self.store.save_record("characters", crew, {**self.record("characters", crew), "coins": "12"})
+        self.assertEqual(self.record("characters", crew)["coins"], 12)
+        for bad in (-1, "lots", 1_000_000):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("characters", crew, {**self.record("characters", crew), "coins": bad})
+        record = self.record("characters", crew)
+        self.assertEqual((record["downtime"], record["carryLimit"]), (0, 6), "defaults: no Downtime, carry limit 6")
+        self.store.save_record("characters", crew, {**record, "downtime": 8, "carryLimit": "9"})
+        for field, bad in (("downtime", 9), ("downtime", -1), ("carryLimit", 100)):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("characters", crew, {**self.record("characters", crew), field: bad})
+        self.store.export_site()
+        public = read_json(self.export_dir / "data" / "characters" / f"{crew}.json")
+        self.assertEqual((public["coins"], public["downtime"], public["carryLimit"]), (12, 8, 9))
+
+    def test_reading_path_is_saved_as_reading_orders(self) -> None:
+        ids = [self.store.save_record("game", None, {"type": "rule", "title": title, "category": "Campaign", "order": order})["id"]
+               for title, order in (("One", 1), ("Two", 2), ("Three", None))]
+        notice = self.store.save_record("game", None, {"type": "announcement", "title": "News", "publishedAt": "2026-10-01"})["id"]
+        self.store.save_reading_path([ids[2], ids[0]])
+        orders = {post["id"]: post.get("order") for post in self.store.state()["game"]}
+        self.assertEqual((orders[ids[2]], orders[ids[0]], orders[ids[1]]), (1, 2, None))
+        for bad in ([notice], [ids[0], ids[0]], ["missing"], "one"):
+            with self.assertRaises(ManagerError):
+                self.store.save_reading_path(bad)
+        self.store.save_reading_path([])
+        self.assertTrue(all(post.get("order") is None for post in self.store.state()["game"]))
+
+    def test_rules_with_a_reading_order_come_first_in_that_order(self) -> None:
+        for title, order in (("Zeta", 2), ("Alpha", None), ("Omega", 1), ("Beta", "")):
+            self.store.save_record("game", None, {"type": "rule", "title": title, "category": "Campaign", "order": order, "published": True})
+        with self.assertRaises(ManagerError):
+            self.store.save_record("game", None, {"type": "rule", "title": "Bad", "category": "Campaign", "order": "first"})
+        self.store.export_site()
+        rules = [post for post in read_json(self.export_dir / "data" / "game.json") if post["type"] == "rule"]
+        titles = [post["title"] for post in rules]
+        self.assertEqual(titles[:2], ["Omega", "Zeta"])
+        self.assertLess(titles.index("Alpha"), titles.index("Beta"))
+        self.assertIsNone(rules[titles.index("Alpha")]["order"])
 
     def test_rules_table_from_schema_v4_moves_into_game(self) -> None:
         connection = sqlite3.connect(self.database)

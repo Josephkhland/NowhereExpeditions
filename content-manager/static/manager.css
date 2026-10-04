@@ -382,3 +382,17 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .complication-row.is-active .complication-state { color: #b8382c; }
 .inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
+
+/* Reading path editor */
+.path-help p { margin: 0 0 8px; }
+.path-rows { display: grid; gap: 6px; margin: 14px 0; padding: 0; list-style: none; }
+.path-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #cbd5ce; background: #fff; }
+.path-number { font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.path-title { display: grid; gap: 2px; min-width: 0; }
+.path-add { display: flex; gap: 8px; align-items: center; }
+.path-add select { flex: 1; min-height: 34px; border: 1px solid #cbd5ce; padding: 6px 8px; background: #fff; }
+.path-status { margin: 4px 0; }
+.field-label { font-weight: 600; font-size: 12px; }
+
+.stash-carried { margin: 8px 0; font-size: 12px; }
+.stash-carried.is-over { color: #a8322a; font-weight: 600; }
