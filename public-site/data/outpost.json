@@ -1,135 +1,199 @@
 {
-  "name": "The Outpost",
-  "highConcept": "An industrial settlement built around the remains of impossible floating ruins.",
-  "trouble": "Every new Gate destabilizes the harbor and the old ruin answers back.",
+  "name": "Endros Research Outpost",
+  "highConcept": "From Archaeological Outpost to Gateway Industry",
+  "trouble": "Everything We Need Comes by Ship",
   "aspects": [
-    "Anchored in impossible antiquity",
-    "Industrial settlement under constant strain",
-    "Shared frontier of lore and danger"
+    "Built Fast, Built to Work",
+    "Everyone Came Here for Something",
+    "No Expedition Without Evaluation and Clearance"
   ],
   "capabilities": [
     {
       "name": "Industry",
-      "rating": "+2",
+      "rating": "+0",
       "summary": "Crafting, repairs and manufacturing for the settlement and expeditions.",
       "detail": "Industry represents the Outpost's ability to build and maintain tools, equipment, structures, and practical systems in the face of unusual demands.",
       "use": "Expeditioners can request repairs, custom tools, salvaged fabrication, and infrastructure support.",
-      "assets": "Foundry yards, repair sheds, workshops, salvage crews.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "workshops",
+          "name": "Workshops"
+        }
+      ],
       "conditions": "Current operating pressure is visible in the strained harbor and damaged support structures."
     },
     {
       "name": "Research",
-      "rating": "+2",
+      "rating": "+0",
       "summary": "Gate investigation, artifact analysis, and anomalous research.",
       "detail": "Research covers the Outpost's capacity to understand Gates, test artifacts, interpret environmental anomalies, and connect observations into a broader map of the campaign world.",
       "use": "Players can use Research to interpret discoveries, map new locations, and understand the consequences of alien materials.",
-      "assets": "Observation decks, laboratory spaces, field archives, specialist analysts.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "university-of-verna-laboratories",
+          "name": "University of Verna Laboratories"
+        },
+        {
+          "type": "facility",
+          "id": "gate-evaluation-committee",
+          "name": "Gate Evaluation Committee"
+        }
+      ],
       "conditions": "Newly recovered artifacts and partial survey data continue to expand the public record."
     },
     {
       "name": "Commerce",
-      "rating": "+1",
+      "rating": "+0",
       "summary": "Trade, funding, and resource conversion for expeditions and settlement needs.",
       "detail": "Commerce represents the Outpost's access to trade, financing, supply chains, and market pressure.",
       "use": "Expeditioners can secure material purchases, funding, route planning, and exchange for recovered resources.",
-      "assets": "Harbor contracts, trader stores, salvage brokers, shipping lanes.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "docks",
+          "name": "Docks"
+        }
+      ],
       "conditions": "Commercial activity remains active but sensitive to the volatility of new discoveries."
     },
     {
       "name": "Security",
-      "rating": "+2",
+      "rating": "+0",
       "summary": "Defense, policing, and emergency response around the Gate network and settlement.",
       "detail": "Security covers the practical response to threats, containment issues, and the enforcement of order around dangerous environments.",
       "use": "Expeditioners may rely on crews, patrols, response teams, and protective infrastructure during active incidents.",
-      "assets": "Harbor patrols, locked facilities, barricaded routes, emergency teams.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "watchtower",
+          "name": "Watchtower"
+        }
+      ],
       "conditions": "Current threats remain real but are being contained as the public record updates."
     },
     {
       "name": "Medicine",
-      "rating": "+1",
+      "rating": "+0",
       "summary": "Treatment, stabilization, and recovery after dangerous expeditions.",
       "detail": "Medicine is responsible for triage, recovery, rehabilitation, and the treatment of injuries or exposure tied to Gates and the anomalous world beyond them.",
       "use": "Expeditioners can seek treatment after exposure, trauma, and field injury. Medical care is a major source of resilience and recovery.",
-      "assets": "Aid stations, staffed infirmaries, case records, specialized treatments.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "infirmary",
+          "name": "Infirmary"
+        }
+      ],
       "conditions": "Long-term recovery remains a concern as more unusual injuries are identified."
     },
     {
       "name": "Infrastructure",
-      "rating": "+2",
+      "rating": "+1",
       "summary": "Facilities, transportation, and services that keep the Outpost functional.",
       "detail": "Infrastructure keeps the settlement coherent: transit, power, utilities, facilities, and route stability.",
       "use": "Expeditioners rely on road and harbor routes, access to facilities, and the practical services that support expedition operations.",
-      "assets": "Dockworks, transit corridors, utility networks, critical buildings.",
+      "assets": [
+        {
+          "type": "facility",
+          "id": "cranes",
+          "name": "Cranes"
+        },
+        {
+          "type": "facility",
+          "id": "elevators",
+          "name": "Elevators"
+        }
+      ],
       "conditions": "Damage to support systems makes this capability more valuable and more fragile."
     }
   ],
   "stress": {
-    "current": 2,
-    "max": 6
+    "current": 0,
+    "max": 3
   },
-  "consequences": [
-    {
-      "name": "Damaged Dockworks",
-      "severity": "Moderate",
-      "detail": "Harbor access and supply throughput are impaired after repeated shocks and gate activity."
-    },
-    {
-      "name": "Fissure Risk in the Old Ruin",
-      "severity": "Low",
-      "detail": "Accessible sectors remain stable, but deeper ruin areas carry unpredictable structural stress."
-    }
-  ],
+  "consequences": [],
   "facilities": [
     {
-      "name": "Harbor Ledger Hall",
-      "summary": "A central station for cargo manifests, route planning, and expedition intake."
+      "id": "workshops",
+      "name": "Workshops",
+      "summary": "General fabrication, repairs, maintenance, and production of mundane equipment.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Industry"
+      ]
     },
     {
-      "name": "Survey Spire",
-      "summary": "A high-priority research and observation site for Gate behavior and environmental scan data."
+      "id": "university-of-verna-laboratories",
+      "name": "University of Verna Laboratories",
+      "summary": "Research facilities used for archaeology, Gate studies, artifact analysis, and experimental work.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Research"
+      ]
     },
     {
-      "name": "Field Infirmary",
-      "summary": "Medical response and stabilization point for expeditions returning from dangerous routes."
-    }
-  ],
-  "activeProjects": [
-    {
-      "name": "Harbor Reinforcement",
-      "summary": "Repair and resecure the deep dock structures after repeated disruption.",
-      "progress": {
-        "current": 0,
-        "max": 4
-      },
-      "completion": null
+      "id": "gate-evaluation-committee",
+      "name": "Gate Evaluation Committee",
+      "summary": "Evaluates newly discovered Gates, maintains classifications and records, and provides recommendations regarding exploration and containment.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Research"
+      ]
     },
     {
-      "name": "Gate Mapping Sweep",
-      "summary": "Update survey data around newly recorded Gate activity and improve route safety.",
-      "progress": {
-        "current": 0,
-        "max": 4
-      },
-      "completion": null
+      "id": "docks",
+      "name": "Docks",
+      "summary": "Handles incoming supplies, outgoing goods, trade vessels, and shipment of processed Gate materials to the mainland.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Commerce"
+      ]
     },
     {
-      "name": "Ruin Stabilization",
-      "summary": "Assess structural risk in ancient sectors and plan strategic access improvements.",
-      "progress": {
-        "current": 0,
-        "max": 4
-      },
-      "completion": null
-    }
-  ],
-  "conditions": [
-    {
-      "name": "Unstable Harbor Approach",
-      "summary": "Travel and cargo access are more dangerous during active Gate events."
+      "id": "watchtower",
+      "name": "Watchtower",
+      "summary": "Provides basic observation, local security coordination, and warning against threats approaching the Outpost.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Security"
+      ]
     },
     {
-      "name": "Public Research Expansion",
-      "summary": "The Outpost has more data than before, but not all conclusions are yet verified."
+      "id": "infirmary",
+      "name": "Infirmary",
+      "summary": "Provides basic medical treatment, stabilization, and recovery services.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Medicine"
+      ]
+    },
+    {
+      "id": "cranes",
+      "name": "Cranes",
+      "summary": "Heavy lifting and cargo handling throughout the industrial areas and docks.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Infrastructure"
+      ]
+    },
+    {
+      "id": "elevators",
+      "name": "Elevators",
+      "summary": "Move personnel, equipment, and cargo between different elevations of the Outpost.",
+      "details": "",
+      "projectId": null,
+      "capabilities": [
+        "Infrastructure"
+      ]
     }
   ]
 }

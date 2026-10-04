@@ -16,6 +16,7 @@ Then open <http://127.0.0.1:8001>. The first launch imports the existing public 
 
 ```
 Outpost Sheet (single record)
+ └── capability contributing assets ──> Facility | Character
 
 Job ──> Session Record (an Archive entry of type session-record, optional)
  └── organizer, participants ──> Character
@@ -24,9 +25,14 @@ Archive entry (gate-record | session-record | newspaper | history | folklore)
  └── participants (session records only) ──> Character
 
 Character ──< Stash entry ──> Gear
+
+Project ──> characters
+ ^── Facility, Gear ("brought into the game by")
 ```
 
-- **Outpost Sheet**: the shared settlement "character" (formerly the Island Sheet): aspects, capabilities, stress, consequences, facilities, projects, conditions.
+- **Outpost Sheet**: the shared settlement "character" (formerly the Island Sheet): aspects, capabilities, stress, and consequences. Each capability's **Contributing assets** is an ordered list of facilities and characters, picked from a menu; a facility or character that is still assigned cannot be deleted.
+- **Facilities**: what the Outpost has (name, the service it provides, optional Markdown details). A facility decides whether a service exists at all; the capability it supports rates how well the Outpost performs it. Facilities are published inside `outpost.json`, each with the capabilities it supports, and shown as a table on the Outpost page (`outpost.html#facility-<id>` links to a row).
+- **Projects**: work the GM and players agree on: a progress track (marked boxes out of a total), prerequisites (a checklist, each ticked when met), and the expected outcome. **Complications** are listed with a *Resolved* checkbox and how they were resolved: an active one frames the project in red with a **!** badge on the site, and resolved ones stay in a collapsible complication history. A project that never had one shows none of this. **Access** is *open* (anyone may join) or *private* (only its characters). A project is **completed** when every box is marked. An **Outpost project** is shown on the Outpost page while ongoing; every character listed shows it in a **Projects** tab on their page, split into ongoing and completed. Facilities and Gear can name the project that brought them into the game.
 - **Characters**: player characters and NPCs (name, type, status, portrait, summary, player name). A character can have an optional **Fate Core sheet** with its own **Show this sheet on the public site** switch, and a **Stash**: references to Gear with a quantity and a **Brought into action** flag. The stash editor has two tabs, *My Stash* and *Marketplace*; adding Gear that is already owned raises its quantity instead of creating a duplicate. Removing an entry never deletes the Gear.
 - **Jobs**: the Job Board. A job has a type (`expedition`, `recovery`, `investigation`, `escort`, `bounty`, `outpost`, `other`), a status (`open`, `scheduled`, `in-progress`, `completed`, `failed`, `cancelled`), summary, objective, briefing, schedule, crew limits, organizer, participants, and optionally the **Session Record** describing what happened when it was played. Jobs do not need a Gate; lore is linked from the briefing.
 - **Archive**: one general lore model. Every entry has a type, title, subtitle, summary, content, author, published date, event date (free text), image, and tags. Type-specific metadata lives in `details`: Gate Records keep designation, Gate status, discovery date, environment, and known traits, hazards, and locations; Session Records keep a session date and outcome, plus participants. New types can be added in `ARCHIVE_TYPES` (app.py and both front ends) without changing the schema.
@@ -95,6 +101,14 @@ Turning the switch off or on does not touch the site files by itself; press **Sy
 ## Upgrading a schema v3 database
 
 Opening a database from before this model (Island, Gates, Expeditions, Expedition Reports) converts it in place on startup. The original file is first copied to `content.v3-backup.db`, and every source row is also kept in the `legacy_records` table. Gates become Gate Records with the same IDs, Reports become Session Records (the first by date is attached to its Job; others are linked from the Job's briefing), Expeditions become Jobs with the same IDs, and the Island Sheet becomes the Outpost Sheet. The console prints a summary of anything that needed a judgement call.
+
+## Upgrading a schema v5 database (Facilities)
+
+On startup, the Outpost Sheet's old facility list (name and description) becomes records in the Facilities section, flagged as sample content. Free-text contributing assets are cleared, because they are now picked from Facilities and Characters. The sheet as it was is kept in `legacy_records` (source `outpost`).
+
+## Upgrading a schema v6 database (Projects)
+
+On startup, the Outpost Sheet's active projects become Outpost projects in the Projects section, flagged as sample content, and persistent conditions are retired (consequences and aspects cover them). The sheet as it was is kept in `legacy_records` (source `outpost`).
 
 ## Player sheet round trip
 

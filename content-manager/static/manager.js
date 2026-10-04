@@ -117,7 +117,7 @@ function referenceSelect(label, name, value, key, labelFor, options = {}) {
   return selectField(label, name, value || "", choices, { emptyLabel: options.emptyLabel || "— None —", ...options });
 }
 
-function participantPicker(selectedIds) {
+function participantPicker(selectedIds, labels = {}) {
   const hiddenCount = selectedIds.filter((id) => !findRecord("characters", id) && hiddenSampleLabel("characters", id)).length;
   const selected = selectedIds.map((id) => findRecord("characters", id)).filter(Boolean);
   const others = [...state.characters].filter((character) => !selectedIds.includes(character.id))
@@ -128,11 +128,11 @@ function participantPicker(selectedIds) {
       <input class="participant-check" type="checkbox" value="${escapeHtml(character.id)}" ${selectedIds.includes(character.id) ? "checked" : ""} />
       <span>${escapeHtml(characterLabel(character))}${character.published ? "" : " — unpublished"}</span>
     </label>`).join("") : '<div class="empty-list">No characters yet. Create them in the Characters section.</div>';
-  return `<div class="field full"><span class="field-label">Participants <span class="participant-count">(${selectedIds.length} selected)</span></span>
+  return `<div class="field full"><span class="field-label">${labels.label || "Participants"} <span class="participant-count">(${selectedIds.length} selected)</span></span>
     <input type="search" class="reference-filter" data-filter-list="participant-list" placeholder="Filter characters" aria-label="Filter participants" />
     <div class="check-list" id="participant-list">${list}</div>
     ${hiddenCount ? `<span class="helper">+ ${hiddenCount} hidden sample participant${hiddenCount > 1 ? "s" : ""}, kept when you save.</span>` : ""}
-    <span class="helper">Crew count on the board is the number of participants. Include the organizer here if they are going.</span></div>`;
+    <span class="helper">${labels.help || "Crew count on the board is the number of participants. Include the organizer here if they are going."}</span></div>`;
 }
 
 const MEDIA_PREFIXES = ["data/portraits/", "data/images/"];
@@ -551,7 +551,163 @@ function rerenderStash(stash) {
 
 /* ---------- Content type definitions ---------- */
 
+/* ---------- Capability contributing assets: facilities and characters ---------- */
+
+const ASSET_KINDS = { facility: ["facilities", "Facility"], character: ["characters", "Character"] };
+const capabilitiesUsing = (type, id) => (state.outpost.capabilities || [])
+  .filter((capability) => Array.isArray(capability.assets) && capability.assets.some((asset) => asset.type === type && asset.id === id));
+const assetLabel = (type, record) => type === "character" ? characterLabel(record) : record.name || "Unnamed";
+
+function assetChip(asset) {
+  const [key, kind] = ASSET_KINDS[asset.type] || ["", "Record"];
+  const record = key ? findRecord(key, asset.id) : null;
+  const label = record ? assetLabel(asset.type, record) : hiddenSampleLabel(key, asset.id) || `Missing ${kind.toLowerCase()}: ${asset.id}`;
+  return `<li class="asset-chip is-${escapeHtml(asset.type)}" data-asset-type="${escapeHtml(asset.type)}" data-asset-id="${escapeHtml(asset.id)}">`
+    + `<span class="asset-kind">${kind}</span><span class="asset-name">${escapeHtml(label)}${record && !record.published ? " — unpublished" : ""}</span>`
+    + `<button type="button" class="asset-remove" data-action="remove-asset" aria-label="Remove ${escapeHtml(label)}" title="Remove">×</button></li>`;
+}
+
+function assetOptions(selected) {
+  const taken = new Set(selected.map((asset) => `${asset.type}:${asset.id}`));
+  const group = (type, label) => {
+    const options = [...state[ASSET_KINDS[type][0]]]
+      .filter((record) => !taken.has(`${type}:${record.id}`))
+      .sort((left, right) => String(left.name).localeCompare(String(right.name)))
+      .map((record) => `<option value="${type}:${escapeHtml(record.id)}">${escapeHtml(assetLabel(type, record))}${record.published ? "" : " — unpublished"}</option>`)
+      .join("");
+    return options ? `<optgroup label="${label}">${options}</optgroup>` : "";
+  };
+  return `<option value="">+ Add a facility or character…</option>${group("facility", "Facilities")}${group("character", "Characters")}`;
+}
+
+// Chips in order, then a menu of the facilities and characters not listed yet.
+function assetPicker(id, assets) {
+  const list = Array.isArray(assets) ? assets : [];
+  return `<div class="asset-picker" data-outpost-path="assets">
+    <ul class="asset-list">${list.map(assetChip).join("")}</ul>
+    <p class="asset-empty">No contributing assets yet.</p>
+    <select id="${id}" class="asset-add">${assetOptions(list)}</select>
+  </div>`;
+}
+
+const readAssets = (picker) => [...picker.querySelectorAll(".asset-chip")]
+  .map((chip) => ({ type: chip.dataset.assetType, id: chip.dataset.assetId }));
+
+function refreshAssetPicker(picker) {
+  const select = picker.querySelector(".asset-add");
+  select.innerHTML = assetOptions(readAssets(picker));
+  select.value = "";
+}
+
+/* ---------- Projects ---------- */
+
+const PROJECT_ACCESS = [["open", "Open to anyone"], ["private", "Private to its characters"]];
+const projectComplete = (project) => (project.progress?.current ?? 0) >= (project.progress?.max ?? 1);
+const projectProgress = (project) => projectComplete(project) ? "Completed" : `${project.progress?.current ?? 0}/${project.progress?.max ?? 4} boxes`;
+const projectSelect = (record) => referenceSelect("Brought into the game by project", "projectId", record.projectId, "projects", (project) => project.name,
+  { emptyLabel: "— No project —", help: "Optional. The project whose outcome this is." });
+// Older records kept prerequisites as plain text.
+const projectPrerequisites = (project) => (project.prerequisites || []).map((item) => typeof item === "string" ? { text: item, met: false } : item);
+const activeComplications = (project) => (project.complications || []).filter((item) => !item.resolved);
+
+function prerequisiteRow(item = { text: "", met: false }) {
+  return `<div class="checklist-row" data-prerequisite-row>
+    <input type="checkbox" data-prerequisite="met" ${item.met ? "checked" : ""} aria-label="Fulfilled" title="Fulfilled" />
+    <input type="text" data-prerequisite="text" value="${escapeHtml(item.text)}" placeholder="What must be true first" aria-label="Prerequisite" />
+    <button class="remove-record" type="button" data-action="remove-project-row" aria-label="Remove prerequisite" title="Remove prerequisite">×</button>
+  </div>`;
+}
+
+function complicationRow(item = { text: "", resolved: false, resolution: "" }) {
+  return `<div class="complication-row${item.resolved ? "" : " is-active"}" data-complication-row>
+    <div class="complication-row-head">
+      <span class="complication-state">${item.resolved ? "Resolved" : "Active"}</span>
+      <label class="inline-check"><input type="checkbox" data-complication="resolved" ${item.resolved ? "checked" : ""} /> Resolved</label>
+      <button class="remove-record" type="button" data-action="remove-project-row" aria-label="Remove complication" title="Remove complication">×</button>
+    </div>
+    <textarea data-complication="text" rows="2" placeholder="What went wrong or stands in the way" aria-label="Complication">${escapeHtml(item.text)}</textarea>
+    <textarea data-complication="resolution" rows="2" placeholder="How it was resolved" aria-label="Resolution">${escapeHtml(item.resolution || "")}</textarea>
+  </div>`;
+}
+
+const projectRows = (projects) => projects.map((project) => `${referenceLink("projects", project, project.name)} <span class="helper">${escapeHtml(projectProgress(project))}</span>`);
+
 const collections = {
+  projects: {
+    title: "Projects", panel: "PROJECTS", singular: "Project",
+    name: (record) => record.name,
+    meta: (record) => [record.access === "private" ? "Private" : "Open", record.outpost ? "Outpost" : "",
+      activeComplications(record).length ? "⚠ Complication" : "", projectProgress(record)],
+    filters: [["access", "Any access", [["open", "Open"], ["private", "Private"]]]],
+    idHelp: "Generated from the name when left blank. Gear and facilities reference this ID.",
+    fields: (record) => {
+      const progress = record.progress || { current: 0, max: 4 };
+      return `
+      ${field("Name", "name", record.name || "", { required: true, full: true })}
+      ${selectField("Access", "access", record.access || "open", PROJECT_ACCESS, { help: "Open projects take anyone who wants to help; private ones only their characters." })}
+      <label class="publish-toggle field"><input type="checkbox" name="outpost" ${record.outpost ? "checked" : ""} /><span><strong>Outpost project</strong><span class="helper">Shown on the Outpost page while it is ongoing.</span></span></label>
+      ${field("Marked progress", "progressCurrent", progress.current ?? 0, { type: "number", min: 0 })}
+      ${field("Progress boxes", "progressMax", progress.max ?? 4, { type: "number", min: 1, help: "The project is completed when every box is marked." })}
+      ${participantPicker(record.characterIds || [], { label: "Characters", help: "Each character listed shows this project on their character page." })}
+      ${textarea("Summary", "summary", record.summary || "", { full: true, rows: 3 })}
+      <div class="field full"><span class="field-label">Prerequisites</span>
+        <div class="checklist-rows" id="prerequisite-rows">${projectPrerequisites(record).map(prerequisiteRow).join("")}</div>
+        <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-prerequisite">+ Add prerequisite</button>
+          <span class="helper">Tick a prerequisite once it is met. Empty rows are dropped on save.</span></div></div>
+      <div class="field full"><span class="field-label">Complications</span>
+        <div class="complication-rows" id="complication-rows">${(record.complications || []).map(complicationRow).join("")}</div>
+        <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-complication">+ Add complication</button>
+          <span class="helper">An active complication marks the project in red on the site. Resolved ones stay in its complication history.</span></div></div>
+      ${textarea("Expected outcome", "outcome", record.outcome || "", { full: true, rows: 4, help: "What changes in the world when it is completed. Markdown; link Archive entries with [[archive-id]]." })}`;
+    },
+    related: (record) => {
+      const facilities = state.facilities.filter((facility) => facility.projectId === record.id);
+      const gear = state.gear.filter((item) => item.projectId === record.id);
+      return `<div class="form-section">Derived references</div>
+        ${relatedBlock("Brought into the game", [
+          ...facilities.map((facility) => `${referenceLink("facilities", facility, facility.name)} <span class="helper">facility</span>`),
+          ...gear.map((item) => `${referenceLink("gear", item, item.name)} <span class="helper">gear</span>`)
+        ], "No facility or gear names this project yet.")}
+        ${linkCheck([record.summary, record.outcome])}`;
+    },
+    read: (formData, form) => ({
+      name: formText(formData, "name"), access: formText(formData, "access"), outpost: formData.get("outpost") === "on",
+      progress: { current: formText(formData, "progressCurrent"), max: formText(formData, "progressMax") },
+      characterIds: [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value),
+      summary: formText(formData, "summary"), outcome: formText(formData, "outcome"),
+      prerequisites: [...form.querySelectorAll("[data-prerequisite-row]")].map((row) => ({
+        text: row.querySelector('[data-prerequisite="text"]').value.trim(), met: row.querySelector('[data-prerequisite="met"]').checked
+      })).filter((item) => item.text),
+      complications: [...form.querySelectorAll("[data-complication-row]")].map((row) => ({
+        text: row.querySelector('[data-complication="text"]').value.trim(),
+        resolved: row.querySelector('[data-complication="resolved"]').checked,
+        resolution: row.querySelector('[data-complication="resolution"]').value.trim()
+      })).filter((item) => item.text)
+    })
+  },
+  facilities: {
+    title: "Facilities", panel: "OUTPOST FACILITIES", singular: "Facility",
+    name: (record) => record.name,
+    meta: (record) => {
+      const supported = capabilitiesUsing("facility", record.id).map((capability) => capability.name);
+      return [supported.length ? supported.join(", ") : "Not assigned"];
+    },
+    idHelp: "Generated from the name when left blank. Capabilities on the Outpost Sheet reference this ID.",
+    fields: (record) => `
+      ${field("Name", "name", record.name || "", { required: true, full: true })}
+      ${textarea("Service", "summary", record.summary || "", { full: true, rows: 3, help: "What the facility makes available, in a sentence or two. Shown in the Facilities table on the Outpost page." })}
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 6, help: "Optional. Markdown: **bold**, *italic*, lists, [text](url). Link Archive entries with [[archive-id]]." })}
+      ${projectSelect(record)}
+      <div class="field full"><span class="helper">Assign the facility to a capability under <strong>Contributing assets</strong> on the Outpost Sheet’s Capabilities tab.</span></div>`,
+    related: (record) => {
+      const supported = capabilitiesUsing("facility", record.id);
+      return `<div class="form-section">Derived references</div>
+        ${relatedBlock("Supports capabilities", supported.map((capability) => `<button type="button" class="related-link" data-jump-view="outpost">${escapeHtml(capability.name || "Unnamed")}</button> <span class="helper">${escapeHtml(capability.rating || "")}</span>`), "Not assigned to a capability yet.")}
+        ${linkCheck([record.summary, record.details])}`;
+    },
+    read: (formData) => ({ name: formText(formData, "name"), summary: formText(formData, "summary"), details: formText(formData, "details"),
+      projectId: formText(formData, "projectId") || null })
+  },
   characters: {
     title: "Characters", panel: "CHARACTER ROSTER", singular: "Character",
     name: (record) => record.name,
@@ -578,7 +734,9 @@ const collections = {
       const sessions = state.archive.filter((entry) => entry.participantIds.includes(record.id));
       return `<div class="form-section">Derived history</div>
         ${relatedBlock("Jobs", jobs.map((job) => `${referenceLink("jobs", job, jobLabel(job))} <span class="helper">${job.organizerId === record.id ? "organizer" : "crew"} · ${job.status}</span>`), "Not part of any job yet.")}
-        ${relatedBlock("Session Records", sessions.map((entry) => referenceLink("archive", entry, sessionRecordLabel(entry))), "Not listed in any Session Record.")}`;
+        ${relatedBlock("Session Records", sessions.map((entry) => referenceLink("archive", entry, sessionRecordLabel(entry))), "Not listed in any Session Record.")}
+        ${relatedBlock("Projects", projectRows(state.projects.filter((project) => (project.characterIds || []).includes(record.id))), "Not part of any project.")}
+        ${relatedBlock("Outpost capabilities", capabilitiesUsing("character", record.id).map((capability) => `<button type="button" class="related-link" data-jump-view="outpost">${escapeHtml(capability.name || "Unnamed")}</button> <span class="helper">contributing asset</span>`), "Not a contributing asset of any capability.")}`;
     },
     read: (formData, form) => ({
       name: formText(formData, "name"), playerName: formText(formData, "playerName"),
@@ -708,6 +866,7 @@ const collections = {
       ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
       ${textarea("Description", "description", record.description || "", { full: true })}
       ${imageField("Image", "image", record.image)}
+      ${projectSelect(record)}
       <div class="form-section">Promotion</div>
       <label class="publish-toggle field full"><input type="checkbox" name="featured" ${record.featured ? "checked" : ""} /><span><strong>Featured</strong><span class="helper">Shown in the Marketplace carousel. About three featured items works best.</span></span></label>
       ${field("Promotional label", "promoLabel", record.promoLabel || "", { placeholder: "NEW", help: `Optional, up to 24 characters. Suggestions: ${PROMO_LABELS.join(", ")}.`, list: "promo-labels" })}
@@ -728,7 +887,8 @@ const collections = {
       price: formText(formData, "price"), weight: formText(formData, "weight"), availability: formText(formData, "availability"),
       tags: linesToArray(formData.get("tags")), description: formText(formData, "description"), image: formText(formData, "image"),
       featured: formData.get("featured") === "on", promoLabel: formText(formData, "promoLabel"),
-      discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") }
+      discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") },
+      projectId: formText(formData, "projectId") || null
     })
   },
   game: {
@@ -1214,6 +1374,10 @@ const preview = { open: false, timer: null, size: "desktop", page: "", counter: 
 // Which public page shows a record of each kind.
 const PREVIEW_PAGES = {
   outpost: () => "outpost.html",
+  facilities: (id) => `outpost.html#facility-${encodeURIComponent(id)}`,
+  projects: (id, data) => data?.outpost || !data?.characterIds?.length
+    ? `outpost.html#project-${encodeURIComponent(id)}`
+    : `characters.html#${encodeURIComponent(data.characterIds[0])}#projects`,
   site: () => "index.html",
   characters: (id, data) => `characters.html#${encodeURIComponent(id)}${data?.sheet ? "#sheet" : ""}`,
   jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
@@ -1414,12 +1578,12 @@ function recordForm(key, record) {
 const outpostArraySchemas = [
   {
     key: "capabilities", title: "Capabilities", singular: "Capability",
-    help: "Outpost ratings and how Expeditioners can use them.",
-    defaultItem: { name: "", rating: "+0", summary: "", detail: "", use: "", assets: "", conditions: "" },
+    help: "Outpost ratings and how Expeditioners can use them. Contributing assets are facilities (from the Facilities section) and characters.",
+    defaultItem: { name: "", rating: "+0", summary: "", detail: "", use: "", assets: [], conditions: "" },
     fields: [
       ["name", "Name", "text"], ["rating", "Rating", "text"],
       ["summary", "Current meaning", "textarea", true], ["detail", "What it represents", "textarea", true],
-      ["use", "How players use it", "textarea", true], ["assets", "Contributing assets", "textarea", true],
+      ["use", "How players use it", "textarea", true], ["assets", "Contributing assets", "assets", true],
       ["conditions", "Relevant conditions", "textarea", true]
     ]
   },
@@ -1428,28 +1592,6 @@ const outpostArraySchemas = [
     help: "Active Outpost consequences and their severity.",
     defaultItem: { name: "", severity: "Low", detail: "" },
     fields: [["name", "Name", "text"], ["severity", "Severity", "select"], ["detail", "Details", "textarea", true]]
-  },
-  {
-    key: "facilities", title: "Facilities", singular: "Facility",
-    help: "Completed facilities available to the Outpost.",
-    defaultItem: { name: "", summary: "" },
-    fields: [["name", "Name", "text"], ["summary", "Description", "textarea", true]]
-  },
-  {
-    key: "activeProjects", title: "Active projects", singular: "Project",
-    help: "Projects, progress tracks, and the effect recorded when complete.",
-    defaultItem: { name: "", summary: "", progress: { current: 0, max: 4 }, completion: null },
-    fields: [
-      ["name", "Name", "text"], ["summary", "Description", "textarea", true],
-      ["progress.current", "Marked progress", "number"], ["progress.max", "Maximum boxes", "number"],
-      ["completion.summary", "Completion effect", "textarea", true]
-    ]
-  },
-  {
-    key: "conditions", title: "Persistent conditions", singular: "Condition",
-    help: "Ongoing conditions affecting the Outpost.",
-    defaultItem: { name: "", summary: "" },
-    fields: [["name", "Name", "text"], ["summary", "Description", "textarea", true]]
   }
 ];
 
@@ -1460,6 +1602,9 @@ function outpostNestedField(schema, index, [path, label, type, full = false], it
   const required = path === "name" ? "required" : "";
   if (type === "textarea") {
     return `<div class="${className}"><label for="${id}">${label}</label><textarea id="${id}" data-outpost-path="${path}" ${required}>${escapeHtml(value)}</textarea></div>`;
+  }
+  if (type === "assets") {
+    return `<div class="${className}"><label for="${id}">${label}</label>${assetPicker(id, value)}</div>`;
   }
   if (type === "select") {
     const levels = ["Low", "Moderate", "High", "Critical"];
@@ -1498,11 +1643,11 @@ function readNestedRecords(form, schema) {
     const item = JSON.parse(record.dataset.original || "{}");
     for (const control of record.querySelectorAll("[data-outpost-path]")) {
       const path = control.dataset.outpostPath;
-      const value = control.type === "number" ? Number(control.value) : control.value.trim();
-      if (path === "completion.summary") {
-        item.completion = value ? { ...(item.completion || {}), summary: value } : null;
+      if (path === "assets") {
+        item.assets = readAssets(control);
         continue;
       }
+      const value = control.type === "number" ? Number(control.value) : control.value.trim();
       const parts = path.split(".");
       const property = parts.pop();
       const target = parts.reduce((current, key) => {
@@ -1510,13 +1655,6 @@ function readNestedRecords(form, schema) {
         return current[key];
       }, item);
       target[property] = value;
-    }
-    if (schema.key === "activeProjects") {
-      const current = item.progress?.current ?? 0;
-      const max = item.progress?.max ?? 4;
-      if (max < 1 || current < 0 || current > max) {
-        throw new Error(`Project "${item.name || "Untitled"}" needs progress between zero and its maximum.`);
-      }
     }
     return item;
   });
@@ -1537,7 +1675,7 @@ function renderOutpostEditor() {
   document.getElementById("work-area").innerHTML = `
     <form id="outpost-form" class="outpost-layout">
       <header class="outpost-editor-head">
-        <div><h2>Outpost Sheet</h2><p>Manage profile, stress, capabilities, and current Outpost records.</p></div>
+        <div><h2>Outpost Sheet</h2><p>Manage profile, stress, capabilities, and consequences. Facilities and projects have their own sections.</p></div>
         <div class="editor-actions"><button type="button" class="button button-secondary" data-action="open-preview">Preview</button><button type="submit" class="button button-primary">Save Outpost Sheet</button></div>
       </header>
       <div class="outpost-tabs" role="tablist" aria-label="Outpost Sheet sections">
@@ -1726,6 +1864,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       return;
     }
+    if (action === "remove-asset") {
+      const picker = actionButton.closest(".asset-picker");
+      actionButton.closest(".asset-chip").remove();
+      refreshAssetPicker(picker);
+      if (preview.open) schedulePreview();
+      return;
+    }
     if (action === "remove-outpost-record") {
       const panel = actionButton.closest(".outpost-panel");
       actionButton.closest(".nested-record")?.remove();
@@ -1791,6 +1936,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const jump = event.target.closest("[data-jump-view]");
     if (jump) {
+      if (jump.dataset.jumpView === "outpost") activeOutpostTab = "capabilities";
       openView(jump.dataset.jumpView, jump.dataset.jumpId);
       return;
     }
@@ -1805,6 +1951,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedId = null;
       draft = true;
       renderContent();
+    } else if (action === "add-prerequisite" || action === "add-complication") {
+      const list = document.getElementById(action === "add-prerequisite" ? "prerequisite-rows" : "complication-rows");
+      list.insertAdjacentHTML("beforeend", action === "add-prerequisite" ? prerequisiteRow() : complicationRow());
+      list.lastElementChild.querySelector('input[type="text"], textarea')?.focus();
+      if (preview.open) schedulePreview();
+    } else if (action === "remove-project-row") {
+      actionButton.closest("[data-prerequisite-row], [data-complication-row]").remove();
+      if (preview.open) schedulePreview();
     } else if (action === "roadmap-add") {
       document.getElementById("roadmap-rows").insertAdjacentHTML("beforeend", roadmapRow());
       document.querySelector("#roadmap-rows [data-roadmap-row]:last-child input")?.focus();
@@ -1921,7 +2075,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (event.target.closest("[data-preview-size]")) setPreviewSize(event.target.closest("[data-preview-size]").dataset.previewSize);
   });
   workArea.addEventListener("input", () => { if (preview.open) schedulePreview(); });
-  workArea.addEventListener("change", () => { if (preview.open) schedulePreview(); });
+  workArea.addEventListener("change", (event) => {
+    const resolved = event.target.closest('[data-complication="resolved"]');
+    if (resolved) {
+      const row = resolved.closest("[data-complication-row]");
+      row.classList.toggle("is-active", !resolved.checked);
+      row.querySelector(".complication-state").textContent = resolved.checked ? "Resolved" : "Active";
+    }
+    const select = event.target.closest(".asset-add");
+    if (select?.value) {
+      const [type, ...rest] = select.value.split(":");
+      const picker = select.closest(".asset-picker");
+      picker.querySelector(".asset-list").insertAdjacentHTML("beforeend", assetChip({ type, id: rest.join(":") }));
+      refreshAssetPicker(picker);
+    }
+    if (preview.open) schedulePreview();
+  });
   document.getElementById("include-samples").addEventListener("change", async (event) => {
     try { await setIncludeSamples(event.target.checked); } catch (error) { showNotice(error.message, true); event.target.checked = !event.target.checked; }
   });

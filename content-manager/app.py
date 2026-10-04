@@ -43,7 +43,7 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 7
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -358,6 +358,7 @@ def clean_gear(data: dict[str, Any]) -> dict[str, Any]:
         "featured": bool(data.get("featured", False)),
         "promoLabel": label,
         "discount": clean_discount,
+        "projectId": clean_ref(data, "projectId"),
     }
 
 
@@ -441,6 +442,132 @@ def clean_site_settings(data: Any) -> dict[str, Any]:
     }
 
 
+def clean_facility(data: dict[str, Any]) -> dict[str, Any]:
+    """A place or service the Outpost has. Facilities decide which services exist; capabilities rate them."""
+    return {
+        "name": clean_text(data, "name", "A name"),
+        "summary": clean_text(data, "summary"),
+        "details": clean_text(data, "details"),
+        "projectId": clean_ref(data, "projectId"),
+    }
+
+
+PROJECT_ACCESS = ("open", "private")
+MAX_PROJECT_BOXES = 40
+
+
+def clean_checklist(data: dict[str, Any], key: str, label: str) -> list[dict[str, Any]]:
+    """A list of objects; plain text items (and a text block, one per line) are accepted too."""
+    value = data.get(key) or []
+    if isinstance(value, str):
+        value = value.splitlines()
+    if not isinstance(value, list):
+        raise ManagerError(f"{label} must be a list.")
+    items = []
+    for item in value:
+        if isinstance(item, str):
+            item = {"text": item}
+        if not isinstance(item, dict):
+            raise ManagerError(f"Each entry in {label.lower()} must be text or an object with text.")
+        items.append(item)
+    return items
+
+
+def clean_project(data: dict[str, Any]) -> dict[str, Any]:
+    """Work the GM and players agree on: a progress track, prerequisites, and the expected outcome.
+    A project is complete when every progress box is marked."""
+    progress = data.get("progress") if isinstance(data.get("progress"), dict) else {}
+    maximum = clean_count(progress, "max", "Progress boxes")
+    current = clean_count(progress, "current", "Marked progress") or 0
+    if not maximum or maximum > MAX_PROJECT_BOXES:
+        raise ManagerError(f"A project needs between 1 and {MAX_PROJECT_BOXES} progress boxes.")
+    if current > maximum:
+        raise ManagerError("Marked progress cannot be more than the number of progress boxes.")
+    return {
+        "name": clean_text(data, "name", "A name"),
+        "access": clean_choice(data, "access", PROJECT_ACCESS, "open"),
+        "outpost": bool(data.get("outpost")),
+        "characterIds": clean_ids(data, "characterIds", "Characters"),
+        "summary": clean_text(data, "summary"),
+        # Each prerequisite is ticked off when it is met.
+        "prerequisites": [{"text": clean_text(item, "text"), "met": bool(item.get("met"))}
+                          for item in clean_checklist(data, "prerequisites", "Prerequisites") if clean_text(item, "text")],
+        # Complications stay on record once resolved, with how they were resolved.
+        "complications": [{"text": clean_text(item, "text"), "resolved": bool(item.get("resolved")), "resolution": clean_text(item, "resolution")}
+                          for item in clean_checklist(data, "complications", "Complications") if clean_text(item, "text")],
+        "outcome": clean_text(data, "outcome"),
+        "progress": {"current": current, "max": maximum},
+    }
+
+
+def split_outpost_projects(outpost: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], bool]:
+    """Schema v7 moved the Outpost Sheet's active projects into the Projects collection (as Outpost projects) and
+    retired persistent conditions. Returns the sheet without either, the project records, and whether any
+    persistent conditions were dropped."""
+    outpost = dict(outpost)
+    projects: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for item in outpost.pop("activeProjects", None) or []:
+        if not isinstance(item, dict) or not str(item.get("name") or "").strip():
+            continue
+        stem = slugify(str(item.get("id") or item["name"])) or "project"
+        project_id, suffix = stem, 2
+        while project_id in used:
+            project_id, suffix = f"{stem}-{suffix}", suffix + 1
+        used.add(project_id)
+        progress = item.get("progress") if isinstance(item.get("progress"), dict) else {}
+        maximum = min(MAX_PROJECT_BOXES, max(1, int(progress.get("max") or 4)))
+        completion = item.get("completion") if isinstance(item.get("completion"), dict) else {}
+        projects.append({"id": project_id, **clean_project({
+            "name": item["name"], "summary": item.get("summary") or "", "outcome": completion.get("summary") or "",
+            "outpost": True, "progress": {"max": maximum, "current": min(maximum, max(0, int(progress.get("current") or 0)))},
+        })})
+    conditions = outpost.pop("conditions", None)
+    return outpost, projects, bool(conditions)
+
+
+# A capability's contributing assets point at facilities and characters.
+ASSET_TYPES = {"facility": "facilities", "character": "characters"}
+
+
+def outpost_assets(capability: Any) -> list[dict[str, str]]:
+    """The asset references of one capability; free text from before schema v6 counts as none."""
+    assets = capability.get("assets") if isinstance(capability, dict) else None
+    if not isinstance(assets, list):
+        return []
+    return [{"type": item["type"], "id": str(item["id"])} for item in assets
+            if isinstance(item, dict) and item.get("type") in ASSET_TYPES and item.get("id")]
+
+
+def split_legacy_outpost(outpost: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], bool]:
+    """Schema v6 moved facilities out of the Outpost Sheet into their own collection and made contributing assets
+    references. Returns the sheet without facilities, the facility records it held, and whether free-text
+    contributing assets were dropped."""
+    outpost = dict(outpost)
+    facilities: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for item in outpost.pop("facilities", None) or []:
+        if not isinstance(item, dict) or not str(item.get("name") or "").strip():
+            continue
+        stem = slugify(str(item.get("id") or item["name"])) or "facility"
+        facility_id, suffix = stem, 2
+        while facility_id in used:
+            facility_id, suffix = f"{stem}-{suffix}", suffix + 1
+        used.add(facility_id)
+        facilities.append({"id": facility_id, **clean_facility(item)})
+    dropped = False
+    if isinstance(outpost.get("capabilities"), list):
+        capabilities = []
+        for capability in outpost["capabilities"]:
+            if isinstance(capability, dict):
+                assets = capability.get("assets")
+                dropped = dropped or (not isinstance(assets, list) and bool(str(assets or "").strip()))
+                capability = {**capability, "assets": outpost_assets(capability)}
+            capabilities.append(capability)
+        outpost["capabilities"] = capabilities
+    return outpost, facilities, dropped
+
+
 def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
     """Out-of-character notes on the Game page: announcements and campaign rules."""
     post_type = clean_choice(data, "type", GAME_POST_TYPES, "rule")
@@ -498,9 +625,21 @@ def _gate_designation(record: dict[str, Any]) -> tuple[str, str] | None:
 COLLECTIONS: dict[str, Collection] = {
     "gear": Collection(
         "gear", "Gear", ("name",), clean_gear, lambda record: str(record.get("name", "")),
+        refs=(("projectId", "project_id", "projects"),),
         public_fields=("id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
-                       "featured", "promoLabel", "discount"),
+                       "featured", "promoLabel", "discount", "projectId"),
         image_fields=("image",), text_fields=("description",),
+    ),
+    "facilities": Collection(
+        "facilities", "Facility", ("name",), clean_facility, lambda record: str(record.get("name", "")),
+        refs=(("projectId", "project_id", "projects"),),
+        text_fields=("summary", "details"),
+    ),
+    "projects": Collection(
+        "projects", "Project", ("name",), clean_project, lambda record: str(record.get("name", "")),
+        links=(("characterIds", "project_characters", "project_id", "character_id", "characters"),),
+        public_fields=("id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress"),
+        text_fields=("summary", "outcome"),
     ),
     "characters": Collection(
         "characters", "Character", ("name",), clean_character, lambda record: str(record.get("name", "")),
@@ -531,7 +670,7 @@ COLLECTIONS: dict[str, Collection] = {
         text_fields=("summary", "details"),
     ),
 }
-PAGE_COLLECTIONS = ("gear", "characters", "archive", "jobs")
+PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs")
 GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil")
 
 
@@ -554,6 +693,8 @@ class ContentStore:
             self.migration_report = self._migrate_from_v3()
         self._create_schema()
         self.migration_report += self._migrate_rules_to_game()
+        self.migration_report += self._migrate_outpost_facilities()
+        self.migration_report += self._migrate_outpost_projects()
         with self._connect() as connection:
             initialized = connection.execute("SELECT value FROM metadata WHERE key = 'initialized'").fetchone()
         if not initialized:
@@ -586,8 +727,18 @@ class ContentStore:
                     id TEXT PRIMARY KEY,
                     data TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS facilities (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT,
+                    data TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS gear (
                     id TEXT PRIMARY KEY,
+                    project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT,
                     data TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS characters (
@@ -601,6 +752,12 @@ class ContentStore:
                     brought_into_action INTEGER NOT NULL DEFAULT 0,
                     position INTEGER NOT NULL,
                     PRIMARY KEY (character_id, gear_id)
+                );
+                CREATE TABLE IF NOT EXISTS project_characters (
+                    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    character_id TEXT NOT NULL REFERENCES characters(id) ON DELETE RESTRICT,
+                    position INTEGER NOT NULL,
+                    PRIMARY KEY (project_id, character_id)
                 );
                 CREATE TABLE IF NOT EXISTS archive_entries (
                     id TEXT PRIMARY KEY,
@@ -641,6 +798,10 @@ class ContentStore:
                 CREATE INDEX IF NOT EXISTS stash_gear ON character_stash(gear_id);
                 """
             )
+            for table in ("gear", "facilities"):
+                columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+                if "project_id" not in columns:
+                    connection.execute(f"ALTER TABLE {table} ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT")
             connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('schemaVersion', ?)", (str(SCHEMA_VERSION),))
 
     # --- Migration from the v3 schema (Island, Gates, Expeditions, Reports) --
@@ -828,6 +989,63 @@ class ContentStore:
             connection.execute("DROP TABLE rules")
         return [f"Moved {len(rows)} rules into the Game section as rule posts."]
 
+    def _migrate_outpost_facilities(self) -> list[str]:
+        """Schema v6: the Outpost Sheet's facility list became the Facilities collection, and contributing assets
+        became references to facilities and characters. The sheet as it was is kept in legacy_records."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone()
+            outpost = json.loads(row["data"]) if row else {}
+            if "facilities" not in outpost and all(isinstance(capability.get("assets", []), list)
+                                                   for capability in outpost.get("capabilities") or [] if isinstance(capability, dict)):
+                return []
+            clean, facilities, dropped = split_legacy_outpost(outpost)
+            connection.execute("INSERT OR REPLACE INTO legacy_records (source, id, data) VALUES ('outpost', 'outpost-sheet-v5', ?)",
+                               (row["data"],))
+            taken = {item["id"] for item in connection.execute("SELECT id FROM facilities")}
+            for facility in facilities:
+                facility_id, suffix = facility["id"], 2
+                while facility_id in taken:
+                    facility_id, suffix = f"{facility['id']}-{suffix}", suffix + 1
+                taken.add(facility_id)
+                # The old list was the placeholder content, like the rest of the original data.
+                self._write_record(connection, "facilities", facility_id,
+                                   {**facility, "id": facility_id, "published": True, "sample": True}, insert=True)
+            connection.execute("UPDATE outpost_state SET data = ? WHERE id = 1", (json.dumps(clean, ensure_ascii=False),))
+        report = [f"Moved {len(facilities)} Outpost facilities into the new Facilities section, flagged as sample content."]
+        if dropped:
+            report.append("Capability contributing assets are now picked from Facilities and Characters; the old free text "
+                          "is kept in legacy_records (source 'outpost').")
+        return report
+
+    def _migrate_outpost_projects(self) -> list[str]:
+        """Schema v7: the Outpost Sheet's active projects became Outpost projects in the Projects collection, and
+        persistent conditions were retired (consequences and aspects already cover them). The sheet as it was is
+        kept in legacy_records."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone()
+            outpost = json.loads(row["data"]) if row else {}
+            if "activeProjects" not in outpost and "conditions" not in outpost:
+                return []
+            sheet, projects, dropped = split_outpost_projects(outpost)
+            if projects or dropped:
+                connection.execute("INSERT OR REPLACE INTO legacy_records (source, id, data) VALUES ('outpost', 'outpost-sheet-v6', ?)",
+                                   (row["data"],))
+            taken = {item["id"] for item in connection.execute("SELECT id FROM projects")}
+            for project in projects:
+                project_id, suffix = project["id"], 2
+                while project_id in taken:
+                    project_id, suffix = f"{project['id']}-{suffix}", suffix + 1
+                taken.add(project_id)
+                self._write_record(connection, "projects", project_id,
+                                   {**project, "id": project_id, "published": True, "sample": True}, insert=True)
+            connection.execute("UPDATE outpost_state SET data = ? WHERE id = 1", (json.dumps(sheet, ensure_ascii=False),))
+        report = []
+        if projects:
+            report.append(f"Moved {len(projects)} Outpost projects into the new Projects section, flagged as sample content.")
+        if dropped:
+            report.append("Persistent conditions were retired; the old ones are kept in legacy_records (source 'outpost').")
+        return report
+
     # --- Record persistence -------------------------------------------------
 
     def _spec(self, name: str) -> Collection:
@@ -916,6 +1134,11 @@ class ContentStore:
                     (record_id,),
                 ):
                     blockers.append(f"{other.label} “{other.display(json.loads(row['data'])) or row['id']}” (participant)")
+        kind = next((kind for kind, collection in ASSET_TYPES.items() if collection == name), None)
+        row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone() if kind else None
+        for capability in (json.loads(row["data"]).get("capabilities") or []) if row else []:
+            if any(asset == {"type": kind, "id": record_id} for asset in outpost_assets(capability)):
+                blockers.append(f"Outpost capability “{capability.get('name') or 'Unnamed'}” (contributing assets)")
         if name == "gear":
             for row in connection.execute(
                 "SELECT c.id, c.data FROM character_stash s JOIN characters c ON c.id = s.character_id WHERE s.gear_id = ?",
@@ -1086,8 +1309,11 @@ class ContentStore:
         posts = self._read_game()
         media_dirs = [self.data_dir / "portraits", self.data_dir / "images"]
         with self._connect() as connection:
-            for table in ("character_stash", "job_participants", "archive_participants", "jobs", "archive_entries",
-                          "characters", "gear", "media", "outpost_state", "game_posts"):
+            # Gear and characters point at projects, which point back at characters: check references at commit.
+            connection.execute("BEGIN")  # the pragma lasts until this transaction ends
+            connection.execute("PRAGMA defer_foreign_keys = ON")
+            for table in ("character_stash", "job_participants", "archive_participants", "project_characters", "jobs",
+                          "archive_entries", "facilities", "gear", "projects", "characters", "media", "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -1109,9 +1335,21 @@ class ContentStore:
                             (path.name, content_type, path.read_bytes()),
                         )
 
+            sheet, facilities, dropped = split_legacy_outpost(outpost)
+            sheet, projects, dropped_conditions = split_outpost_projects(sheet)
+            dropped = dropped or dropped_conditions
+            known_projects = {row["id"] for row in connection.execute("SELECT id FROM projects")}
+            for project in projects:
+                if project["id"] not in known_projects:
+                    self._write_record(connection, "projects", project["id"], {**project, "published": True}, insert=True)
+            for facility in facilities:
+                self._write_record(connection, "facilities", facility["id"], {**facility, "published": True}, insert=True)
+            if dropped:
+                connection.execute("INSERT OR REPLACE INTO legacy_records (source, id, data) VALUES ('outpost', 'outpost-sheet-v5', ?)",
+                                   (json.dumps(outpost, ensure_ascii=False),))
             connection.execute(
                 "INSERT INTO outpost_state (id, data) VALUES (1, ?)",
-                (json.dumps(outpost, ensure_ascii=False),),
+                (json.dumps(sheet, ensure_ascii=False),),
             )
             for post in posts:
                 self._write_record(connection, "game", str(post["id"]), {**post, "published": True}, insert=True)
@@ -1184,7 +1422,28 @@ class ContentStore:
     def save_outpost(self, data: Any) -> None:
         if not isinstance(data, dict):
             raise ManagerError("Outpost data must be an object.")
+        stale = "Facilities now have their own section. Reload the manager page (copy any unsaved text first) and save again."
+        if {"facilities", "activeProjects", "conditions"} & set(data):
+            raise ManagerError(stale.replace("Facilities now have", "Facilities and projects now have"))
         with self._connect() as connection:
+            capabilities = []
+            for capability in data.get("capabilities") or []:
+                if not isinstance(capability, dict):
+                    raise ManagerError("Each capability must be an object.")
+                assets = capability.get("assets", [])
+                if not isinstance(assets, list):
+                    raise ManagerError(stale)
+                if any(not isinstance(item, dict) or item.get("type") not in ASSET_TYPES or not item.get("id") for item in assets):
+                    raise ManagerError("Each contributing asset must be a facility or a character.")
+                clean_assets = []
+                for asset in outpost_assets(capability):
+                    if not connection.execute(f"SELECT 1 FROM {ASSET_TYPES[asset['type']]} WHERE id = ?", (asset["id"],)).fetchone():
+                        raise ManagerError(f"Unknown {asset['type']} in the contributing assets of {capability.get('name') or 'a capability'}: {asset['id']}")
+                    if asset not in clean_assets:
+                        clean_assets.append(asset)
+                capabilities.append({**capability, "assets": clean_assets})
+            if "capabilities" in data:
+                data = {**data, "capabilities": capabilities}
             connection.execute(
                 "INSERT INTO outpost_state (id, data) VALUES (1, ?) "
                 "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
@@ -1222,7 +1481,14 @@ class ContentStore:
                 record[field] = scrub_archive_links(record.get(field) or "", public_archive)
             return record
 
-        exported["gear"] = [public_record("gear", gear) for gear in published["gear"].values()]
+        public_project = lambda project_id: project_id if project_id in published["projects"] else None
+        exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId"))}
+                            for gear in published["gear"].values()]
+        exported["projects"] = [
+            {**public_record("projects", project),
+             "characterIds": [item for item in project.get("characterIds", []) if item in published["characters"]]}
+            for project in published["projects"].values()
+        ]
 
         for character in published["characters"].values():
             character = public_record("characters", character)
@@ -1261,7 +1527,30 @@ class ContentStore:
                                key=lambda post: (post.get("publishedAt") or "", post.get("title", "")), reverse=True)
         game = announcements + sorted((post for post in posts if post.get("type") != "announcement"),
                                       key=lambda post: str(post.get("title", "")))
-        output["outpost.json"] = json_bytes(state["outpost"])
+        # The Outpost Sheet carries its facilities, and contributing assets are named for the page.
+        outpost = json.loads(json.dumps(state["outpost"]))
+        for retired in ("facilities", "activeProjects", "conditions"):
+            outpost.pop(retired, None)
+        supports: dict[str, list[str]] = {}
+        for capability in outpost.get("capabilities") or []:
+            if not isinstance(capability, dict):
+                continue
+            capability["assets"] = [
+                {**asset, "name": published[ASSET_TYPES[asset["type"]]][asset["id"]].get("name", "")}
+                for asset in outpost_assets(capability) if asset["id"] in published[ASSET_TYPES[asset["type"]]]
+            ]
+            for asset in capability["assets"]:
+                if asset["type"] == "facility":
+                    supports.setdefault(asset["id"], []).append(str(capability.get("name") or ""))
+        # Facilities in the order the capabilities list them, then the unassigned ones by name.
+        facilities = sorted(published["facilities"].values(), key=lambda facility: (
+            list(supports).index(facility["id"]) if facility["id"] in supports else len(supports), str(facility.get("name", ""))))
+        outpost["facilities"] = [
+            {**{field: facility.get(field) for field in ("id", "name", "summary", "details")},
+             "projectId": public_project(facility.get("projectId")), "capabilities": supports.get(facility["id"], [])}
+            for facility in (public_record("facilities", facility) for facility in facilities)
+        ]
+        output["outpost.json"] = json_bytes(outpost)
         site = json.loads(json.dumps(state["site"]))
         for credit in (site.get("community") or {}, site.get("sponsor") or {}):
             logo = media_filename(credit.get("logo"))
@@ -1274,6 +1563,7 @@ class ContentStore:
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
         counts = {name: len(exported[name]) for name in PAGE_COLLECTIONS}
         counts["game"] = len(game)
+        counts["facilities"] = len(outpost["facilities"])
         counts["unpublished"] = sum(len(state[name]) for name in COLLECTIONS) - sum(counts.values())
         counts["samplesHidden"] = len(state["hiddenSamples"])
         return output, counts

@@ -357,3 +357,28 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .coin-icon, .weight-icon { display: inline-block; width: 1.05em; height: 1.05em; margin-right: 0.3em; vertical-align: -0.15em; }
 .coin-icon { color: var(--amber); }
 .weight-icon { width: 1.3em; height: 1.3em; vertical-align: -0.28em; color: var(--green); }
+
+/* Capability contributing assets */
+.asset-picker { display: grid; gap: 8px; }
+.asset-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.asset-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 4px 2px 8px; border: 1px solid #cbd5ce; background: #fff; font-size: 12px; }
+.asset-kind { padding: 1px 5px; color: #fff; background: var(--green); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.asset-chip.is-character .asset-kind { background: #6a5a8c; }
+.asset-remove { width: 22px; height: 22px; padding: 0; border: 0; color: #6d7c76; background: none; font-size: 15px; line-height: 1; cursor: pointer; }
+.asset-remove:hover, .asset-remove:focus-visible { color: #a63d32; }
+.asset-empty { margin: 0; color: #6d7c76; font-size: 12px; }
+.asset-list:not(:empty) + .asset-empty { display: none; }
+
+/* Project prerequisites and complications */
+.checklist-rows, .complication-rows { display: grid; gap: 6px; }
+.checklist-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 28px; align-items: center; gap: 8px; }
+.checklist-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green); }
+.checklist-row:has([data-prerequisite="met"]:checked) [data-prerequisite="text"] { color: #6d7c76; text-decoration: line-through; }
+.checklist-row input[type="text"], .complication-row textarea { width: 100%; min-height: 34px; border: 1px solid #cbd5ce; padding: 6px 8px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; }
+.complication-row { display: grid; gap: 6px; padding: 8px; border: 1px solid #cbd5ce; border-left: 3px solid #9aa8a2; background: #fbfcfa; }
+.complication-row.is-active { border-color: #e2b4ad; border-left-color: #b8382c; background: #fdf4f2; }
+.complication-row-head { display: flex; align-items: center; gap: 12px; }
+.complication-state { margin-right: auto; color: #6d7c76; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.complication-row.is-active .complication-state { color: #b8382c; }
+.inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
