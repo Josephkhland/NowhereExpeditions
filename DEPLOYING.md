@@ -55,6 +55,31 @@ content manager (local)  ──Sync data──►  public-site/data  ──git p
 
 To redeploy without a change, use **Actions → Deploy public site → Run workflow**.
 
+## Versions
+
+Every deploy is a numbered release, shown in the site's footer as `v1.4.2 (2026-10-04)` and linked to its release notes. The local preview shows "Local preview" instead.
+
+- **Patch** goes up by default on every deploy that has new commits since the last release.
+- **Minor** or **Major** go up instead when one of the rules in [`.github/versioning.json`](.github/versioning.json) matches. Out of the box, either:
+  - a commit message (or the title of a merged pull request) contains `[minor]` or `[major]`, for example `git commit -m "Add the Marketplace [minor]"`, or
+  - a merged pull request carries the label `release: minor` or `release: major`. Create these labels once under **Issues → Labels** if you want to use them.
+- **Running the workflow by hand** (**Actions → Deploy public site → Run workflow**) lets you pick `patch`, `minor` or `major` directly. Leave it on `auto` for the rules above. On `auto`, a redeploy with nothing new keeps the current version.
+
+Each release becomes a git tag (`v1.4.2`) and a **GitHub Release** with auto-generated notes listing what changed since the previous one. The repository's **Releases** page is the version history. Tags are created only after a successful deploy, so a failed run never uses up a number.
+
+`.github/versioning.json` settings:
+
+| Key | Meaning |
+| --- | --- |
+| `firstVersion` | The version of the first release (when no tag exists yet). |
+| `tagPrefix` | Prefix of release tags (`v`). |
+| `timezone` | Time zone for the release date, e.g. `UTC` or `Europe/Athens`. |
+| `major` / `minor` → `markers` | Text that, anywhere in a commit message since the last release, triggers that bump (case-insensitive). |
+| `major` / `minor` → `labels` | Pull request labels that trigger that bump. |
+| `major` / `minor` → `paths` | File patterns that trigger the bump when changed, e.g. `"public-site/*.js"` to make site code changes a minor release while data-only updates stay patches. |
+
+Major wins over minor, and minor over patch. To preview what the next deploy would be numbered, run `python .github/scripts/release_version.py` (it only writes `public-site/version.json`, which Git ignores). The rule tests run with `python -m unittest discover -s .github/scripts`.
+
 ## Back up the database
 
 Because `content.db` stays out of Git, it isn't backed up by the repository. Copy it somewhere private now and then (a cloud drive folder, an external disk). Stop the content manager first so the copy is complete. It is the only place unpublished material lives.
@@ -64,7 +89,7 @@ Because `content.db` stays out of Git, it isn't backed up by the repository. Cop
 - **`git` is not recognized:** `E:\Git\cmd` must be on PATH (it is on the user PATH). Programs started before it was added, including VS Code and open terminals, need a restart to see it.
 - **Push asks for a password, or authentication fails:** the remote uses SSH, so check the key still works with `ssh -T git@github.com` (it should greet you by name). HTTPS remotes need an up-to-date Git for Windows (step 1), because GitHub no longer accepts account passwords.
 
-- **The Action didn't run:** it only runs for pushes to `main` that change `public-site/` (or the workflow file). Use **Run workflow** for a manual deploy.
+- **The Action didn't run:** it only runs for pushes to `main` that change `public-site/` (or the workflow or versioning files). Use **Run workflow** for a manual deploy.
 - **"Branch main is not allowed to deploy to github-pages":** the repository's default branch has a different name. Rename it to `main`, or change `branches: [main]` in the workflow.
 - **The site shows a 404 right after the first deploy:** check that **Settings → Pages → Source** is set to **GitHub Actions**, then rerun the workflow.
 - **Changes don't appear:** make sure you pressed **Sync data** before committing, then hard-refresh the browser (Ctrl+F5).
