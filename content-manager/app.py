@@ -361,6 +361,86 @@ def clean_gear(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+ROADMAP_STATUSES = ("todo", "in-progress", "done")
+LAUNCH_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)")
+URL_RE = re.compile(r"https?://\S+")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# An image file kept with the site, e.g. assets/images/cozy-house-games.png.
+SITE_ASSET_RE = re.compile(r"assets/images/[A-Za-z0-9._-]+\.(png|jpe?g|webp|gif|svg)")
+
+# Site-wide settings shown around the campaign content: the launch countdown and roadmap on the Overview, the
+# community link, and the sponsor credit in the footer. Kept as one record, like the Outpost Sheet.
+SITE_DEFAULTS: dict[str, Any] = {
+    "showLaunch": True,
+    "launchAt": "2026-11-06T20:00+02:00",
+    "launchLabel": "Athens time",
+    "launchTitle": "The first expedition sets out",
+    "launchSummary": "The Outpost opens its Job Board for the first crews. Here is what still needs doing before then.",
+    # Milestones on the Overview timeline. A done step's date is when it happened; otherwise it is an estimate.
+    "roadmap": [
+        {"title": "Interest Check", "detail": "Players gauged interest in a Fate West Marches campaign.", "status": "done", "date": "2026-09-29"},
+        {"title": "Site Created", "detail": "The campaign site opens: Outpost, Job Board, Archive, Marketplace, and Characters.", "status": "done", "date": "2026-10-04"},
+        {"title": "Game Listing Authored", "detail": "The rules and the game listing on the Game page.", "status": "in-progress", "date": "2026-10-11"},
+        {"title": "Site Content Authored", "detail": "The real Outpost, Archive, gear, and first jobs replace the sample content.", "status": "todo", "date": "2026-10-18"},
+        {"title": "Players Recruited", "detail": "", "status": "todo", "date": "2026-10-25"},
+        {"title": "Characters Created", "detail": "Sheets built, sent in, and imported.", "status": "todo", "date": "2026-11-01"},
+        {"title": "Opening Event and First Session on Discord", "detail": "The first expedition sets out.", "status": "todo", "date": "2026-11-06"},
+    ],
+    "discordUrl": "https://discord.gg/TxcudTj",
+    # Logos are files dropped into public-site/assets/images/; a missing file just leaves the name without a logo.
+    "community": {"label": "A campaign of", "name": "Game of Adventuring", "logo": "assets/images/game-of-adventuring.png"},
+    "sponsor": {"name": "Cozy House Games", "url": "https://discord.gg/DRNwnHeGTv", "logo": "assets/images/cozy-house-games.png"},
+}
+
+
+def clean_site_settings(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ManagerError("Site settings must be an object.")
+    launch_at = clean_text(data, "launchAt")
+    if launch_at and not LAUNCH_RE.fullmatch(launch_at):
+        raise ManagerError("Launch time must look like 2026-11-06T20:00+02:00 (date, time, and UTC offset).")
+    roadmap = data.get("roadmap") or []
+    if not isinstance(roadmap, list) or any(not isinstance(item, dict) for item in roadmap) or len(roadmap) > 40:
+        raise ManagerError("The roadmap must be a list of at most 40 steps.")
+    steps = []
+    for item in roadmap:
+        title = clean_text(item, "title")
+        if title:
+            date = clean_text(item, "date")
+            if date and not DATE_RE.fullmatch(date):
+                raise ManagerError(f"The date of roadmap step “{title}” must look like 2026-10-04.")
+            steps.append({"title": title, "detail": clean_text(item, "detail"),
+                          "status": clean_choice(item, "status", ROADMAP_STATUSES, "todo"), "date": date})
+
+    def link(container: dict[str, Any], key: str, label: str) -> str:
+        value = clean_text(container, key)
+        if value and not URL_RE.fullmatch(value):
+            raise ManagerError(f"{label} must be a full web address starting with https://.")
+        return value
+
+    def image(container: dict[str, Any], label: str) -> str | None:
+        value = clean_text(container, "logo")
+        if value and not (media_filename(value) or URL_RE.fullmatch(value) or SITE_ASSET_RE.fullmatch(value)):
+            raise ManagerError(f"{label} must be an uploaded image, a file in assets/images/, or a full web address starting with https://.")
+        return value or None
+
+    sponsor = data.get("sponsor") if isinstance(data.get("sponsor"), dict) else {}
+    community = data.get("community") if isinstance(data.get("community"), dict) else {}
+    return {
+        "showLaunch": bool(data.get("showLaunch")),
+        "launchAt": launch_at,
+        "launchLabel": clean_text(data, "launchLabel"),
+        "launchTitle": clean_text(data, "launchTitle"),
+        "launchSummary": clean_text(data, "launchSummary"),
+        "roadmap": steps,
+        "discordUrl": link(data, "discordUrl", "The Discord invite"),
+        "community": {"label": clean_text(community, "label"), "name": clean_text(community, "name"),
+                      "logo": image(community, "The community logo")},
+        "sponsor": {"name": clean_text(sponsor, "name"), "url": link(sponsor, "url", "The sponsor link"),
+                    "logo": image(sponsor, "The sponsor logo")},
+    }
+
+
 def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
     """Out-of-character notes on the Game page: announcements and campaign rules."""
     post_type = clean_choice(data, "type", GAME_POST_TYPES, "rule")
@@ -1035,6 +1115,10 @@ class ContentStore:
             )
             for post in posts:
                 self._write_record(connection, "game", str(post["id"]), {**post, "published": True}, insert=True)
+            site_path = self.data_dir / "site.json"
+            if site_path.exists():
+                connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('siteSettings', ?)",
+                                   (json.dumps(clean_site_settings(read_json(site_path)), ensure_ascii=False),))
             connection.execute(
                 "INSERT OR REPLACE INTO metadata (key, value) VALUES ('initialized', '1')"
             )
@@ -1079,11 +1163,23 @@ class ContentStore:
             outpost_row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone()
         result: dict[str, Any] = {name: [record for record in items if include or not record.get("sample")] for name, items in records.items()}
         result["outpost"] = json.loads(outpost_row["data"]) if outpost_row else {}
+        result["site"] = self.site_settings()
         samples = [{"collection": name, "id": record["id"], "label": COLLECTIONS[name].display(record) or record["id"]}
                    for name, items in records.items() for record in items if record.get("sample")]
         result["settings"] = {"includeSamples": include, "sampleCount": len(samples)}
         result["hiddenSamples"] = [] if include else samples
         return result
+
+    def site_settings(self) -> dict[str, Any]:
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'siteSettings'").fetchone()
+        return json.loads(row["value"]) if row else json.loads(json.dumps(SITE_DEFAULTS))
+
+    def save_site_settings(self, data: Any) -> None:
+        clean = clean_site_settings(data)
+        with self._connect() as connection:
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('siteSettings', ?)",
+                               (json.dumps(clean, ensure_ascii=False),))
 
     def save_outpost(self, data: Any) -> None:
         if not isinstance(data, dict):
@@ -1102,8 +1198,8 @@ class ContentStore:
         In preview mode unpublished records are included and the editor's unsaved draft replaces its record."""
         state = self.state()
         draft = self._preview_draft if preview else None
-        if draft and draft["collection"] == "outpost":
-            state["outpost"] = draft["record"]
+        if draft and draft["collection"] in ("outpost", "site"):
+            state[draft["collection"]] = draft["record"]
         elif draft:
             records = [record for record in state[draft["collection"]] if record["id"] != draft["id"]]
             state[draft["collection"]] = [*records, draft["record"]]
@@ -1166,6 +1262,15 @@ class ContentStore:
         game = announcements + sorted((post for post in posts if post.get("type") != "announcement"),
                                       key=lambda post: str(post.get("title", "")))
         output["outpost.json"] = json_bytes(state["outpost"])
+        site = json.loads(json.dumps(state["site"]))
+        for credit in (site.get("community") or {}, site.get("sponsor") or {}):
+            logo = media_filename(credit.get("logo"))
+            media = self.media(logo) if logo else None
+            if media:
+                output[credit["logo"].removeprefix("data/")] = media[1]
+            elif logo:
+                credit["logo"] = None
+        output["site.json"] = json_bytes(site)
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
         counts = {name: len(exported[name]) for name in PAGE_COLLECTIONS}
         counts["game"] = len(game)
@@ -1189,6 +1294,13 @@ class ContentStore:
                 if not isinstance(data, dict):
                     raise ManagerError("Outpost data must be an object.")
                 self._preview_draft = {"collection": "outpost", "id": None, "record": data}
+                return {"id": None}
+            if collection == "site":
+                try:
+                    self._preview_draft = {"collection": "site", "id": None, "record": clean_site_settings(data)}
+                except ManagerError as error:
+                    self._preview_draft = None
+                    return {"id": None, "error": str(error)}
                 return {"id": None}
             spec = self._spec(collection)
             if not isinstance(data, dict):
@@ -1402,6 +1514,9 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     self._send_json(200, store.set_preview_draft(self._read_body()))
                 elif method == "POST" and path == "/api/settings":
                     store.set_include_samples(self._read_body().get("includeSamples"))
+                    self._send_json(200, {"saved": True})
+                elif method == "POST" and path == "/api/site":
+                    store.save_site_settings(self._read_body().get("data"))
                     self._send_json(200, {"saved": True})
                 elif method == "POST" and path == "/api/outpost":
                     store.save_outpost(self._read_body().get("data"))

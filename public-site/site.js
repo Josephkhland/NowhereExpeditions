@@ -400,6 +400,127 @@ const renderAnnouncementBanner = async () => {
     console.warn("No announcements available.", error);
   }
 };
+/* ---------- Site settings: launch countdown and roadmap, Discord, sponsor ---------- */
+
+let sitePromise = null;
+const loadSiteSettings = () => {
+  sitePromise ||= fetchJson("data/site.json").catch(() => null);
+  return sitePromise;
+};
+
+const CHAT_ICON = '<svg class="chat-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9l-4.5 3.5V17H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm4 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm4 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm4 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="currentColor"/></svg>';
+const safeUrl = (url) => /^https?:\/\//i.test(String(url || "")) ? url : "";
+
+// Every page: the Discord link, the community and sponsor credits above the copyright line.
+// A logo file that is missing or fails to load is simply removed, leaving the name.
+const footerLogo = (logo, className) => logo
+  ? `<img class="${className}" src="${escapeHtml(logo)}" alt="" onerror="this.remove()" />` : "";
+
+const footerCredit = (label, name, url, logo, className) => {
+  if (!name) return "";
+  const body = `${footerLogo(logo, className)}<span>${escapeHtml(name)}</span>`;
+  const href = safeUrl(url);
+  return `<span class="footer-credit"><span class="footer-credit-label">${escapeHtml(label)}</span>${href
+    ? `<a class="footer-credit-link" href="${escapeHtml(href)}" target="_blank" rel="noopener">${body}</a>` : `<span class="footer-credit-link">${body}</span>`}</span>`;
+};
+
+const renderFooterCommunity = async () => {
+  const slot = document.getElementById("footer-community");
+  if (!slot) return;
+  const site = await loadSiteSettings();
+  if (!site) return;
+  const discord = safeUrl(site.discordUrl);
+  const community = site.community || {};
+  const sponsor = site.sponsor || {};
+  const parts = [
+    discord ? `<a class="discord-link" href="${escapeHtml(discord)}" target="_blank" rel="noopener">${CHAT_ICON}Join our Discord</a>` : "",
+    footerCredit(community.label || "A campaign of", community.name, discord, community.logo, "community-logo"),
+    footerCredit("Supported by", sponsor.name, sponsor.url, sponsor.logo, "sponsor-logo")
+  ].filter(Boolean);
+  if (!parts.length) return;
+  slot.innerHTML = parts.join("");
+  slot.hidden = false;
+};
+
+// "2026-11-06T20:00+02:00" read as written: the wall-clock date and time in that offset.
+const launchWallClock = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value || "");
+  if (!match) return "";
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  return `${date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}, ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const TIMELINE_STATES = { done: ["✓", "Done"], "in-progress": ["", "In progress"], todo: ["", "Estimate"] };
+
+// "2026-10-11" as "11 Oct"; the year only when it is not the launch year.
+const timelineDate = (value, launchYear) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || "");
+  if (!match) return "";
+  const [, year, month, day] = match.map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB",
+    { day: "numeric", month: "short", ...(year === launchYear ? {} : { year: "numeric" }), timeZone: "UTC" });
+};
+
+// Overview: the milestones to the first session as a vertical timeline, then the countdown. Hidden after launch.
+const renderLaunchPanel = async () => {
+  const panel = document.getElementById("launch-panel");
+  if (!panel) return;
+  const site = await loadSiteSettings();
+  const launch = site?.launchAt ? new Date(site.launchAt) : null;
+  if (!site?.showLaunch || !launch || Number.isNaN(launch.getTime()) || launch <= new Date()) return;
+  const steps = site.roadmap || [];
+  const done = steps.filter((step) => step.status === "done").length;
+  const launchYear = Number(site.launchAt.slice(0, 4));
+  const visitorTime = launch.toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+  const sameOffset = new Date(launch).getTimezoneOffset() === -Number((/([+-]\d{2}):(\d{2})$/.exec(site.launchAt) || [0, "+00", "00"]).slice(1, 3).reduce((hours, minutes) => Number(hours) * 60 + Math.sign(Number(hours) || 1) * Number(minutes)));
+  const discord = safeUrl(site.discordUrl);
+  panel.innerHTML = `
+    <div class="launch-head">
+      <span class="kicker">Before the first expedition${steps.length ? ` · ${done} of ${steps.length} milestones done` : ""}</span>
+      <h2 id="launch-title">${escapeHtml(site.launchTitle || "Launch")}</h2>
+      ${site.launchSummary ? `<p class="launch-summary">${escapeHtml(site.launchSummary)}</p>` : ""}
+    </div>
+    ${steps.length ? `<ol class="timeline">${steps.map((step) => {
+      const status = TIMELINE_STATES[step.status] ? step.status : "todo";
+      const [mark, label] = TIMELINE_STATES[status];
+      const date = timelineDate(step.date, launchYear);
+      return `<li class="timeline-step is-${status}">
+        <span class="timeline-date">${date ? `<time datetime="${escapeHtml(step.date)}">${status === "done" ? "" : "~ "}${escapeHtml(date)}</time>` : ""}<span class="timeline-state">${label}</span></span>
+        <span class="timeline-node" aria-hidden="true">${mark}</span>
+        <div class="timeline-body"><h3 class="timeline-title">${escapeHtml(step.title)}</h3>${step.detail ? `<p class="timeline-detail">${escapeHtml(step.detail)}</p>` : ""}</div>
+      </li>`;
+    }).join("")}</ol>` : ""}
+    <div class="launch-countdown">
+      <p class="launch-when"><span class="kicker">Countdown to the first session</span>
+        <span><strong>${escapeHtml(launchWallClock(site.launchAt))}</strong>${site.launchLabel ? ` ${escapeHtml(site.launchLabel)}` : ""}</span>
+        ${sameOffset ? "" : `<span class="muted">Your time: ${escapeHtml(visitorTime)}</span>`}</p>
+      <div class="countdown" role="timer" aria-label="Time until launch">
+        ${["days", "hours", "minutes", "seconds"].map((unit) => `<div><span class="countdown-value" data-unit="${unit}">--</span><span class="countdown-label">${unit}</span></div>`).join("")}
+      </div>
+      ${discord ? `<a class="destination-link discord-cta" href="${escapeHtml(discord)}" target="_blank" rel="noopener">${CHAT_ICON}Join our Discord <span aria-hidden="true">↗</span></a>` : ""}
+    </div>`;
+  panel.hidden = false;
+
+  // The countdown ticks once a second; at zero the panel steps aside.
+  const values = Object.fromEntries([...panel.querySelectorAll("[data-unit]")].map((node) => [node.dataset.unit, node]));
+  const tick = () => {
+    const remaining = launch.getTime() - Date.now();
+    if (remaining <= 0) {
+      panel.hidden = true;
+      clearInterval(timer);
+      return;
+    }
+    const seconds = Math.floor(remaining / 1000);
+    values.days.textContent = Math.floor(seconds / 86400);
+    values.hours.textContent = String(Math.floor(seconds / 3600) % 24).padStart(2, "0");
+    values.minutes.textContent = String(Math.floor(seconds / 60) % 60).padStart(2, "0");
+    values.seconds.textContent = String(seconds % 60).padStart(2, "0");
+  };
+  const timer = setInterval(tick, 1000);
+  tick();
+};
+
 /* ---------- Campaign records: Characters, Jobs, Archive, Gear ---------- */
 
 const fetchCollection = async (name) => {
@@ -1562,7 +1683,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
   initializeDestinationCarousel();
   const page = document.body.dataset.page;
-  await Promise.all([renderOutpost(), renderAnnouncementBanner(), PAGE_RENDERERS[page]?.()]);
+  await Promise.all([renderOutpost(), renderAnnouncementBanner(), renderLaunchPanel(), renderFooterCommunity(), PAGE_RENDERERS[page]?.()]);
   // Marks the page as fully rendered; the content manager's preview waits for this before showing an update.
   document.documentElement.dataset.rendered = "true";
 });

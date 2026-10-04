@@ -1,4 +1,4 @@
-const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpost: {}, settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [] };
+const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpost: {}, site: {}, settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [] };
 let activeView = "outpost";
 let selectedId = null;
 let draft = false;
@@ -141,6 +141,7 @@ function imageSource(path) {
   if (!path) return "";
   const prefix = MEDIA_PREFIXES.find((item) => path.startsWith(item));
   if (prefix) return `/api/media/${encodeURIComponent(path.slice(prefix.length))}`;
+  if (path.startsWith("assets/")) return `/preview/${path}`;
   return /^https?:\/\//.test(path) ? path : "";
 }
 
@@ -1048,6 +1049,92 @@ function openBatch() {
   dialog.showModal();
 }
 
+/* ---------- Site & launch: countdown, roadmap, Discord, sponsor ---------- */
+
+const ROADMAP_STATUS = [["todo", "To do"], ["in-progress", "In progress"], ["done", "Done"]];
+
+function roadmapRow(step = { title: "", detail: "", status: "todo", date: "" }) {
+  return `<div class="roadmap-row" data-roadmap-row>
+    <input type="text" data-step="title" value="${escapeHtml(step.title)}" placeholder="Step" aria-label="Step" />
+    <input type="text" data-step="detail" value="${escapeHtml(step.detail)}" placeholder="Optional detail" aria-label="Step detail" />
+    <input type="date" data-step="date" value="${escapeHtml(step.date || "")}" aria-label="Date (or estimate)" title="When it happened, or the estimate" />
+    <select data-step="status" aria-label="Status">${ROADMAP_STATUS.map(([value, label]) => `<option value="${value}" ${step.status === value ? "selected" : ""}>${label}</option>`).join("")}</select>
+    <span class="roadmap-move">
+      <button type="button" class="button button-secondary" data-action="roadmap-up" aria-label="Move up" title="Move up">↑</button>
+      <button type="button" class="button button-secondary" data-action="roadmap-down" aria-label="Move down" title="Move down">↓</button>
+    </span>
+    <button class="remove-record" type="button" data-action="roadmap-remove" aria-label="Remove step" title="Remove step">×</button>
+  </div>`;
+}
+
+function renderSiteEditor() {
+  const site = state.site || {};
+  const sponsor = site.sponsor || {};
+  const community = site.community || {};
+  const done = (site.roadmap || []).filter((step) => step.status === "done").length;
+  document.getElementById("work-area").innerHTML = `
+    <form id="site-form" class="outpost-layout">
+      <header class="outpost-editor-head">
+        <div><h2>Site &amp; launch</h2><p>The launch countdown and roadmap on the Overview, the Discord link, and the community and sponsor credits in every page footer.</p></div>
+        <div class="editor-actions"><button type="button" class="button button-secondary" data-action="open-preview">Preview</button><button type="submit" class="button button-primary">Save site settings</button></div>
+      </header>
+      <section class="outpost-panel">
+        <h2>Launch</h2>
+        <div class="outpost-fields">
+          <label class="publish-toggle field full"><input type="checkbox" name="showLaunch" ${site.showLaunch ? "checked" : ""} /><span><strong>Show the launch panel on the Overview</strong><span class="helper">It also hides itself once the launch time has passed.</span></span></label>
+          ${field("Launch time", "launchAt", site.launchAt || "", { placeholder: "2026-11-06T20:00+02:00", help: "Date, time, and UTC offset. Athens is +02:00 in winter (from 25 October) and +03:00 in summer." })}
+          ${field("Time zone name", "launchLabel", site.launchLabel || "", { placeholder: "Athens time", help: "Shown next to the time; visitors also see it in their own time zone." })}
+          ${field("Heading", "launchTitle", site.launchTitle || "", { full: true })}
+          ${textarea("Introduction", "launchSummary", site.launchSummary || "", { full: true, rows: 3 })}
+        </div>
+      </section>
+      <section class="outpost-panel">
+        <div class="outpost-panel-head"><div><h2>Timeline</h2><p class="outpost-section-caption">${done} of ${(site.roadmap || []).length} milestones done. The date is when a milestone happened, or the estimate until it is done. Milestones without a title are dropped on save.</p></div>
+          <button type="button" class="button button-secondary" data-action="roadmap-add">+ Add step</button></div>
+        <div class="roadmap-rows" id="roadmap-rows">${(site.roadmap || []).map(roadmapRow).join("")}</div>
+      </section>
+      <section class="outpost-panel">
+        <h2>Community and sponsor</h2>
+        <div class="outpost-fields">
+          ${field("Discord invite", "discordUrl", site.discordUrl || "", { full: true, placeholder: "https://discord.gg/…", help: "Shown as “Join our Discord” on the Overview and in every footer. Leave empty to hide it." })}
+          ${field("Community credit", "communityLabel", community.label || "", { placeholder: "A campaign of" })}
+          ${field("Community name", "communityName", community.name || "", { help: "Links to the Discord invite above. Leave empty to hide it." })}
+          ${field("Community logo", "communityLogo", community.logo || "", { full: true, placeholder: "assets/images/game-of-adventuring.png", help: "A file in public-site/assets/images/, or a full https:// address. Shown small in the footer." })}
+          ${field("Sponsor name", "sponsorName", sponsor.name || "")}
+          ${field("Sponsor link", "sponsorUrl", sponsor.url || "", { placeholder: "https://…" })}
+          ${imageField("Sponsor logo", "sponsorLogo", sponsor.logo)}
+        </div>
+      </section>
+      <div class="outpost-save-note">Saved in the local manager. Sync data or Export to site to publish.</div>
+    </form>`;
+}
+
+function readSite(form) {
+  const formData = new FormData(form);
+  return {
+    showLaunch: form.elements.showLaunch.checked,
+    launchAt: formText(formData, "launchAt"),
+    launchLabel: formText(formData, "launchLabel"),
+    launchTitle: formText(formData, "launchTitle"),
+    launchSummary: formText(formData, "launchSummary"),
+    roadmap: [...form.querySelectorAll("[data-roadmap-row]")].map((row) => ({
+      title: row.querySelector('[data-step="title"]').value.trim(),
+      detail: row.querySelector('[data-step="detail"]').value.trim(),
+      status: row.querySelector('[data-step="status"]').value,
+      date: row.querySelector('[data-step="date"]').value
+    })),
+    discordUrl: formText(formData, "discordUrl"),
+    community: { label: formText(formData, "communityLabel"), name: formText(formData, "communityName"), logo: formText(formData, "communityLogo") || null },
+    sponsor: { name: formText(formData, "sponsorName"), url: formText(formData, "sponsorUrl"), logo: formText(formData, "sponsorLogo") || null }
+  };
+}
+
+async function saveSite(form) {
+  await api("/api/site", { method: "POST", body: JSON.stringify({ data: readSite(form) }) });
+  await loadState();
+  showNotice("Site settings saved in the local manager.");
+}
+
 /* ---------- Rendering ---------- */
 
 const hiddenSampleLabel = (collection, id) => {
@@ -1078,6 +1165,7 @@ async function loadState() {
   const loaded = await api("/api/state");
   for (const key of Object.keys(collections)) state[key] = loaded[key] || [];
   state.outpost = loaded.outpost || {};
+  state.site = loaded.site || {};
   state.settings = loaded.settings || { includeSamples: false, sampleCount: 0 };
   state.hiddenSamples = loaded.hiddenSamples || [];
   renderSampleSwitch();
@@ -1095,8 +1183,8 @@ function updateNavigation() {
     button.classList.toggle("active", button.dataset.view === activeView);
     button.setAttribute("aria-current", button.dataset.view === activeView ? "page" : "false");
   });
-  document.getElementById("page-title").textContent = activeView === "outpost" ? "Outpost Sheet" : collections[activeView].title;
-  document.getElementById("search-wrap").hidden = activeView === "outpost";
+  document.getElementById("page-title").textContent = activeView === "outpost" ? "Outpost Sheet" : activeView === "site" ? "Site & launch" : collections[activeView].title;
+  document.getElementById("search-wrap").hidden = activeView === "outpost" || activeView === "site";
   document.getElementById("collection-search").value = filterText;
 }
 
@@ -1114,6 +1202,7 @@ function filteredRecords(key) {
 
 function renderContent() {
   if (activeView === "outpost") renderOutpostEditor();
+  else if (activeView === "site") renderSiteEditor();
   else renderCollection(activeView);
   if (preview.open) schedulePreview(0);
 }
@@ -1125,6 +1214,7 @@ const preview = { open: false, timer: null, size: "desktop", page: "", counter: 
 // Which public page shows a record of each kind.
 const PREVIEW_PAGES = {
   outpost: () => "outpost.html",
+  site: () => "index.html",
   characters: (id, data) => `characters.html#${encodeURIComponent(id)}${data?.sheet ? "#sheet" : ""}`,
   jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
   archive: (id) => `archive.html#${encodeURIComponent(id)}`,
@@ -1136,6 +1226,10 @@ function currentDraft() {
   if (activeView === "outpost") {
     const form = document.getElementById("outpost-form");
     return form ? { collection: "outpost", data: readOutpost(form) } : null;
+  }
+  if (activeView === "site") {
+    const form = document.getElementById("site-form");
+    return form ? { collection: "site", data: readSite(form) } : null;
   }
   const form = document.getElementById("record-form");
   if (!form) return null;
@@ -1182,7 +1276,7 @@ async function refreshPreview() {
   const result = await api("/api/preview", { method: "POST", body: JSON.stringify(draft) });
   if (ticket !== preview.latest) return;
   const page = PREVIEW_PAGES[draft.collection](result.id, draft.data);
-  document.getElementById("preview-title").textContent = draft.collection === "outpost" ? "Outpost Sheet"
+  document.getElementById("preview-title").textContent = draft.collection === "outpost" ? "Outpost Sheet" : draft.collection === "site" ? "Overview · Site & launch"
     : collections[draft.collection].name(draft.data) || `New ${collections[draft.collection].singular.toLowerCase()}`;
   setPreviewStatus(result.error
     ? `Not valid yet: ${result.error} The preview shows the saved version.`
@@ -1711,6 +1805,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       selectedId = null;
       draft = true;
       renderContent();
+    } else if (action === "roadmap-add") {
+      document.getElementById("roadmap-rows").insertAdjacentHTML("beforeend", roadmapRow());
+      document.querySelector("#roadmap-rows [data-roadmap-row]:last-child input")?.focus();
+      if (preview.open) schedulePreview();
+    } else if (action === "roadmap-remove" || action === "roadmap-up" || action === "roadmap-down") {
+      const row = actionButton.closest("[data-roadmap-row]");
+      if (action === "roadmap-remove") row.remove();
+      else if (action === "roadmap-up" && row.previousElementSibling) row.previousElementSibling.before(row);
+      else if (action === "roadmap-down" && row.nextElementSibling) row.nextElementSibling.after(row);
+      if (preview.open) schedulePreview();
     } else if (action === "batch-import") {
       openBatch();
     } else if (action === "open-preview") {
@@ -1799,6 +1903,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       if (event.target.matches("#record-form")) await saveRecord(event.target);
       else if (event.target.matches("#outpost-form")) await saveOutpost(event.target);
+      else if (event.target.matches("#site-form")) await saveSite(event.target);
     } catch (error) {
       showNotice(error.message, true);
     }

@@ -7,6 +7,9 @@ site-export/
 *.db-shm
 *.db-wal
 
+# Full-size source artwork (e.g. the original logos); the site uses resized copies in public-site/assets/images/.
+artwork/
+
 # Python caches
 __pycache__/
 *.py[cod]

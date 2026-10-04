@@ -318,6 +318,48 @@ class ContentStoreTests(unittest.TestCase):
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount"})
 
+    # --- site settings: launch roadmap, Discord, sponsor ---
+
+    def test_site_settings_default_validate_export_and_import(self) -> None:
+        site = self.store.state()["site"]
+        self.assertEqual((site["launchAt"], site["discordUrl"]), ("2026-11-06T20:00+02:00", "https://discord.gg/TxcudTj"))
+        self.assertEqual(site["sponsor"]["name"], "Cozy House Games")
+        self.assertEqual(site["roadmap"][0], {"title": "Interest Check", "detail": site["roadmap"][0]["detail"], "status": "done", "date": "2026-09-29"})
+        self.assertEqual(site["roadmap"][-1]["date"], "2026-11-06")
+        with self.assertRaisesRegex(ManagerError, "must look like 2026-10-04"):
+            self.store.save_site_settings({**site, "roadmap": [{"title": "X", "date": "soon"}]})
+        with self.assertRaisesRegex(ManagerError, "Launch time must look like"):
+            self.store.save_site_settings({**site, "launchAt": "next friday"})
+        with self.assertRaisesRegex(ManagerError, "Discord invite must be a full web address"):
+            self.store.save_site_settings({**site, "discordUrl": "javascript:alert(1)"})
+        with self.assertRaisesRegex(ManagerError, "status must be one of"):
+            self.store.save_site_settings({**site, "roadmap": [{"title": "X", "status": "maybe"}]})
+        self.assertEqual(site["sponsor"]["logo"], "assets/images/cozy-house-games.png")
+        self.assertEqual((site["community"]["name"], site["community"]["logo"]), ("Game of Adventuring", "assets/images/game-of-adventuring.png"))
+        with self.assertRaisesRegex(ManagerError, "sponsor logo must be an uploaded image"):
+            self.store.save_site_settings({**site, "sponsor": {**site["sponsor"], "logo": "javascript:alert(1)"}})
+        with self.assertRaisesRegex(ManagerError, "community logo must be"):
+            self.store.save_site_settings({**site, "community": {**site["community"], "logo": "../../secret.png"}})
+        self.store.save_site_settings({**site, "sponsor": {**site["sponsor"], "logo": "https://example.com/logo.png"}})
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "site.json")
+        self.assertEqual(exported["sponsor"]["logo"], "https://example.com/logo.png", "a web address is published as is")
+        self.assertEqual(exported["community"]["logo"], "assets/images/game-of-adventuring.png", "a site file path is published as is")
+
+        data_url = "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode()
+        logo = self.store.save_media({"filename": "Cozy logo.png", "dataUrl": data_url, "kind": "image"})["path"]
+        self.store.save_site_settings({**site, "roadmap": [{"title": "Recruit players", "status": "done", "date": "2026-10-25"}, {"title": "  ", "status": "todo"}],
+                                       "sponsor": {**site["sponsor"], "logo": logo}})
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "site.json")
+        self.assertEqual(exported["roadmap"], [{"title": "Recruit players", "detail": "", "status": "done", "date": "2026-10-25"}])
+        self.assertEqual((self.export_dir / logo).read_bytes(), PNG_BYTES)
+
+        self.store.sync_site_data()
+        self.store.save_site_settings({**site, "launchTitle": "Changed locally"})
+        self.store.import_site()
+        self.assertEqual(self.store.state()["site"]["roadmap"][0]["status"], "done", "import reads site.json back")
+
     # --- preview ---
 
     def test_preview_serves_the_site_with_database_data_and_the_unsaved_draft(self) -> None:

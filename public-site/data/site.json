@@ -1,0 +1,62 @@
+{
+  "showLaunch": true,
+  "launchAt": "2026-11-06T20:00+02:00",
+  "launchLabel": "Athens time",
+  "launchTitle": "The first expedition sets out",
+  "launchSummary": "The Outpost opens its Job Board for the first crews. Here is what still needs doing before then.",
+  "roadmap": [
+    {
+      "title": "Interest Check",
+      "detail": "Players gauged interest in a Fate West Marches campaign.",
+      "status": "done",
+      "date": "2026-09-29"
+    },
+    {
+      "title": "Site Created",
+      "detail": "The campaign site opens: Outpost, Job Board, Archive, Marketplace, and Characters.",
+      "status": "done",
+      "date": "2026-10-04"
+    },
+    {
+      "title": "Game Listing Authored",
+      "detail": "The rules and the game listing on the Game page.",
+      "status": "in-progress",
+      "date": "2026-10-11"
+    },
+    {
+      "title": "Site Content Authored",
+      "detail": "The real Outpost, Archive, gear, and first jobs replace the sample content.",
+      "status": "todo",
+      "date": "2026-10-18"
+    },
+    {
+      "title": "Players Recruited",
+      "detail": "",
+      "status": "todo",
+      "date": "2026-10-25"
+    },
+    {
+      "title": "Characters Created",
+      "detail": "Sheets built, sent in, and imported.",
+      "status": "todo",
+      "date": "2026-11-01"
+    },
+    {
+      "title": "Opening Event and First Session on Discord",
+      "detail": "The first expedition sets out.",
+      "status": "todo",
+      "date": "2026-11-06"
+    }
+  ],
+  "discordUrl": "https://discord.gg/TxcudTj",
+  "community": {
+    "label": "A campaign of",
+    "name": "Game of Adventuring",
+    "logo": "assets/images/game-of-adventuring.png"
+  },
+  "sponsor": {
+    "name": "Cozy House Games",
+    "url": "https://discord.gg/DRNwnHeGTv",
+    "logo": "assets/images/cozy-house-games.png"
+  }
+}
