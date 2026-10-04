@@ -1,5 +1,7 @@
-# Publishes public-site/ to GitHub Pages whenever it changes on the main branch.
+# Publishes public-site/ to GitHub Pages whenever it changes on the main branch, and records each
+# deploy as a versioned release (tag v1.4.2 + a GitHub Release) shown in the site's footer.
 # One-time setup: repository Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Versioning rules live in .github/versioning.json (see DEPLOYING.md → Versions).
 name: Deploy public site
 
 on:
@@ -8,15 +10,24 @@ on:
     paths:
       - "public-site/**"
       - ".github/workflows/deploy-site.yml"
-  # Allows a manual redeploy from the Actions tab.
+      - ".github/versioning.json"
+      - ".github/scripts/release_version.py"
+  # Allows a manual redeploy from the Actions tab, optionally forcing the version bump.
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (auto follows .github/versioning.json; a redeploy with no new commits keeps the version)"
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
 
 permissions:
-  contents: read
+  contents: write # to push the release tag and create the GitHub Release
   pages: write
   id-token: write
 
 # Only one deployment at a time; a newer push waits rather than cancelling a deploy in progress.
+# This also keeps two runs from claiming the same version number.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -30,6 +41,15 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history and tags, to find the last release and what changed since
+          fetch-tags: true
+
+      - name: Work out the release version
+        id: version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python .github/scripts/release_version.py --bump "${{ inputs.bump || 'auto' }}"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
@@ -42,3 +62,18 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      # Only after a successful deploy, so a failed run never burns a version number.
+      - name: Tag and publish the release
+        if: steps.version.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          DATE: ${{ steps.version.outputs.date }}
+          TITLE: ${{ steps.version.outputs.version }} (${{ steps.version.outputs.date }})
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG ($DATE)" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+          gh release create "$TAG" --verify-tag --title "$TITLE" --generate-notes

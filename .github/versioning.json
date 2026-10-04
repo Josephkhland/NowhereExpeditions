@@ -1,0 +1,15 @@
+{
+  "tagPrefix": "v",
+  "firstVersion": "1.0.0",
+  "timezone": "UTC",
+  "major": {
+    "markers": ["[major]"],
+    "labels": ["release: major"],
+    "paths": []
+  },
+  "minor": {
+    "markers": ["[minor]"],
+    "labels": ["release: minor"],
+    "paths": []
+  }
+}

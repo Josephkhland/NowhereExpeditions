@@ -18,3 +18,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Written by the deploy workflow (.github/scripts/release_version.py); never committed.
+public-site/version.json

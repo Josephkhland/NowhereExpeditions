@@ -472,6 +472,24 @@ const renderFooterCommunity = async () => {
   slot.hidden = false;
 };
 
+// Every page: the release version beside the copyright, e.g. "v1.4.2 (2026-10-04)", linking to its release notes.
+// version.json is written by the deploy workflow, so a local preview has none and says so.
+const renderSiteVersion = async () => {
+  const slot = document.getElementById("site-version");
+  if (!slot) return;
+  let release = null;
+  try {
+    const response = await fetch("version.json", { cache: "no-cache" });
+    if (response.ok) release = await response.json();
+  } catch {
+    // Offline or a local preview: fall through to the label below.
+  }
+  const label = release?.version ? `v${release.version}${release.date ? ` (${release.date})` : ""}` : "Local preview";
+  const href = safeUrl(release?.url);
+  slot.innerHTML = ` · ${href ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" title="Release notes">${escapeHtml(label)}</a>` : escapeHtml(label)}`;
+  slot.hidden = false;
+};
+
 // "2026-11-06T20:00+02:00" read as written: the wall-clock date and time in that offset.
 const launchWallClock = (value) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value || "");
@@ -1781,7 +1799,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
   initializeDestinationCarousel();
   const page = document.body.dataset.page;
-  await Promise.all([renderOutpost(), renderAnnouncementBanner(), renderLaunchPanel(), renderFooterCommunity(), PAGE_RENDERERS[page]?.()]);
+  await Promise.all([renderOutpost(), renderAnnouncementBanner(), renderLaunchPanel(), renderFooterCommunity(), renderSiteVersion(), PAGE_RENDERERS[page]?.()]);
   // Marks the page as fully rendered; the content manager's preview waits for this before showing an update.
   document.documentElement.dataset.rendered = "true";
 });

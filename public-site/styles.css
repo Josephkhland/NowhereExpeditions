@@ -2226,3 +2226,7 @@ h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+.site-version a { color: inherit; text-decoration: none; }
+.site-version a:hover,
+.site-version a:focus-visible { color: var(--accent-2); text-decoration: underline; }
