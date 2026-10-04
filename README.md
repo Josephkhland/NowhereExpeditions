@@ -113,6 +113,8 @@ Full details, including first-time GitHub Pages setup, are in [DEPLOYING.md](DEP
 | **Game post** | An out-of-character announcement or campaign rule | `game.html` (`#post-<id>`) |
 | **Site settings** | Launch countdown and roadmap, Discord invite, community and sponsor credits | Overview and every footer |
 | **Outpost Sheet** | The shared Outpost "character" | `outpost.html` |
+| **Facilities** | What the Outpost has, assigned to capabilities | `outpost.html` (Facilities table) |
+| **Projects** | Progress tracks for Outpost and personal work | `outpost.html` (ongoing Outpost projects), `characters.html` (Projects tab) |
 
 Only a few relationships are structured (Job → Session Record, Job and Session Record → participants, Character stash → Gear); everything else is a `[[archive-id]]` link inside the text, so the Archive reads like a wiki. Histories are derived: a Character's history is the Jobs they joined. Players open an editable sheet from their character page, save it as a file after the session, and the GM imports the file they send back. New players can build a character the same way from **Create new character** on the Characters page. The full model, publishing rules, and the sheet workflow are described in [content-manager/README.md](content-manager/README.md).
 

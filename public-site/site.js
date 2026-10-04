@@ -77,61 +77,57 @@ const renderOutpost = async () => {
   if (!root) return;
 
   try {
-    const outpost = await fetchJson("data/outpost.json");
+    const [outpost, campaign] = await Promise.all([
+      fetchJson("data/outpost.json"),
+      loadCampaign().catch(() => ({ archiveById: new Map() }))
+    ]);
 
-    const facilityMarkup = (outpost.facilities || [])
-      .map(
-        (item) => `
-          <div class="card fact-card">
-            <div class="meta-row">
-              <span class="pill">Facility</span>
-            </div>
-            <h3>${item.name}</h3>
-            <p>${item.summary}</p>
-          </div>
-        `
-      )
+    // Facilities decide which services exist; each lists the capabilities it supports.
+    const facilityRows = (outpost.facilities || [])
+      .map((facility) => `
+          <tr id="facility-${escapeHtml(facility.id || slugify(facility.name))}" class="facility-row" data-capabilities="${escapeHtml((facility.capabilities || []).length ? `|${facility.capabilities.join("|")}|` : "-")}">
+            <th scope="row">${escapeHtml(facility.name)}</th>
+            <td class="facility-supports">${(facility.capabilities || []).map((name) => `<span class="tag">${escapeHtml(name)}</span>`).join("") || '<span class="muted">Unassigned</span>'}</td>
+            <td class="facility-service">${richInline(facility.summary || "", campaign)}
+              ${facility.details ? `<details class="facility-more"><summary>More</summary>${richText(facility.details, campaign)}</details>` : ""}
+              ${fromProject(facility.projectId, campaign)}</td>
+          </tr>`)
       .join("");
 
-    const projectMarkup = (outpost.activeProjects || [])
-      .map((item) => {
-        const progress = item.progress || {};
-        const current = Number(progress.current) || 0;
-        const max = Number(progress.max) || 4;
-        const isComplete = current >= max;
-        const completion = item.completion;
+    // A capability's contributing assets: facilities on this page, characters on theirs. Older data held free text.
+    const capabilityAssets = (capability) => {
+      if (!Array.isArray(capability.assets)) {
+        return capability.assets ? `<p><strong>Current contributing assets:</strong> ${escapeHtml(capability.assets)}</p>` : "";
+      }
+      const link = (asset) => asset.type === "facility"
+        ? `<a class="asset-link is-facility" href="#facility-${encodeURIComponent(asset.id)}">${escapeHtml(asset.name)}</a>`
+        : `<a class="asset-link is-character" href="characters.html#${encodeURIComponent(asset.id)}">${escapeHtml(asset.name)}</a>`;
+      const row = (label, assets) => `<div class="asset-row"><strong>${label}:</strong>${assets.length
+        ? `<span class="asset-links">${assets.map(link).join("")}</span>` : ' <span class="muted">None yet.</span>'}</div>`;
+      const characters = capability.assets.filter((asset) => asset.type === "character");
+      return `<div class="capability-assets">${row("Facilities", capability.assets.filter((asset) => asset.type === "facility"))}${characters.length ? row("Contributing characters", characters) : ""}</div>`;
+    };
 
-        return `
-          <article class="card fact-card project-card${isComplete ? " is-complete" : ""}">
-            <div class="meta-row">
-              <span class="pill">Project</span>
-              ${isComplete ? '<span class="pill status-ready">Completed</span>' : ""}
-            </div>
-            <h3>${item.name}</h3>
-            <p>${item.summary}</p>
-            <div class="project-progress">
-              <span class="track-label">Progress <span>${Math.min(current, max)}/${max}</span></span>
-              ${renderBoxTrack(current, max, `${item.name} progress`, "project-track")}
-            </div>
-            <p class="project-outcome"><strong>Completion effect:</strong> ${completion?.summary || (isComplete ? "Record the resulting facility, capability change, or condition change." : "Not recorded yet.")}</p>
-          </article>
-        `;
-      })
-      .join("");
+    const outpostProjects = (campaign.projects || []).filter((project) => project.outpost && !projectComplete(project))
+      .sort((left, right) => String(left.name).localeCompare(String(right.name)));
 
-    const conditionMarkup = (outpost.conditions || [])
-      .map(
-        (item) => `
-          <div class="card fact-card">
-            <div class="meta-row">
-              <span class="pill">Condition</span>
-            </div>
-            <h3>${item.name}</h3>
-            <p>${item.summary}</p>
-          </div>
-        `
-      )
-      .join("");
+    // Ongoing Outpost projects with an active complication are flagged next to the consequences.
+    const complicated = outpostProjects.filter((project) => (project.complications || []).some((item) => !item.resolved));
+
+    // Browse facilities by the capability they support.
+    const facilities = outpost.facilities || [];
+    const facilityGroups = [
+      ...(outpost.capabilities || []).map((capability) => capability.name)
+        .filter((name) => facilities.some((facility) => (facility.capabilities || []).includes(name)))
+        .map((name) => [name, name, facilities.filter((facility) => (facility.capabilities || []).includes(name)).length]),
+      ...(facilities.some((facility) => !(facility.capabilities || []).length)
+        ? [["-", "Unassigned", facilities.filter((facility) => !(facility.capabilities || []).length).length]] : [])
+    ];
+    const facilityFilter = facilityGroups.length > 1 ? `
+      <div class="filter-bar facility-filter" role="group" aria-label="Show facilities by capability">
+        ${[["", "All", facilities.length], ...facilityGroups].map(([value, label, count]) => `
+          <button type="button" class="filter-chip" data-facility-filter="${escapeHtml(value)}" aria-pressed="${value === ""}">${escapeHtml(label)} <span class="chip-count">${count}</span></button>`).join("")}
+      </div>` : "";
 
     const capabilityRows = (outpost.capabilities || [])
       .map((capability) => {
@@ -152,7 +148,7 @@ const renderOutpost = async () => {
               <div class="capability-detail-body">
                 <p><strong>What it represents:</strong> ${capability.detail}</p>
                 <p><strong>How players use it:</strong> ${capability.use}</p>
-                <p><strong>Current contributing assets:</strong> ${capability.assets}</p>
+                ${capabilityAssets(capability)}
                 <p><strong>Relevant conditions:</strong> ${capability.conditions}</p>
               </div>
             </td>
@@ -203,6 +199,23 @@ const renderOutpost = async () => {
       </div>
 
       <div class="section-header">
+        <h2>Current State</h2>
+      </div>
+      <div class="card current-state">
+        ${complicated.length ? `
+          <div class="complication-alert" role="note">
+            <h3><span class="complication-badge is-inline" aria-hidden="true">!</span>Project complications</h3>
+            <ul>${complicated.map((project) => `
+              <li>
+                <span><strong>${escapeHtml(project.name)}:</strong> ${project.complications.filter((item) => !item.resolved).map((item) => richInline(item.text, campaign)).join(" · ")}</span>
+                <a class="complication-jump" href="#project-${encodeURIComponent(project.id)}">View project <span aria-hidden="true">↓</span></a>
+              </li>`).join("")}</ul>
+          </div>` : ""}
+        <h3>Consequences</h3>
+        <div class="consequence-list">${consequenceMarkup || '<p class="muted">No major consequences currently recorded.</p>'}</div>
+      </div>
+
+      <div class="section-header">
         <h2>Capabilities</h2>
       </div>
       <table class="capability-table">
@@ -220,33 +233,50 @@ const renderOutpost = async () => {
       </table>
 
       <div class="section-header">
-        <h2>Current State</h2>
+        <h2>Facilities</h2>
       </div>
-      <div class="grid grid-two">
-        <div class="card">
-          <h3>Consequences</h3>
-          <div class="consequence-list">${consequenceMarkup || '<p class="muted">No major consequences currently recorded.</p>'}</div>
-        </div>
-        <div class="card">
-          <h3>Facilities</h3>
-          <div class="grid">${facilityMarkup || '<p class="muted">No facilities catalogued.</p>'}</div>
-        </div>
-      </div>
+      <p class="section-lede">Facilities decide which services the Outpost offers at all. A capability's rating decides how well it performs them when a roll is needed.</p>
+      ${facilityFilter}
+      <table class="capability-table facility-table">
+        <thead>
+          <tr>
+            <th scope="col">Facility</th>
+            <th scope="col">Supports</th>
+            <th scope="col">Service</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${facilityRows || '<tr><td colspan="3" class="muted">No facilities catalogued.</td></tr>'}
+        </tbody>
+      </table>
 
       <div class="section-header">
-        <h2>Projects and Conditions</h2>
+        <h2>Active Projects</h2>
       </div>
-      <div class="grid grid-two">
-        <div class="card">
-          <h3>Active Projects</h3>
-          <div class="grid">${projectMarkup || '<p class="muted">No active projects.</p>'}</div>
-        </div>
-        <div class="card">
-          <h3>Persistent Conditions</h3>
-          <div class="grid">${conditionMarkup || '<p class="muted">No persistent conditions recorded.</p>'}</div>
-        </div>
-      </div>
+      <p class="section-lede">Outpost projects in progress. A project is complete when every progress box is marked.</p>
+      ${outpostProjects.length ? `<div class="grid grid-two project-grid">${outpostProjects.map((project) => projectCard(project, campaign)).join("")}</div>`
+        : '<div class="card"><p class="muted">No Outpost projects under way.</p></div>'}
     `;
+
+    const filterFacilities = (value) => {
+      root.querySelectorAll("[data-facility-filter]").forEach((chip) => chip.setAttribute("aria-pressed", String(chip.dataset.facilityFilter === value)));
+      root.querySelectorAll(".facility-row").forEach((row) => {
+        row.hidden = Boolean(value) && !(value === "-" ? row.dataset.capabilities === "-" : row.dataset.capabilities.includes(`|${value}|`));
+      });
+    };
+    root.querySelectorAll("[data-facility-filter]").forEach((chip) => chip.addEventListener("click", () => filterFacilities(chip.dataset.facilityFilter)));
+
+    // Links to #facility-<id> and #project-<id> highlight their row or card.
+    const showFacility = () => {
+      const target = /^#(facility|project)-/.test(window.location.hash) && document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      root.querySelectorAll(".is-linked").forEach((item) => item.classList.remove("is-linked"));
+      if (!target) return;
+      if (target.classList.contains("facility-row")) filterFacilities("");
+      target.classList.add("is-linked");
+      target.scrollIntoView({ block: "center" });
+    };
+    window.addEventListener("hashchange", showFacility);
+    showFacility();
 
     root.querySelectorAll(".info-toggle").forEach((button) => {
       button.addEventListener("click", () => {
@@ -537,14 +567,16 @@ let campaignPromise = null;
 
 const loadCampaign = () => {
   if (!campaignPromise) {
-    campaignPromise = Promise.all(["characters", "jobs", "archive", "gear"].map(fetchCollection))
-      .then(([characters, jobs, archive, gear]) => {
+    campaignPromise = Promise.all(["characters", "jobs", "archive", "gear", "projects"].map(fetchCollection))
+      .then(([characters, jobs, archive, gear, projects]) => {
         const byId = (items) => new Map(items.map((item) => [item.id, item]));
         const mentions = (item, id) => [item.summary, item.content, item.objective, item.briefing]
           .some((text) => String(text || "").includes(`[[${id}]]`) || String(text || "").includes(`[[${id}|`));
         return {
-          characters, jobs, archive, gear,
+          characters, jobs, archive, gear, projects,
           characterById: byId(characters),
+          projectById: byId(projects),
+          projectsForCharacter: (characterId) => projects.filter((project) => (project.characterIds || []).includes(characterId)),
           jobById: byId(jobs),
           archiveById: byId(archive),
           gearById: byId(gear),
@@ -676,6 +708,59 @@ const initials = (name = "") => name.split(/\s+/).filter(Boolean).slice(0, 2).ma
 const avatar = (character, className = "avatar") => character.portrait
   ? `<span class="${className}"><img src="${escapeHtml(character.portrait)}" alt="" loading="lazy" /></span>`
   : `<span class="${className} avatar-empty" aria-hidden="true">${escapeHtml(initials(character.name))}</span>`;
+
+/* ---------- Projects: progress tracks agreed between the GM and players ---------- */
+
+const projectComplete = (project) => (Number(project.progress?.current) || 0) >= (Number(project.progress?.max) || 1);
+
+// Where a project is shown: the Outpost while an ongoing Outpost project, otherwise its first character's page.
+const projectHref = (project) => {
+  if (project.outpost && !projectComplete(project)) return `outpost.html#project-${encodeURIComponent(project.id)}`;
+  return project.characterIds?.length ? `characters.html#${encodeURIComponent(project.characterIds[0])}#projects` : "";
+};
+
+// "Brought into the game by …" on facilities and gear.
+const fromProject = (projectId, campaign) => {
+  const project = projectId && campaign.projectById?.get(projectId);
+  if (!project) return "";
+  const href = projectHref(project);
+  const name = escapeHtml(project.name);
+  return `<p class="from-project">Brought into the game by ${href ? `<a class="inline-link" href="${href}">${name}</a>` : `<strong>${name}</strong>`}</p>`;
+};
+
+const projectCard = (project, campaign) => {
+  const prerequisites = (project.prerequisites || []).map((item) => typeof item === "string" ? { text: item, met: false } : item);
+  const met = prerequisites.filter((item) => item.met).length;
+  const active = (project.complications || []).filter((item) => !item.resolved);
+  const resolved = (project.complications || []).filter((item) => item.resolved);
+  const max = Number(project.progress?.max) || 1;
+  const current = Math.min(max, Number(project.progress?.current) || 0);
+  const complete = projectComplete(project);
+  const characters = (project.characterIds || []).map((id) => campaign.characterById.get(id)).filter(Boolean);
+  return `
+    <article class="card fact-card project-card${complete ? " is-complete" : ""}${active.length ? " has-complication" : ""}" id="project-${escapeHtml(project.id)}">
+      ${active.length ? '<span class="complication-badge" role="img" aria-label="Active complication" title="Active complication">!</span>' : ""}
+      <div class="meta-row">
+        <span class="pill">${project.access === "private" ? "Private project" : "Open project"}</span>
+        ${project.outpost ? '<span class="pill">Outpost</span>' : ""}
+        ${complete ? '<span class="pill status-ready">Completed</span>' : ""}
+      </div>
+      <h3>${escapeHtml(project.name)}</h3>
+      ${project.summary ? richText(project.summary, campaign) : ""}
+      ${active.length ? `<div class="project-complication"><strong>Complication</strong>${active.map((item) => `<p>${richInline(item.text, campaign)}</p>`).join("")}</div>` : ""}
+      <div class="project-progress">
+        <span class="track-label">Progress <span>${current}/${max}</span></span>
+        ${renderBoxTrack(current, max, `${escapeHtml(project.name)} progress`, "project-track")}
+      </div>
+      ${prerequisites.length ? `<div class="project-field"><strong>Prerequisites <span class="chip-count">${met}/${prerequisites.length} met</span></strong>
+        <ul class="prerequisite-list">${prerequisites.map((item) => `<li class="${item.met ? "is-met" : ""}"><span class="prerequisite-mark" aria-hidden="true">${item.met ? "✓" : ""}</span><span>${escapeHtml(item.text)}<span class="sr-only">${item.met ? " (met)" : " (not met yet)"}</span></span></li>`).join("")}</ul></div>` : ""}
+      ${project.outcome ? `<div class="project-field"><strong>${complete ? "Outcome" : "Expected outcome"}</strong>${richText(project.outcome, campaign)}</div>` : ""}
+      ${characters.length ? `<div class="project-field"><strong>Characters</strong>${crewList(characters, "")}</div>` : ""}
+      ${resolved.length ? `<details class="complication-history"><summary>Complication history (${resolved.length})</summary>
+        <ol>${resolved.map((item) => `<li><p>${richInline(item.text, campaign)}</p><p class="complication-resolution"><strong>Resolved:</strong> ${item.resolution ? richInline(item.resolution, campaign) : "No details recorded."}</p></li>`).join("")}</ol>
+      </details>` : ""}
+    </article>`;
+};
 
 const crewList = (characters, emptyText) => characters.length
   ? `<ul class="crew-list">${characters.map((character) => `
@@ -1350,6 +1435,7 @@ const renderMarketplace = async () => {
             <div><dt>Availability</dt><dd>${statusPill(item.availability, "pill pill-small")}</dd></div>
           </dl>
           ${richText(item.description, campaign, "No description posted.")}
+          ${fromProject(item.projectId, campaign)}
           ${(item.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         </article>`;
       if (!dialog.open) dialog.showModal();
@@ -1541,6 +1627,12 @@ const renderCharacterRoster = async () => {
       const jobs = campaign.jobsForCharacter(character.id);
       const sessions = campaign.sessionRecordsForCharacter(character.id);
       const stash = renderStash(character.stash, campaign);
+      const projects = campaign.projectsForCharacter(character.id).sort((left, right) => String(left.name).localeCompare(String(right.name)));
+      const ongoing = projects.filter((project) => !projectComplete(project));
+      const completed = projects.filter(projectComplete);
+      const tabbed = Boolean(character.sheet || projects.length);
+      const projectGroup = (title, items, empty) => `<h3${title === "Completed" ? ' class="sheet-subheading"' : ""}>${title}</h3>
+        ${items.length ? `<div class="grid grid-two project-grid">${items.map((project) => projectCard(project, campaign)).join("")}</div>` : `<p class="muted">${empty}</p>`}`;
       root.innerHTML = `
         <a class="back-link" href="characters.html">← All characters</a>
         <article class="detail-surface record-surface">
@@ -1553,12 +1645,13 @@ const renderCharacterRoster = async () => {
               ${paragraphs(character.summary, "No public summary.")}
             </div>
           </div>
-          ${character.sheet ? `
+          ${tabbed ? `
             <div class="profile-tabs" role="tablist" aria-label="Character record">
               <button type="button" class="profile-tab" role="tab" id="tab-profile" aria-controls="panel-profile" data-profile-tab="profile">Profile</button>
-              <button type="button" class="profile-tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" data-profile-tab="sheet">Character Sheet</button>
+              ${character.sheet ? '<button type="button" class="profile-tab" role="tab" id="tab-sheet" aria-controls="panel-sheet" data-profile-tab="sheet">Character Sheet</button>' : ""}
+              ${projects.length ? `<button type="button" class="profile-tab" role="tab" id="tab-projects" aria-controls="panel-projects" data-profile-tab="projects">Projects <span class="chip-count">${projects.length}</span></button>` : ""}
             </div>` : ""}
-          <div class="detail-block" id="panel-profile" ${character.sheet ? 'role="tabpanel" aria-labelledby="tab-profile"' : ""}>
+          <div class="detail-block" id="panel-profile" ${tabbed ? 'role="tabpanel" aria-labelledby="tab-profile"' : ""}>
             <h3>Job History</h3>
             ${jobs.length ? `<ul class="archive-list">${jobs.map((job) => `<li><a class="archive-row" href="jobs.html#${encodeURIComponent(job.id)}">
                 <span class="archive-title">${escapeHtml(jobLabel(job))}</span>
@@ -1576,11 +1669,15 @@ const renderCharacterRoster = async () => {
             ${renderFateSheet(character.sheet, character.name)}
             ${stash}
           </div>` : ""}
+          ${projects.length ? `<div class="detail-block" id="panel-projects" role="tabpanel" aria-labelledby="tab-projects">
+            ${projectGroup("Ongoing", ongoing, "No ongoing projects.")}
+            ${projectGroup("Completed", completed, "No completed projects yet.")}
+          </div>` : ""}
         </article>`;
-      if (character.sheet) setupProfileTabs(character);
+      if (tabbed) setupProfileTabs(character);
     };
 
-    // Tabs keep the chosen panel in the URL (characters.html#id#sheet) so a sheet can be linked directly.
+    // Tabs keep the chosen panel in the URL (characters.html#id#sheet, #id#projects) so it can be linked directly.
     const setupProfileTabs = (character) => {
       const tabs = [...root.querySelectorAll("[data-profile-tab]")];
       const select = (name, focus = false) => {
@@ -1591,7 +1688,7 @@ const renderCharacterRoster = async () => {
           document.getElementById(tab.getAttribute("aria-controls")).hidden = !active;
           if (active && focus) tab.focus();
         });
-        window.history.replaceState(null, "", `#${encodeURIComponent(character.id)}${name === "sheet" ? "#sheet" : ""}`);
+        window.history.replaceState(null, "", `#${encodeURIComponent(character.id)}${name === "profile" ? "" : `#${name}`}`);
       };
       tabs.forEach((tab) => tab.addEventListener("click", () => select(tab.dataset.profileTab)));
       root.querySelector(".profile-tabs").addEventListener("keydown", (event) => {
@@ -1602,7 +1699,8 @@ const renderCharacterRoster = async () => {
           : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
         select(tabs[next].dataset.profileTab, true);
       });
-      select(window.location.hash.split("#")[2] === "sheet" ? "sheet" : "profile");
+      const wanted = window.location.hash.split("#")[2];
+      select(tabs.some((tab) => tab.dataset.profileTab === wanted) ? wanted : "profile");
     };
 
     const route = () => {

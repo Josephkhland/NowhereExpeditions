@@ -1035,6 +1035,65 @@ a.footer-credit-link:focus-visible { color: var(--accent-2); }
   margin: 0 0 0.6rem;
 }
 
+.capability-assets { display: grid; gap: 0.45rem; margin: 0 0 0.6rem; }
+.asset-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; }
+.asset-links { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; }
+.asset-link { padding: 0.1rem 0.55rem; border: 1px solid var(--line-strong); color: var(--text); background: rgba(122, 215, 209, 0.07); font-size: 0.88rem; text-decoration: none; }
+.asset-link.is-character { border-color: rgba(224, 168, 93, 0.45); background: rgba(224, 168, 93, 0.08); }
+.asset-link:hover,
+.asset-link:focus-visible { color: var(--accent-2); }
+
+.section-lede { max-width: 70ch; margin: -0.4rem 0 1rem; color: var(--muted); }
+.facility-table tbody th { width: 24%; }
+.facility-table .facility-supports { width: 22%; }
+.facility-supports .tag { margin: 0 0.3rem 0.3rem 0; }
+.facility-service { color: var(--muted); }
+.facility-row { transition: background-color 0.3s ease; }
+.facility-row.is-linked { background: rgba(224, 168, 93, 0.1); }
+.facility-more { margin-top: 0.4rem; }
+.facility-filter { margin-top: -0.2rem; }
+.chip-count { margin-left: 0.2rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.from-project { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.85rem; }
+
+.project-grid { align-items: start; }
+.project-field { display: grid; gap: 0.3rem; margin-top: 0.8rem; }
+.project-field > strong { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.project-field .clean-list { margin: 0; }
+.project-card { scroll-margin-top: 6rem; transition: box-shadow 0.3s ease; }
+.project-card.is-linked { box-shadow: 0 0 0 2px var(--accent-2); }
+
+.prerequisite-list { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.prerequisite-list li { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); align-items: start; gap: 0.5rem; }
+.prerequisite-mark { display: grid; place-items: center; width: 1.1rem; height: 1.1rem; margin-top: 0.15rem; border: 1px solid var(--line-strong); color: #0d1416; font-size: 0.75rem; font-weight: 800; line-height: 1; }
+.prerequisite-list li.is-met .prerequisite-mark { border-color: var(--success); background: var(--success); }
+.prerequisite-list li.is-met { color: var(--muted); }
+.prerequisite-list li.is-met > span:last-child { text-decoration: line-through; text-decoration-color: rgba(174, 190, 194, 0.6); }
+
+/* An active complication: red frame, a badge in the corner, and the complication itself. */
+.project-card { position: relative; }
+.project-card.has-complication { border-color: rgba(230, 96, 84, 0.75); box-shadow: inset 0 0 0 1px rgba(230, 96, 84, 0.35); }
+.complication-badge { position: absolute; top: -0.7rem; right: -0.7rem; display: grid; place-items: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; color: #fff; background: #d9534a; box-shadow: 0 0 0 3px var(--bg, #0d1416); font-weight: 800; line-height: 1; }
+.project-complication { margin: 0.7rem 0 0; padding: 0.6rem 0.75rem; border-left: 3px solid #e66054; background: rgba(230, 96, 84, 0.1); }
+.project-complication strong { color: #f08a80; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.project-complication p { margin: 0.25rem 0 0; color: var(--text); }
+.complication-alert { margin: 0 0 1.1rem; padding: 0.8rem 0.9rem; border: 1px solid rgba(230, 96, 84, 0.6); border-left-width: 3px; background: rgba(230, 96, 84, 0.08); }
+.complication-alert h3 { display: flex; align-items: center; gap: 0.55rem; margin: 0 0 0.5rem; color: #f08a80; font-size: 0.95rem; }
+.complication-badge.is-inline { position: static; width: 1.3rem; height: 1.3rem; box-shadow: none; font-size: 0.8rem; }
+.complication-alert ul { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.complication-alert li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 1rem; }
+.complication-jump { flex: none; padding: 0.2rem 0.6rem; border: 1px solid rgba(230, 96, 84, 0.6); color: var(--text); font-size: 0.78rem; text-decoration: none; white-space: nowrap; }
+.complication-jump:hover,
+.complication-jump:focus-visible { border-color: #f08a80; color: #f08a80; }
+.complication-history { margin-top: 0.9rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.complication-history summary { color: var(--muted); cursor: pointer; font-size: 0.82rem; }
+.complication-history ol { display: grid; gap: 0.6rem; margin: 0.6rem 0 0; padding-left: 1.2rem; color: var(--muted); font-size: 0.9rem; }
+.complication-history p { margin: 0; }
+.complication-resolution { margin-top: 0.2rem !important; }
+.complication-resolution strong { color: var(--success); font-weight: 600; }
+.facility-more summary { color: var(--accent); cursor: pointer; font-size: 0.85rem; }
+.facility-more .rich-text { margin-top: 0.4rem; }
+
 .browser-shell {
   display: grid;
   grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
@@ -2103,6 +2162,10 @@ h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
 
   .capability-table tr {
     border-bottom: 1px solid var(--line);
+  }
+
+  .capability-table tr[hidden] {
+    display: none;
   }
 
   .capability-table tbody th,

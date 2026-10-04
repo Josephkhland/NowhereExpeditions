@@ -316,7 +316,7 @@ class ContentStoreTests(unittest.TestCase):
                                      "eventDate", "image", "tags", "participantIds", "details"})
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
-                          "featured", "promoLabel", "discount"})
+                          "featured", "promoLabel", "discount", "projectId"})
 
     # --- site settings: launch roadmap, Discord, sponsor ---
 
@@ -509,6 +509,157 @@ class ContentStoreTests(unittest.TestCase):
         write_json(self.data_dir / "rules.json", [{"id": "legacy", "title": "Legacy rule", "category": "Campaign"}])
         self.store.import_site()
         self.assertEqual(self.record("game", "legacy")["type"], "rule")
+
+    # --- facilities and capability assets ---
+
+    def capability(self, name: str, assets: list) -> dict:
+        return {"name": name, "rating": "+0", "summary": "", "detail": "", "use": "", "assets": assets, "conditions": ""}
+
+    def test_outpost_facilities_from_schema_v5_become_records(self) -> None:
+        legacy = {**self.store.state()["outpost"],
+                  "capabilities": [self.capability("Industry", "Foundry yards, repair sheds.")],
+                  "facilities": [{"name": "Survey Spire", "summary": "Gate scans."}, {"name": "Survey Spire", "summary": "Again."}]}
+        connection = sqlite3.connect(self.database)
+        connection.execute("UPDATE outpost_state SET data = ? WHERE id = 1", (json.dumps(legacy),))
+        connection.commit()
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertEqual(reopened.migration_report[0], "Moved 2 Outpost facilities into the new Facilities section, flagged as sample content.")
+        self.assertIn("legacy_records", reopened.migration_report[1])
+        self.assertEqual(reopened.state()["facilities"], [], "sample facilities stay hidden while samples are off")
+        reopened.set_include_samples(True)
+        state = reopened.state()
+        self.assertNotIn("facilities", state["outpost"])
+        self.assertEqual(state["outpost"]["capabilities"][0]["assets"], [])
+        spire = next(item for item in state["facilities"] if item["id"] == "survey-spire")
+        self.assertEqual((spire["name"], spire["summary"], spire["published"], spire["sample"]), ("Survey Spire", "Gate scans.", True, True))
+        self.assertIn("survey-spire-2", {item["id"] for item in state["facilities"]})
+        connection = sqlite3.connect(self.database)
+        kept = json.loads(connection.execute("SELECT data FROM legacy_records WHERE source = 'outpost'").fetchone()[0])
+        connection.close()
+        self.assertEqual(kept["capabilities"][0]["assets"], "Foundry yards, repair sheds.")
+        self.assertEqual(ContentStore(self.database, self.data_dir).migration_report, [], "the migration runs once")
+
+    def test_capability_assets_reference_facilities_and_characters(self) -> None:
+        workshops = self.store.save_record("facilities", None, {"name": "Workshops", "summary": "General fabrication.", "published": True})["id"]
+        docks = self.store.save_record("facilities", None, {"name": "Docks", "summary": "Shipping.", "published": False})["id"]
+        hale = self.add_character("Doctor Hale")
+        outpost = self.store.state()["outpost"]
+        assets = [{"type": "facility", "id": workshops}, {"type": "character", "id": hale}, {"type": "facility", "id": workshops},
+                  {"type": "facility", "id": docks}]
+        self.store.save_outpost({**outpost, "capabilities": [self.capability("Industry", assets), self.capability("Commerce", [{"type": "facility", "id": docks}])]})
+        self.assertEqual(len(self.store.state()["outpost"]["capabilities"][0]["assets"]), 3, "duplicates are merged")
+
+        with self.assertRaisesRegex(ManagerError, "Unknown facility in the contributing assets of Industry: nowhere"):
+            self.store.save_outpost({**outpost, "capabilities": [self.capability("Industry", [{"type": "facility", "id": "nowhere"}])]})
+        with self.assertRaisesRegex(ManagerError, "must be a facility or a character"):
+            self.store.save_outpost({**outpost, "capabilities": [self.capability("Industry", [{"type": "gear", "id": "rope"}])]})
+        with self.assertRaisesRegex(ManagerError, "Reload the manager page"):
+            self.store.save_outpost({**outpost, "capabilities": [self.capability("Industry", "free text")]})
+        with self.assertRaisesRegex(ManagerError, "Reload the manager page"):
+            self.store.save_outpost({**outpost, "facilities": []})
+
+        with self.assertRaisesRegex(ManagerError, "Outpost capability “Industry” \\(contributing assets\\)"):
+            self.store.delete_record("facilities", workshops)
+        with self.assertRaisesRegex(ManagerError, "Outpost capability “Industry”"):
+            self.store.delete_record("characters", hale)
+
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "outpost.json")
+        self.assertEqual(exported["capabilities"][0]["assets"], [
+            {"type": "facility", "id": workshops, "name": "Workshops"}, {"type": "character", "id": hale, "name": "Doctor Hale"}],
+            "unpublished facilities are left out")
+        self.assertEqual(exported["facilities"], [{"id": workshops, "name": "Workshops", "summary": "General fabrication.", "details": "",
+                                                   "projectId": None, "capabilities": ["Industry"]}])
+
+        self.store.sync_site_data()
+        self.store.import_site()
+        state = self.store.state()
+        self.assertEqual(state["outpost"]["capabilities"][0]["assets"], [{"type": "facility", "id": workshops}, {"type": "character", "id": hale}],
+                         "import reads the references back without the names")
+        self.assertEqual([(item["id"], item["published"]) for item in state["facilities"]], [(workshops, True)])
+        self.assertNotIn("facilities", state["outpost"])
+
+    # --- projects ---
+
+    def add_project(self, name: str, **fields) -> str:
+        return self.store.save_record("projects", None, {"name": name, "progress": {"current": 0, "max": 4}, "published": True, **fields})["id"]
+
+    def test_outpost_projects_and_conditions_from_schema_v6(self) -> None:
+        legacy = {**self.store.state()["outpost"],
+                  "activeProjects": [{"name": "Harbor Reinforcement", "summary": "Repair the docks.", "progress": {"current": 2, "max": 6},
+                                      "completion": {"summary": "The docks hold."}}],
+                  "conditions": [{"name": "Unstable Harbor Approach", "summary": "Dangerous."}]}
+        connection = sqlite3.connect(self.database)
+        connection.execute("UPDATE outpost_state SET data = ? WHERE id = 1", (json.dumps(legacy),))
+        connection.commit()
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertEqual(reopened.migration_report, [
+            "Moved 1 Outpost projects into the new Projects section, flagged as sample content.",
+            "Persistent conditions were retired; the old ones are kept in legacy_records (source 'outpost')."])
+        reopened.set_include_samples(True)
+        state = reopened.state()
+        self.assertFalse({"activeProjects", "conditions"} & set(state["outpost"]))
+        project = state["projects"][0]
+        self.assertEqual((project["id"], project["outpost"], project["access"], project["progress"], project["outcome"], project["sample"]),
+                         ("harbor-reinforcement", True, "open", {"current": 2, "max": 6}, "The docks hold.", True))
+        self.assertEqual(ContentStore(self.database, self.data_dir).migration_report, [], "the migration runs once")
+
+    def test_projects_link_characters_gear_and_facilities(self) -> None:
+        mara = self.add_character("Mara")
+        hidden = self.add_character("Hidden", published=False)
+        prototype = self.add_project("Prototype Rifle", access="private", characterIds=[mara, hidden],
+                                     progress={"current": 4, "max": 4}, prerequisites="Workshop access\nA rare alloy", outcome="A **new** rifle.")
+        harbor = self.add_project("Harbor Crane", outpost=True)
+        draft = self.add_project("Secret Plan", published=False)
+        self.assertEqual(self.record("projects", prototype)["prerequisites"],
+                         [{"text": "Workshop access", "met": False}, {"text": "A rare alloy", "met": False}], "text lines are accepted")
+        self.store.save_record("projects", prototype, {**self.record("projects", prototype),
+            "prerequisites": [{"text": "Workshop access", "met": True}, {"text": "  "}],
+            "complications": [{"text": "The alloy cracked.", "resolved": True, "resolution": "Bought a new shard."},
+                              {"text": "Varga wants a cut."}, {"text": "", "resolution": "dropped"}]})
+        saved = self.record("projects", prototype)
+        self.assertEqual(saved["prerequisites"], [{"text": "Workshop access", "met": True}])
+        self.assertEqual(saved["complications"], [
+            {"text": "The alloy cracked.", "resolved": True, "resolution": "Bought a new shard."},
+            {"text": "Varga wants a cut.", "resolved": False, "resolution": ""}])
+        with self.assertRaisesRegex(ManagerError, "Complications must be a list"):
+            self.store.save_record("projects", prototype, {**saved, "complications": {"text": "x"}})
+        with self.assertRaisesRegex(ManagerError, "between 1 and 40 progress boxes"):
+            self.store.save_record("projects", None, {"name": "X", "progress": {"current": 0, "max": 0}})
+        with self.assertRaisesRegex(ManagerError, "cannot be more than"):
+            self.store.save_record("projects", None, {"name": "X", "progress": {"current": 5, "max": 4}})
+        with self.assertRaisesRegex(ManagerError, "Unknown"):
+            self.store.save_record("projects", None, {"name": "X", "progress": {"max": 4}, "characterIds": ["nobody"]})
+
+        rifle = self.add_gear("Prototype Rifle", projectId=prototype)
+        lens = self.add_gear("Lens", projectId=draft)
+        crane = self.store.save_record("facilities", None, {"name": "Big Crane", "projectId": harbor, "published": True})["id"]
+        with self.assertRaisesRegex(ManagerError, "Unknown project"):
+            self.add_gear("Ghost", projectId="nowhere")
+        with self.assertRaisesRegex(ManagerError, "still referenced by Gear “Prototype Rifle” \\(projectId\\)"):
+            self.store.delete_record("projects", prototype)
+        with self.assertRaisesRegex(ManagerError, "Project “Prototype Rifle”"):
+            self.store.delete_record("characters", mara)
+
+        self.store.export_site()
+        data = self.export_dir / "data"
+        exported = read_json(data / "projects" / f"{prototype}.json")
+        self.assertEqual(exported["characterIds"], [mara], "unpublished characters are left out")
+        self.assertEqual(set(exported), {"id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress"})
+        self.assertEqual(sorted(read_json(data / "projects" / "index.json")), sorted([f"{prototype}.json", f"{harbor}.json"]))
+        self.assertEqual(read_json(data / "gear" / f"{rifle}.json")["projectId"], prototype)
+        self.assertIsNone(read_json(data / "gear" / f"{lens}.json")["projectId"], "unpublished projects are not named")
+        facility = next(item for item in read_json(data / "outpost.json")["facilities"] if item["id"] == crane)
+        self.assertEqual(facility["projectId"], harbor)
+
+        self.store.sync_site_data()
+        self.store.import_site()
+        self.assertEqual(self.record("projects", prototype)["characterIds"], [mara])
+        self.assertEqual(self.record("projects", prototype)["complications"][1]["text"], "Varga wants a cut.")
+        self.assertEqual(self.record("gear", rifle)["projectId"], prototype)
+        self.assertEqual(self.record("facilities", crane)["projectId"], harbor)
 
     # --- character sheets ---
 

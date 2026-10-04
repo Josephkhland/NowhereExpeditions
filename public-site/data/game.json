@@ -1,141 +1,17 @@
 [
   {
-    "id": "test-009",
+    "id": "game-listing",
     "type": "announcement",
-    "title": "Game Listing",
+    "title": "JOIN NOWHERE EXPEDITIONS!",
     "category": "",
-    "summary": "# WHAT is love?\nBaby don't hurt me.",
-    "details": "It has been 11 years since the Valeoran Ruins where discovered at the far ends of an uncharted horizon. Rising from the sea and reaching high into the sky, fragments of an ancient wonder remain suspended, drifting in place over an unnaturally still ocean. Today, floating platforms, laboratories, workshops, shipyards and habitation blocks surround the ruins, forming Endros; A rapidly growing settlement so remote that newspapers have taken the liberty of calling it \"Endros in the Middle of Nowhere\", \"Endwhere\" or just \"Nowhere\".\n\nSeveral years after the initial discovery, researchers observed portions of the ruins beginning to move, gathering together and forming temporary portals known as **Gates**. What lies beyond them varies widly: Ruins, Unknown Ecosystems, Impossible machinery. Strange places where familiar rules no longer apply and resources found nowhere else in the known world. Materials recovered from Gates ave created an entirely new field of technology known as **Artificery**. More recently, researchers begun documenting something stranger still: Magic.\n\n> JOIN NOWHERE EXPEDITIONS\nNowhere Expeditions recruits specialists willing to relocate to Endros and participate in expeditions beyond the Gates.\nResearchers. Engineers. Physicians. Sailors. Security personnel. Salvagers. Artificers. Surveyors.\nAnd occasionally people whose qualifications are harder to put on official paperwork.\n\nYou will live in Endros, eat in Endros, breath in Endros.",
-    "tags": [],
-    "publishedAt": "2026-10-02",
+    "summary": "Have your neighbours already packed and moved to Endros? **Maybe it's time YOU do too!**\n\n**Nowhere Expeditions** recruits specialists willing to relocate to Endros and participate in expeditions beyond the Gates. \nVacancies for researchers, engineers, physicians, sailors, security personnel, salvagers, artificers, surveyors and many other roles.  \n\n**Is it hard to describe your qualifications on official paperwork?** We can let you shine... In Endros!\n\n**Scared of the remoteness?** Sell your lord! Sell your house! Bring your family! Bring your sheep! Bring your cow! You can build a whole new life in Endros!\n\nBe scared not! In Endros, you'll start anew, working at the pinnacle of science and helping lead the world into a new era. The Era of Magic!",
+    "details": "# History\nIt has been 11 years since the Valeoran Ruins were discovered at the far ends of an uncharted horizon. Rising from the sea and reaching high into the sky, fragments of an ancient wonder remain suspended, drifting in place over an unnaturally still ocean. Today, floating platforms, laboratories, workshops, shipyards and habitation blocks surround the ruins, forming Endros: a rapidly growing settlement so remote that newspapers have taken the liberty of calling it \"Endros in the Middle of Nowhere\", \"Endwhere\" or just \"Nowhere\".\n\nSeveral years after the initial discovery, researchers observed portions of the ruins beginning to move, gathering together and forming temporary portals known as *Gates*. What lies beyond them varies widely: Ruins, Unknown Ecosystems, Impossible machinery. Strange places where familiar rules no longer apply and resources found nowhere else in the known world. Materials recovered from Gates have created an entirely new field of technology known as *Artificery*. More recently, researchers have begun documenting something even stranger: *Magic*.\n\n# Game Details\nBrowse through the [Rules Subsection](https://josephkhland.github.io/NowhereExpeditions/game.html#rules) to learn everything you need to know. Mandatory information can be found under the `Campaign`  topic. You might also want to browse through the [Archive](https://josephkhland.github.io/NowhereExpeditions/archive.html) for more lore.",
+    "tags": [
+      "Game",
+      "Announcement"
+    ],
+    "publishedAt": "2026-10-04",
     "pinned": true,
-    "showUntil": ""
-  },
-  {
-    "id": "persistent-world",
-    "type": "rule",
-    "title": "Expeditions change a persistent world",
-    "category": "Campaign",
-    "summary": "Expedition outcomes can permanently affect the Outpost and the campaign record.",
-    "details": "The Outpost, Archive, Job Board, and reports represent the current known state of a world shared by different crews. Records should be updated when new information or consequences are established.",
-    "tags": [
-      "shared world",
-      "consequences",
-      "records"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "exploration-over-plot",
-    "type": "rule",
-    "title": "Exploration comes before a fixed plot",
-    "category": "Campaign",
-    "summary": "The campaign presents places, situations, mysteries, hazards, factions, and opportunities rather than a predetermined sequence of events.",
-    "details": "Player decisions determine which leads receive attention and how discoveries change the shared world. The site records opportunities and known situations without assuming what the crew will do next.",
-    "tags": [
-      "exploration",
-      "campaign structure"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "knowledge-is-progression",
-    "type": "rule",
-    "title": "Knowledge is progress",
-    "category": "Information",
-    "summary": "Discoveries and verified information are rewards in their own right.",
-    "details": "Field reports, maps, observations, artifact research, and environmental findings can expand what Expeditioners know. Only information discovered and established in play belongs in the public record.",
-    "tags": [
-      "discovery",
-      "reports",
-      "progression"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "island-projects",
-    "type": "rule",
-    "title": "Outpost projects change the settlement when completed",
-    "category": "Outpost",
-    "summary": "Projects advance on progress tracks; filling a track completes the project.",
-    "details": "A completed project records its result on the Outpost Sheet. Depending on the project, that result may create a facility, improve a capability, or add or remove a condition.",
-    "tags": [
-      "Outpost",
-      "projects",
-      "progress"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "island-stress-and-consequences",
-    "type": "rule",
-    "title": "Outpost stress and consequences",
-    "category": "Outpost",
-    "summary": "When all Outpost stress boxes are marked, a consequence absorbs further stress.",
-    "details": "A consequence's severity determines how much stress it can absorb: Low absorbs 2, Moderate 4, High 6, and Critical 8. Current marked stress and active consequences are recorded on the Outpost Sheet.",
-    "tags": [
-      "Outpost",
-      "stress",
-      "consequences"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "player-chosen-expeditions",
-    "type": "rule",
-    "title": "Players choose expedition priorities",
-    "category": "Expeditions",
-    "summary": "Players decide which Gates, mysteries, threats, and Outpost projects to pursue.",
-    "details": "Nowhere Expeditions uses a West Marches structure. Available opportunities are presented for the players to choose from; no expedition is mandatory and there is no fixed route through the campaign.",
-    "tags": [
-      "West Marches",
-      "player agency",
-      "choices"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "island-as-shared-character",
-    "type": "rule",
-    "title": "The Outpost is a shared campaign character",
-    "category": "Outpost",
-    "summary": "The Outpost has capabilities, aspects, stress, consequences, facilities, projects, and conditions that matter to play.",
-    "details": "Capabilities such as Industry, Research, Commerce, Security, Medicine, and Infrastructure describe what the settlement can do in the fiction. They are public-facing tools, not a substitute for other campaign procedures.",
-    "tags": [
-      "Outpost",
-      "capabilities",
-      "shared resources"
-    ],
-    "publishedAt": "",
-    "pinned": false,
-    "showUntil": ""
-  },
-  {
-    "id": "unknown-remains-unknown",
-    "type": "rule",
-    "title": "Unknown information stays marked as unknown",
-    "category": "Information",
-    "summary": "Unverified details and unexplored mysteries are not filled in with guesses.",
-    "details": "Use clear markers such as UNKNOWN, UNCLASSIFIED, NO DATA, or NOT YET SURVEYED when the campaign record does not establish an answer. Secret GM information is not published on player-facing pages.",
-    "tags": [
-      "public knowledge",
-      "secrets",
-      "unknown"
-    ],
-    "publishedAt": "",
-    "pinned": false,
     "showUntil": ""
   }
 ]
