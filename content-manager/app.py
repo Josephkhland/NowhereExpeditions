@@ -251,6 +251,10 @@ def clean_stash(value: Any) -> list[dict[str, Any]]:
     return list(merged.values())
 
 
+MAX_DOWNTIME = 8
+DEFAULT_CARRY_LIMIT = 6
+
+
 def clean_character(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "name": clean_text(data, "name", "A character name"),
@@ -261,6 +265,12 @@ def clean_character(data: dict[str, Any]) -> dict[str, Any]:
         "playerName": clean_text(data, "playerName"),
         "sheet": clean_sheet(data.get("sheet")),
         "stash": clean_stash(data.get("stash")),
+        # Spent in the Marketplace; refreshed up to the Resources rating after each expedition.
+        "coins": clean_int(data.get("coins") if data.get("coins") not in (None, "") else 0, "Coins", 0, 999999),
+        # Time between expeditions, spent on Project Actions; a character holds at most 8.
+        "downtime": clean_int(data.get("downtime") if data.get("downtime") not in (None, "") else 0, "Downtime", 0, MAX_DOWNTIME),
+        # Most total weight brought into action: 6 unless a stunt raises it or a situation lowers it.
+        "carryLimit": clean_int(data.get("carryLimit") if data.get("carryLimit") not in (None, "") else DEFAULT_CARRY_LIMIT, "Carry limit", 0, 99),
     }
 
 
@@ -585,9 +595,13 @@ def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
         "summary": clean_text(data, "summary"),
         "details": clean_text(data, "details"),
         "tags": clean_list(data, "tags"),
+        # Optional art, shown on the right of the post and faded into the page.
+        "image": clean_text(data, "image") or None,
         "publishedAt": published_at,
         "pinned": bool(data.get("pinned")) if announcement else False,
         "showUntil": show_until,
+        # Rules with a reading order come first, in that order (the onboarding path); the rest follow by title.
+        "order": None if announcement else clean_int(data.get("order"), "Reading order", 1, 999, allow_none=True),
     }
 
 
@@ -643,7 +657,7 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "characters": Collection(
         "characters", "Character", ("name",), clean_character, lambda record: str(record.get("name", "")),
-        public_fields=("id", "name", "type", "status", "portrait", "summary", "playerName", "sheet", "stash"),
+        public_fields=("id", "name", "type", "status", "portrait", "summary", "playerName", "sheet", "stash", "coins", "downtime", "carryLimit"),
         image_fields=("portrait",),
     ),
     "archive": Collection(
@@ -667,11 +681,11 @@ COLLECTIONS: dict[str, Collection] = {
     # Announcements and rules share one combined public file, game.json.
     "game": Collection(
         "game_posts", "Game post", ("title",), clean_game_post, lambda record: str(record.get("title", "")),
-        text_fields=("summary", "details"),
+        image_fields=("image",), text_fields=("summary", "details"),
     ),
 }
 PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs")
-GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil")
+GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image")
 
 
 # --- Store ------------------------------------------------------------------
@@ -1225,6 +1239,25 @@ class ContentStore:
                     self._prune_media(connection, existing.get(field))
         return {"id": chosen_id}
 
+    def save_reading_path(self, rule_ids: Any) -> None:
+        """The new-player reading path: these rules get reading orders 1..n, every other rule loses its order."""
+        if not isinstance(rule_ids, list) or not all(isinstance(item, str) for item in rule_ids):
+            raise ManagerError("The reading path must be a list of rule IDs.")
+        if len(set(rule_ids)) != len(rule_ids):
+            raise ManagerError("A rule can appear on the reading path only once.")
+        if len(rule_ids) > 999:
+            raise ManagerError("The reading path can hold at most 999 rules.")
+        with self._connect() as connection:
+            rules = {post["id"]: post for post in self._records(connection, "game") if post.get("type") != "announcement"}
+            unknown = [item for item in rule_ids if item not in rules]
+            if unknown:
+                raise ManagerError(f"Not a rule post: {', '.join(unknown)}")
+            wanted = {rule_id: index for index, rule_id in enumerate(rule_ids, start=1)}
+            for rule_id, rule in rules.items():
+                order = wanted.get(rule_id)
+                if rule.get("order") != order:
+                    self._write_record(connection, "game", rule_id, {**rule, "order": order}, insert=False)
+
     def delete_record(self, name: str, record_id: str) -> None:
         spec = self._spec(name)
         with self._connect() as connection:
@@ -1526,7 +1559,7 @@ class ContentStore:
         announcements = sorted((post for post in posts if post.get("type") == "announcement"),
                                key=lambda post: (post.get("publishedAt") or "", post.get("title", "")), reverse=True)
         game = announcements + sorted((post for post in posts if post.get("type") != "announcement"),
-                                      key=lambda post: str(post.get("title", "")))
+                                      key=lambda post: (post.get("order") is None, post.get("order") or 0, str(post.get("title", ""))))
         # The Outpost Sheet carries its facilities, and contributing assets are named for the page.
         outpost = json.loads(json.dumps(state["outpost"]))
         for retired in ("facilities", "activeProjects", "conditions"):
@@ -1810,6 +1843,9 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     self._send_json(200, {"saved": True})
                 elif method == "POST" and path == "/api/outpost":
                     store.save_outpost(self._read_body().get("data"))
+                    self._send_json(200, {"saved": True})
+                elif method == "POST" and path == "/api/reading-path":
+                    store.save_reading_path(self._read_body().get("ruleIds"))
                     self._send_json(200, {"saved": True})
                 elif method == "POST" and path == "/api/export":
                     self._send_json(200, store.export_site())

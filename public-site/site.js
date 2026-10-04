@@ -318,6 +318,89 @@ const visibleAnnouncements = (posts) => posts
   .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned))
     || String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")));
 
+/* ---------- Random Resource: draws Resource Functions from the Function table in the same post ---------- */
+
+// {{function-picker}} in a post becomes this widget. It reads the Functions, what they do and how they interact
+// from the post's own table (the one whose first column is "Function"), so editing the table updates the picker.
+const readFunctionTable = (scope) => {
+  const table = [...scope.querySelectorAll("table")].find((candidate) => candidate.querySelector("th")?.textContent.trim() === "Function");
+  if (!table) return [];
+  return [...table.querySelectorAll("tbody tr")].map((row) => {
+    const cells = [...row.cells].map((cell) => cell.textContent.trim());
+    const names = (text) => (text || "").split(",").map((part) => part.replace(/\[.*?\]/g, "").trim()).filter((part) => part && part !== "—");
+    // "Release [Runaway], Amplify [Overload]": each difficult pairing with the problem it names.
+    const hard = [...(cells[4] || "").matchAll(/([A-Za-z]+)\s*\[([^\]]+)\]/g)].map(([, name, label]) => ({ name, label }));
+    return { name: cells[0], does: cells[1] || "", synergy: names(cells[3]), hard };
+  }).filter((entry) => entry.name);
+};
+
+// Usually two Functions, sometimes one or three, rarely four (the guideline in the Resource Functions rule).
+const FUNCTION_COUNT_WEIGHTS = [[1, 30], [2, 45], [3, 20], [4, 5]];
+const weightedCount = () => {
+  let roll = Math.random() * FUNCTION_COUNT_WEIGHTS.reduce((total, [, weight]) => total + weight, 0);
+  for (const [count, weight] of FUNCTION_COUNT_WEIGHTS) {
+    if ((roll -= weight) < 0) return count;
+  }
+  return 2;
+};
+
+// Labels that name a danger mark an Instability; the rest (Cancellation, Strain, Detuning...) an Opposition.
+const DANGER_LABEL = /runaway|overload|rupture|instab|hazard|discharge|pressure|feedback|fracture|failure|corruption/i;
+
+const setupFunctionPickers = (root) => {
+  root.querySelectorAll("[data-function-picker]:not([data-ready])").forEach((picker) => {
+    picker.dataset.ready = "true";
+    const functions = readFunctionTable(picker.closest(".rich-text") || root);
+    if (functions.length < 2) {
+      picker.innerHTML = '<p class="muted">The Function table could not be read.</p>';
+      return;
+    }
+    picker.innerHTML = `
+      <div class="picker-controls">
+        <label>Functions
+          <select data-picker-count>
+            <option value="random">Random (usually 2)</option>
+            ${[1, 2, 3, 4].map((count) => `<option value="${count}">${count}</option>`).join("")}
+          </select>
+        </label>
+        <label class="picker-check"><input type="checkbox" data-picker-hidden /> Make one Hidden</label>
+        <button type="button" class="picker-draw" data-picker-draw>Draw a Resource</button>
+      </div>
+      <div class="picker-result" aria-live="polite"><p class="muted">Press <strong>Draw a Resource</strong> to roll some Functions.</p></div>`;
+    const result = picker.querySelector(".picker-result");
+    picker.querySelector("[data-picker-draw]").addEventListener("click", () => {
+      const choice = picker.querySelector("[data-picker-count]").value;
+      const count = Math.min(functions.length, choice === "random" ? weightedCount() : Number(choice));
+      const pool = [...functions];
+      const drawn = Array.from({ length: count }, () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      const hiddenIndex = picker.querySelector("[data-picker-hidden]").checked && count > 1 ? Math.floor(Math.random() * count) : -1;
+      // The table is written row by row, so a pair is looked up from both sides; it can be a synergy and a risk at once.
+      const pairs = [];
+      drawn.forEach((left, index) => drawn.slice(index + 1).forEach((right) => {
+        const notes = [];
+        if (left.synergy.includes(right.name) || right.synergy.includes(left.name)) notes.push({ kind: "synergy", label: "Synergy" });
+        [...left.hard.filter((item) => item.name === right.name), ...right.hard.filter((item) => item.name === left.name)]
+          .forEach(({ label }) => {
+            if (!notes.some((note) => note.label === label)) notes.push({ kind: DANGER_LABEL.test(label) ? "unstable" : "opposes", label });
+          });
+        if (notes.length) pairs.push({ left: left.name, right: right.name, notes });
+      }));
+      result.innerHTML = `
+        <ul class="picker-functions">${drawn.map((entry, index) => `
+          <li${index === hiddenIndex ? ' class="is-hidden"' : ""}>
+            <code>${escapeHtml(entry.name)}</code>${index === hiddenIndex ? '<span class="picker-hidden-label">Hidden</span>' : ""}
+            <span>${escapeHtml(entry.does)}</span>
+          </li>`).join("")}</ul>
+        ${count > 1 ? `<p class="picker-interactions-title">Interactions</p>
+          ${pairs.length ? `<ul class="picker-interactions">${pairs.map((pair) => `
+            <li><code>${escapeHtml(pair.left)}</code> + <code>${escapeHtml(pair.right)}</code>
+              ${pair.notes.map((note) => `<span class="is-${note.kind}">${escapeHtml(note.label)}</span>`).join("")}</li>`).join("")}</ul>`
+            : '<p class="muted">No known interactions between these Functions.</p>'}` : ""}
+        <p class="muted picker-next">Now give it a name, a description and, if it needs one, a Special Property.</p>`;
+    });
+  });
+};
+
 const renderGame = async () => {
   const announcementRoot = document.getElementById("announcement-list");
   const rulesRoot = document.getElementById("rules-list");
@@ -337,42 +420,188 @@ const renderGame = async () => {
     return;
   }
 
+  // Optional art sits on the right of a post and fades into the page; a missing file just leaves the text.
+  const postArt = (post) => post.image
+    ? `<div class="post-art" aria-hidden="true"><img src="${escapeHtml(post.image)}" alt="" loading="lazy" onerror="this.closest('.has-art')?.classList.remove('has-art'); this.parentElement.remove()" /></div>` : "";
+  const artClass = (post) => post.image ? " has-art" : "";
+  const tagList = (tags, label) => (Array.isArray(tags) && tags.length)
+    ? `<div class="rule-tags" aria-label="${label}">${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : "";
+  // Summaries become plain text in the rules list, where each entry is already a link.
+  const plainText = (html) => {
+    const box = document.createElement("div");
+    box.innerHTML = html;
+    return box.textContent;
+  };
+
+  // Rules with a reading order (the Onboarding path) come first, in order; the rest follow by title.
+  const readingOrder = (rule) => Number.isInteger(rule.order) ? rule.order : Infinity;
+  const rules = posts.filter((post) => post.type !== "announcement")
+    .sort((left, right) => (readingOrder(left) - readingOrder(right) || 0)
+      || String(left.title || "").localeCompare(String(right.title || "")));
+  const path = rules.filter((rule) => Number.isInteger(rule.order));
+  const ruleLink = (rule) => `#post-${encodeURIComponent(rule.id)}`;
+
+  // {{reading-path}} on its own line in a post's Details becomes the numbered path, grouped by category.
+  const readingPathList = () => {
+    if (!path.length) return "";
+    const groups = [];
+    path.forEach((rule) => {
+      const category = rule.category || "Campaign";
+      if (groups.at(-1)?.category !== category) groups.push({ category, rules: [] });
+      groups.at(-1).rules.push(rule);
+    });
+    return `
+      <nav class="reading-path" aria-label="Reading path">
+        ${groups.map((group) => `
+          <div class="reading-path-group">
+            <h3>${escapeHtml(group.category)}</h3>
+            <ol>${group.rules.map((rule) => `<li value="${path.indexOf(rule) + 1}"><a href="${ruleLink(rule)}">${escapeHtml(rule.title)}</a></li>`).join("")}</ol>
+          </div>`).join("")}
+      </nav>`;
+  };
+  // Markers on their own line in a post: {{reading-path}} (the Onboarding list) and {{function-picker}} (Random Resource).
+  const postText = (text) => richText(text, campaign)
+    .replace(/<p>\s*\{\{\s*reading-path\s*\}\}\s*<\/p>/g, readingPathList)
+    .replace(/<p>\s*\{\{\s*function-picker\s*\}\}\s*<\/p>/g, '<div class="function-picker" data-function-picker></div>');
+
   const announcements = visibleAnnouncements(posts);
   announcementRoot.innerHTML = announcements.length ? announcements.map((post) => `
-    <article class="announcement${post.pinned ? " is-pinned" : ""}" id="post-${escapeHtml(post.id)}">
-      <div class="announcement-meta">
-        ${post.pinned ? '<span class="pill pill-small status-observed">Pinned</span>' : ""}
-        <span>${escapeHtml(formatDate(post.publishedAt))}</span>
-      </div>
-      <h2>${escapeHtml(post.title)}</h2>
-      ${post.summary ? `<p class="announcement-summary">${richInline(post.summary, campaign)}</p>` : ""}
-      ${post.details ? richText(post.details, campaign) : ""}
-      ${(post.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${post.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-    </article>`).join("") : '<p class="empty-state">No announcements right now.</p>';
-
-  const rules = posts.filter((post) => post.type !== "announcement")
-    .sort((left, right) => String(left.title || "").localeCompare(String(right.title || "")));
-  const renderRules = () => {
-    const query = search.value.trim().toLowerCase();
-    const filtered = rules.filter((rule) => [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
-      .filter(Boolean).join(" ").toLowerCase().includes(query));
-    count.textContent = query ? `Showing ${filtered.length} of ${rules.length} rules` : `${rules.length} rules`;
-    rulesRoot.innerHTML = filtered.length ? filtered.map((rule) => `
-      <article class="rule-entry" id="post-${escapeHtml(rule.id)}">
-        <div class="rule-entry-heading">
-          <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
-          <h2>${escapeHtml(rule.title || "Untitled rule")}</h2>
+    <article class="announcement${post.pinned ? " is-pinned" : ""}${artClass(post)}" id="post-${escapeHtml(post.id)}">
+      ${postArt(post)}
+      <div class="post-body">
+        <div class="announcement-meta">
+          ${post.pinned ? '<span class="pill pill-small status-observed">Pinned</span>' : ""}
+          <span>${escapeHtml(formatDate(post.publishedAt))}</span>
         </div>
-        <p class="rule-summary">${richInline(rule.summary || "", campaign)}</p>
-        ${rule.details ? `<details class="rule-details"><summary>Read rule</summary>${richText(rule.details, campaign)}</details>` : ""}
-        ${(Array.isArray(rule.tags) && rule.tags.length) ? `<div class="rule-tags" aria-label="Related topics">${rule.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-      </article>
-    `).join("") : '<p class="empty-state">No rules match this search.</p>';
-  };
-  search.addEventListener("input", renderRules);
-  renderRules();
+        <h2>${escapeHtml(post.title)}</h2>
+        ${post.summary ? `<p class="announcement-summary">${richInline(post.summary, campaign)}</p>` : ""}
+        ${post.details ? postText(post.details) : ""}
+        ${tagList(post.tags, "Tags")}
+      </div>
+    </article>`).join("") : '<p class="empty-state">No announcements right now.</p>';
+  setupFunctionPickers(announcementRoot);
 
-  // Tabs follow the hash: #rules, #announcements, or #post-<id> (which opens the tab holding that post).
+  // Previous / Next along the reading path, at the end of each rule on it.
+  const pathNav = (rule) => {
+    const index = path.indexOf(rule);
+    if (index < 0) return "";
+    const previous = path[index - 1];
+    const next = path[index + 1];
+    return `
+      <nav class="rule-pager" aria-label="Reading path">
+        ${previous ? `<a class="rule-pager-link is-previous" href="${ruleLink(previous)}"><span>← Previous</span><strong>${escapeHtml(previous.title)}</strong></a>` : "<span></span>"}
+        ${next ? `<a class="rule-pager-link is-next" href="${ruleLink(next)}"><span>Next →</span><strong>${escapeHtml(next.title)}</strong></a>`
+          : '<a class="rule-pager-link is-next" href="#onboarding"><span>Finished</span><strong>Back to Onboarding</strong></a>'}
+      </nav>`;
+  };
+
+  // Topics: Onboarding (the reading path, in order), All, then each rule category.
+  const topicsRoot = document.getElementById("rules-topics");
+  const categories = [...new Set(rules.map((rule) => rule.category || "Campaign"))];
+  const topics = [
+    ...(path.length ? [["onboarding", "Onboarding", path.length]] : []),
+    ["all", "All", rules.length],
+    ...categories.map((category) => [`topic-${slugify(category)}`, category, rules.filter((rule) => (rule.category || "Campaign") === category).length])
+  ];
+  let topic = "all";
+  const topicHash = () => topic === "all" ? "#rules" : `#${topic}`;
+  const inTopic = (rule) => topic === "all" || (topic === "onboarding" ? Number.isInteger(rule.order) : `topic-${slugify(rule.category || "Campaign")}` === topic);
+  const matchesSearch = (rule) => [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
+    .filter(Boolean).join(" ").toLowerCase().includes(search.value.trim().toLowerCase());
+  // A dropdown keeps the sidebar short however many topics there are.
+  const topicSelect = topicsRoot?.querySelector("select");
+  const renderTopics = () => {
+    if (!topicSelect) return;
+    topicSelect.innerHTML = topics.map(([key, label, total]) =>
+      `<option value="${key}"${key === topic ? " selected" : ""}>${escapeHtml(label)} (${total})</option>`).join("");
+    topicSelect.classList.toggle("is-onboarding", topic === "onboarding");
+    topicsRoot.hidden = false;
+  };
+
+  // The rules reader: every rule with its short description in the sidebar, the open rule on the right.
+  // On phones the two take turns: the list, then the rule (with a way back) once one is chosen.
+  const layout = document.getElementById("rules-layout");
+  const ruleView = document.getElementById("rule-view");
+  const wide = window.matchMedia("(min-width: 801px)");
+  let selectedRule = null;
+  let visibleRules = rules;
+
+  const renderRuleList = () => {
+    visibleRules = rules.filter((rule) => inTopic(rule) && matchesSearch(rule));
+    count.textContent = visibleRules.length === rules.length ? `${rules.length} rules` : `Showing ${visibleRules.length} of ${rules.length} rules`;
+    const intro = topic === "onboarding" ? '<li class="rules-nav-intro">New players: read these in order. Each rule ends with a link to the next.</li>' : "";
+    rulesRoot.innerHTML = intro + (visibleRules.length ? visibleRules.map((rule) => `
+      <li><a class="rules-nav-item${rule === selectedRule ? " is-active" : ""}" href="${ruleLink(rule)}"${rule === selectedRule ? ' aria-current="true"' : ""}>
+        <span class="rules-nav-meta"><span>${escapeHtml(rule.category || "Campaign")}</span>${Number.isInteger(rule.order) ? `<span>${path.indexOf(rule) + 1} / ${path.length}</span>` : ""}</span>
+        <strong>${escapeHtml(rule.title || "Untitled rule")}</strong>
+        ${rule.summary ? `<span class="rules-nav-summary">${escapeHtml(plainText(richInline(rule.summary, campaign)))}</span>` : ""}
+      </a></li>`).join("") : '<li class="empty-state">No rules match this search.</li>');
+  };
+
+  const renderRuleView = () => {
+    const rule = selectedRule;
+    layout.classList.toggle("is-reading", Boolean(rule) && window.location.hash.startsWith("#post-"));
+    ruleView.className = `rule-view${rule ? artClass(rule) : ""}`;
+    if (!rule) {
+      ruleView.innerHTML = '<p class="empty-state">Choose a rule from the list.</p>';
+      return;
+    }
+    const step = path.indexOf(rule);
+    ruleView.innerHTML = `
+      ${postArt(rule)}
+      <a class="rule-back" href="${topicHash()}">← All rules</a>
+      <header class="rule-view-head">
+        <div class="rule-view-meta">
+          <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
+          ${step >= 0 ? `<span class="rule-step">Onboarding · ${step + 1} of ${path.length}</span>` : ""}
+        </div>
+        <h2 id="rule-view-title">${escapeHtml(rule.title || "Untitled rule")}</h2>
+        ${rule.summary ? `<p class="rule-lead">${richInline(rule.summary, campaign)}</p>` : ""}
+      </header>
+      ${rule.details ? `<div class="rule-content">${postText(rule.details)}</div>` : ""}
+      ${pathNav(rule)}
+      ${tagList(rule.tags, "Related topics")}`;
+    setupFunctionPickers(ruleView);
+  };
+
+  // Brings the reader to the top of the open rule, and keeps its entry in view in the sidebar.
+  const revealRule = () => {
+    const headerHeight = document.querySelector(".site-header")?.offsetHeight || 0;
+    const top = layout.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+    if (!wide.matches || window.scrollY > top) window.scrollTo({ top, behavior: "instant" });
+    const active = rulesRoot.querySelector(".is-active");
+    // On wide screens only the list scrolls (the topic and search stay at the top of the sidebar).
+    if (active && wide.matches && (active.offsetTop < rulesRoot.scrollTop || active.offsetTop + active.offsetHeight > rulesRoot.scrollTop + rulesRoot.clientHeight)) {
+      rulesRoot.scrollTop = active.offsetTop - rulesRoot.clientHeight / 3;
+    }
+  };
+
+  const showRule = (rule) => {
+    // A topic or search that hides the rule would leave its entry missing from the list.
+    if (!inTopic(rule)) topic = "all";
+    if (!matchesSearch(rule)) search.value = "";
+    selectedRule = rule;
+    renderTopics();
+    renderRuleList();
+    renderRuleView();
+    revealRule();
+  };
+
+  const setTopic = (key, { updateHash = false } = {}) => {
+    topic = topics.some(([candidate]) => candidate === key) ? key : "all";
+    if (updateHash) window.history.replaceState(null, "", topicHash());
+    renderTopics();
+    renderRuleList();
+    // Wide screens always show a rule: keep the open one if it is still listed, otherwise the first.
+    if (!selectedRule || !visibleRules.includes(selectedRule)) selectedRule = visibleRules[0] || null;
+    renderRuleList();
+    renderRuleView();
+  };
+  topicSelect?.addEventListener("change", () => setTopic(topicSelect.value, { updateHash: true }));
+  search.addEventListener("input", renderRuleList);
+  setTopic("all");
+
+  // Tabs follow the hash: #rules, #announcements, #onboarding / #topic-<category>, or #post-<id> (which opens the tab holding that post).
   const tabs = [...document.querySelectorAll("[data-game-tab]")];
   const select = (name, { focus = false, updateHash = true } = {}) => {
     tabs.forEach((tab) => {
@@ -387,13 +616,22 @@ const renderGame = async () => {
   const route = () => {
     const hash = decodeURIComponent(window.location.hash.slice(1));
     const post = hash.startsWith("post-") ? posts.find((item) => `post-${item.id}` === hash) : null;
-    if (post) {
-      select(post.type === "announcement" ? "announcements" : "rules", { updateHash: false });
-      const target = document.getElementById(hash);
-      target?.querySelector("details")?.setAttribute("open", "");
-      target?.scrollIntoView({ block: "start" });
-    } else if (hash === "rules" || hash === "announcements") {
-      select(hash, { updateHash: false });
+    if (post?.type === "announcement") {
+      select("announcements", { updateHash: false });
+      document.getElementById(hash)?.scrollIntoView({ block: "start" });
+    } else if (post) {
+      select("rules", { updateHash: false });
+      showRule(post);
+    } else if (hash === "onboarding" || hash.startsWith("topic-")) {
+      select("rules", { updateHash: false });
+      search.value = "";
+      setTopic(hash);
+      revealRule();
+    } else if (hash === "rules") {
+      select("rules", { updateHash: false });
+      renderRuleView();
+    } else if (hash === "announcements") {
+      select("announcements", { updateHash: false });
     } else {
       select(announcements.length ? "announcements" : "rules", { updateHash: false });
     }
@@ -1579,9 +1817,15 @@ const renderFateSheet = (sheet, characterName = "Character") => {
     </div>`;
 };
 
-/* Stash: Gear the character owns, split by whether it is brought into action. No Load rules are applied yet. */
-const renderStash = (stash, campaign) => {
-  const rows = (stash || []).map((item) => ({ ...item, gear: campaign.gearById.get(item.gearId) })).filter((item) => item.gear);
+/* Stash: the character's Coins and the Gear they own, split by whether it is brought into action.
+   What is brought into action counts against the character's carry limit (6 unless a stunt or situation changes it). */
+const DEFAULT_CARRY_LIMIT = 6;
+const MAX_DOWNTIME = 8;
+const carryLimitOf = (character) => Number.isInteger(character.carryLimit) ? character.carryLimit : DEFAULT_CARRY_LIMIT;
+const renderStash = (character, campaign) => {
+  const limit = carryLimitOf(character);
+  const rows = (character.stash || []).map((item) => ({ ...item, gear: campaign.gearById.get(item.gearId) })).filter((item) => item.gear);
+  const carried = rows.filter((item) => item.broughtIntoAction).reduce((total, item) => total + (Number(item.gear.weight) || 0) * item.quantity, 0);
   const group = (title, items, emptyText) => `
     <section class="stash-group">
       <h4>${title}</h4>
@@ -1595,6 +1839,10 @@ const renderStash = (stash, campaign) => {
   return `
     <section class="detail-block stash-block">
       <h3>Stash</h3>
+      <div class="stash-summary">
+        <span class="stash-coins"><span class="muted">Coins</span> ${coins(Number(character.coins) || 0)}</span>
+        <span class="stash-carried${carried > limit ? " is-over" : ""}"><span class="muted">Carried into action</span> ${weightMarkup(`${carried} / ${limit}`)}</span>
+      </div>
       ${rows.length ? `<div class="detail-grid">
         ${group("Brought into Action", rows.filter((item) => item.broughtIntoAction), "Nothing marked for the next job.")}
         ${group("Stored in Stash", rows.filter((item) => !item.broughtIntoAction), "Nothing in storage.")}
@@ -1644,7 +1892,7 @@ const renderCharacterRoster = async () => {
     const renderProfile = (character) => {
       const jobs = campaign.jobsForCharacter(character.id);
       const sessions = campaign.sessionRecordsForCharacter(character.id);
-      const stash = renderStash(character.stash, campaign);
+      const stash = renderStash(character, campaign);
       const projects = campaign.projectsForCharacter(character.id).sort((left, right) => String(left.name).localeCompare(String(right.name)));
       const ongoing = projects.filter((project) => !projectComplete(project));
       const completed = projects.filter(projectComplete);
@@ -1660,6 +1908,10 @@ const renderCharacterRoster = async () => {
               <span class="pill">${character.type === "npc" ? "NPC" : "Player Character"}</span>
               <h2>${escapeHtml(character.name)}</h2>
               <p class="meta-row">${statusPill(character.status)}${character.type !== "npc" && character.playerName ? `<span class="muted">Played by ${escapeHtml(character.playerName)}</span>` : ""}</p>
+              ${character.type !== "npc" ? `<dl class="character-tallies">
+                <div title="Spent on Project Actions between expeditions; at most ${MAX_DOWNTIME}"><dt>Downtime</dt><dd><strong>${escapeHtml(Number(character.downtime) || 0)}</strong> / ${MAX_DOWNTIME}</dd></div>
+                <div><dt>Coins</dt><dd>${coins(Number(character.coins) || 0)}</dd></div>
+              </dl>` : ""}
               ${paragraphs(character.summary, "No public summary.")}
             </div>
           </div>
@@ -1792,11 +2044,41 @@ const setActiveNav = () => {
   });
 };
 
+// On narrow screens the links fold behind a Menu button, so the sticky header stays one short row.
+// Without JavaScript the header keeps its full, wrapped layout.
+const setupMobileNav = () => {
+  const header = document.querySelector(".site-header");
+  const topbar = header?.querySelector(".topbar");
+  const nav = header?.querySelector(".main-nav");
+  if (!topbar || !nav) return;
+  nav.id ||= "main-nav";
+  const current = nav.querySelector(".nav-link.active")?.textContent.trim();
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "nav-toggle";
+  button.setAttribute("aria-controls", nav.id);
+  button.setAttribute("aria-expanded", "false");
+  button.innerHTML = `<span class="nav-toggle-current">${escapeHtml(current || "Menu")}</span><span class="nav-toggle-icon" aria-hidden="true"></span><span class="sr-only">Open menu</span>`;
+  topbar.insertBefore(button, nav);
+  header.classList.add("has-nav-toggle");
+  const setOpen = (open) => {
+    header.classList.toggle("nav-open", open);
+    button.setAttribute("aria-expanded", String(open));
+    button.querySelector(".sr-only").textContent = open ? "Close menu" : "Open menu";
+  };
+  button.addEventListener("click", () => setOpen(!header.classList.contains("nav-open")));
+  nav.addEventListener("click", (event) => { if (event.target.closest("a")) setOpen(false); });
+  document.addEventListener("click", (event) => { if (!header.contains(event.target)) setOpen(false); });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && header.classList.contains("nav-open")) { setOpen(false); button.focus(); }
+  });
+};
 
-const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster };
+const PAGE_RENDERERS ={ game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
+  setupMobileNav();
   initializeDestinationCarousel();
   const page = document.body.dataset.page;
   await Promise.all([renderOutpost(), renderAnnouncementBanner(), renderLaunchPanel(), renderFooterCommunity(), renderSiteVersion(), PAGE_RENDERERS[page]?.()]);
