@@ -142,5 +142,8 @@
     ],
     "extras": "Spell List:\nCantrips-\n- Create Bonfire (Fill up a 5ft cube with fire instantaneously - can damage)\n- Mending\n- Thaumaturgy - scary prestidigitation \n- Prestidigitation\n- Fire Bolt \n- Message\n\n1st level spells:\n- Shield\n- Burning Hands\n- Feather Fall"
   },
-  "stash": []
+  "stash": [],
+  "coins": null,
+  "downtime": null,
+  "carryLimit": null
 }
