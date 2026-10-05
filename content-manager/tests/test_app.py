@@ -220,7 +220,7 @@ class ContentStoreTests(unittest.TestCase):
             self.store.save_record("jobs", None, {"title": "X", "sessionRecordId": "nope"})
         with self.assertRaisesRegex(ManagerError, "type session-record"):
             self.store.save_record("jobs", None, {"title": "X", "sessionRecordId": "g-03"})
-        with self.assertRaisesRegex(ManagerError, "Unknown participant"):
+        with self.assertRaisesRegex(ManagerError, "Unknown character"):
             self.store.save_record("jobs", None, {"title": "X", "participantIds": ["ghost"]})
         with self.assertRaisesRegex(ManagerError, "status must be one of"):
             self.store.save_record("jobs", None, {"title": "X", "status": "underway"})
@@ -490,6 +490,227 @@ class ContentStoreTests(unittest.TestCase):
         self.assertEqual(latest["details"], "See [[g-03]] and [record unavailable].")
         self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image"})
 
+    # --- Resources, Forms and Gate Domains (schema v8) ---
+
+    def gate(self, designation: str = "G-12", domains: list[str] | None = None, published: bool = True) -> str:
+        return self.store.save_record("archive", None, {"type": "gate-record", "title": f"Gate {designation}", "published": published,
+                                                        "details": {"designation": designation, "domains": domains or ["volcanic"]}})["id"]
+
+    def test_resources_validate_functions_domains_and_their_gate(self) -> None:
+        gate = self.gate()
+        resource = self.store.save_record("resources", None, {
+            "name": "Emberglass", "sourceType": "ground", "functions": ["Store", "Heat", "Release"], "hiddenFunctions": ["Resonate"],
+            "availability": "limited", "gateId": gate, "harvestingIssue": "Shatters when chilled", "gmNotes": "Linked to the Core"})["id"]
+        self.assertEqual(self.record("resources", resource)["hiddenFunctions"], ["Resonate"])
+        bad = [
+            {"name": "X", "functions": ["Lighten"]},                      # not in the vocabulary
+            {"name": "X", "functions": ["Heat"], "hiddenFunctions": ["Heat"]},
+            {"name": "X", "domains": ["volcanic", "frozen", "arid"]},     # at most two
+            {"name": "X", "domains": ["swamp"]},
+            {"name": "X", "availability": "plentiful"},
+            {"name": "Emberglass"},                                       # names are unique
+        ]
+        for data in bad:
+            with self.assertRaises(ManagerError):
+                self.store.save_record("resources", None, data)
+        session = self.store.save_record("archive", None, {"type": "session-record", "title": "A session"})["id"]
+        with self.assertRaisesRegex(ManagerError, "gate-record"):
+            self.store.save_record("resources", None, {"name": "Stray", "gateId": session})
+        with self.assertRaisesRegex(ManagerError, "Resource"):
+            self.store.delete_record("archive", gate)
+        with self.assertRaisesRegex(ManagerError, "detach"):
+            self.store.save_record("archive", gate, {**self.record("archive", gate), "type": "history"})
+
+    def test_resource_export_hides_gm_knowledge_and_inherits_the_gate_domain(self) -> None:
+        gate = self.gate(domains=["frozen", "constructed"])
+        self.store.save_record("resources", None, {"id": "rime-gear", "name": "Rime Gear", "functions": ["Move", "Absorb"],
+                                                   "hiddenFunctions": ["Record"], "harvestingIssue": "Seizes up", "gmNotes": "secret",
+                                                   "gateId": gate, "published": True})
+        self.store.save_record("resources", None, {"id": "own-domain", "name": "Own Domain", "domains": ["arid"], "gateId": gate, "published": True})
+        self.store.save_record("resources", None, {"id": "draft", "name": "Draft", "published": False})
+        self.store.export_site()
+        data = self.export_dir / "data" / "resources"
+        self.assertEqual(read_json(data / "index.json"), ["own-domain.json", "rime-gear.json"])
+        rime = read_json(data / "rime-gear.json")
+        self.assertNotIn("hiddenFunctions", rime)
+        self.assertNotIn("harvestingIssue", rime)
+        self.assertNotIn("gmNotes", rime)
+        self.assertEqual((rime["domains"], rime["functions"], rime["gateId"]), (["frozen", "constructed"], ["Move", "Absorb"], gate))
+        self.assertEqual(read_json(data / "own-domain.json")["domains"], ["arid"])
+
+    def test_resources_of_an_unpublished_gate_keep_no_gate_link(self) -> None:
+        gate = self.gate(published=False)
+        self.store.save_record("resources", None, {"id": "orphan", "name": "Orphan", "gateId": gate, "published": True})
+        self.store.export_site()
+        orphan = read_json(self.export_dir / "data" / "resources" / "orphan.json")
+        self.assertIsNone(orphan["gateId"])
+        self.assertEqual(orphan["domains"], [], "an unpublished Gate's Domain is not revealed either")
+
+    # --- The Function vocabulary ---
+
+    def vocabulary_with(self, change) -> list:
+        groups = json.loads(json.dumps(self.store.function_vocabulary()))
+        change(groups)
+        return groups
+
+    def test_function_vocabulary_renames_carry_through_records(self) -> None:
+        resource = self.store.save_record("resources", None, {"name": "Emberglass", "functions": ["Heat", "Store"], "hiddenFunctions": ["Resonate"]})["id"]
+        form = self.store.save_record("forms", None, {"name": "Kindle", "tier": "first", "words": ["Heat"]})["id"]
+        project = self.store.save_record("projects", None, {"name": "Forge", "progress": {"max": 4}, "requiredFunctions": ["Heat"]})["id"]
+        self.store.save_record("game", None, {"type": "rule", "title": "Fire", "category": "Campaign", "details": "Uses `Heat`."})
+        def rename(groups):
+            next(fn for group in groups for fn in group["functions"] if fn["name"] == "Heat")["name"] = "Warm"
+        result = self.store.save_function_vocabulary(self.vocabulary_with(rename), {"Heat": "Warm"})
+        self.assertEqual(result["recordsUpdated"], 3)
+        self.assertEqual(result["ruleMentions"], ["Heat (Fire)"], "rules text is reported, not rewritten")
+        self.assertEqual(self.record("resources", resource)["functions"], ["Warm", "Store"])
+        self.assertEqual(self.record("forms", form)["words"], ["Warm"])
+        self.assertEqual(self.record("projects", project)["requiredFunctions"], ["Warm"])
+        with self.assertRaises(ManagerError):
+            self.store.save_record("resources", None, {"name": "Old word", "functions": ["Heat"]})
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertIn("Warm", reopened.state()["vocabulary"]["functionGroups"]["Energy & Light"])
+
+    def test_functions_in_use_cannot_be_removed_but_unused_ones_can(self) -> None:
+        self.store.save_record("resources", None, {"name": "Emberglass", "functions": ["Heat"]})
+        def drop(name):
+            return lambda groups: [group.__setitem__("functions", [fn for fn in group["functions"] if fn["name"] != name]) for group in groups]
+        with self.assertRaisesRegex(ManagerError, "Heat .*Emberglass"):
+            self.store.save_function_vocabulary(self.vocabulary_with(drop("Heat")))
+        self.store.save_function_vocabulary(self.vocabulary_with(drop("Corrode")))
+        self.assertNotIn("Corrode", self.store.state()["vocabulary"]["functionGroups"]["Matter & Structure"])
+
+    def test_new_functions_and_groups_are_usable_and_exported(self) -> None:
+        def add(groups):
+            groups.append({"name": "Time", "functions": [{"name": "Delay", "definition": "Slow a process down."}]})
+        self.store.save_function_vocabulary(self.vocabulary_with(add))
+        self.store.save_record("forms", None, {"name": "Slow Fall", "tier": "first", "words": ["Delay"], "published": True})
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "vocabulary.json")["functionGroups"]
+        self.assertEqual(exported[-1], {"name": "Time", "functions": [{"name": "Delay", "definition": "Slow a process down."}]})
+        for bad in ([], [{"name": "A", "functions": [{"name": "lowercase"}]}], [{"name": "A", "functions": [{"name": "Heat"}, {"name": "heat"}]}],
+                    [{"name": "A", "functions": [{"name": "Heat"}]}, {"name": "a", "functions": [{"name": "Move"}]}]):
+            with self.assertRaises(ManagerError):
+                self.store.save_function_vocabulary(bad)
+
+    # --- Domains ---
+
+    def test_domains_can_be_renamed_added_and_removed_when_unused(self) -> None:
+        gate = self.gate(domains=["frozen"])
+        domains = self.store.domain_vocabulary()
+        next(domain for domain in domains if domain["key"] == "frozen")["name"] = "Glacial"
+        domains.append({"name": "Astral Wastes", "colour": "#aa66ff", "description": "Void between stars."})
+        self.store.save_domain_vocabulary(domains)
+        saved = self.store.domain_vocabulary()
+        self.assertEqual([domain["key"] for domain in saved][-1], "astral-wastes")
+        self.assertEqual(self.record("archive", gate)["details"]["domains"], ["frozen"], "records keep the key through a rename")
+        self.store.save_record("resources", None, {"name": "Starglass", "domains": ["astral-wastes"]})
+        with self.assertRaisesRegex(ManagerError, "Starglass"):
+            self.store.save_domain_vocabulary([domain for domain in saved if domain["key"] != "astral-wastes"])
+        self.store.save_domain_vocabulary([domain for domain in saved if domain["key"] != "arid"])
+        with self.assertRaises(ManagerError):
+            self.store.save_record("resources", None, {"name": "Dune salt", "domains": ["arid"]})
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "vocabulary.json")["domains"]
+        self.assertIn({"key": "frozen", "name": "Glacial", "colour": "#9fdcec", "description": saved[4]["description"]}, exported)
+        for bad in ([], [{"name": "A"}, {"name": "a"}], [{"name": "A", "colour": "red"}]):
+            with self.assertRaises(ManagerError):
+                self.store.save_domain_vocabulary(bad)
+
+    def test_bulk_publish_and_sample_flags(self) -> None:
+        ids = [self.store.save_record("forms", None, {"name": f"Form {n}", "tier": "first", "words": ["Heat"]})["id"] for n in range(3)]
+        self.assertTrue(self.record("forms", ids[0])["updatedAt"])
+        self.assertEqual(self.store.bulk_update("forms", ids[:2], "publish"), {"changed": 2})
+        self.assertEqual([self.record("forms", item)["published"] for item in ids], [True, True, False])
+        self.assertEqual(self.store.bulk_update("forms", ids, "publish"), {"changed": 1})
+        self.store.bulk_update("forms", [ids[2]], "sample")
+        self.assertTrue(self.store.state()["forms"][-1]["sample"] if self.store.include_samples() else True)
+        for bad in (("forms", [], "publish"), ("forms", ["missing"], "publish"), ("forms", ids, "explode"), ("nothing", ids, "publish")):
+            with self.assertRaises(ManagerError):
+                self.store.bulk_update(*bad)
+
+    def test_sync_status_tracks_changes_after_the_last_sync(self) -> None:
+        self.assertFalse(self.store.sync_status()["pending"])
+        self.store.mark("lastChangeAt")
+        self.assertTrue(self.store.sync_status()["pending"])
+        self.store.mark("lastSyncAt")
+        self.assertFalse(self.store.sync_status()["pending"])
+
+    def test_function_interactions_start_from_the_design_table_and_follow_renames(self) -> None:
+        interactions = self.store.function_interactions()
+        self.assertIn({"a": "Conduct", "b": "Dampen", "kind": "opposition", "keyword": "Resistance", "note": ""}, interactions)
+        self.assertTrue(any(entry["a"] == "Release" and entry["b"] == "Store" and entry["kind"] == "synergy" for entry in interactions))
+        self.store.save_function_interactions([{"a": "Store", "b": "Heat", "kind": "synergy", "keyword": "Thermal battery", "note": "Holds warmth."},
+                                               {"a": "Move", "b": "Anchor", "kind": "opposition"}])
+        self.assertEqual([(e["a"], e["b"]) for e in self.store.function_interactions()], [("Anchor", "Move"), ("Heat", "Store")])
+        for bad in ([{"a": "Heat", "b": "Heat"}], [{"a": "Heat", "b": "Teleport"}], [{"a": "Heat", "b": "Store", "kind": "love"}],
+                    [{"a": "Heat", "b": "Store"}, {"a": "Store", "b": "Heat"}], [{"a": "Heat", "b": "Move", "keyword": "x" * 41}]):
+            with self.assertRaises(ManagerError):
+                self.store.save_function_interactions(bad)
+        groups = self.store.function_vocabulary()
+        for group in groups:
+            for fn in group["functions"]:
+                if fn["name"] == "Heat":
+                    fn["name"] = "Warmth"
+            group["functions"] = [fn for fn in group["functions"] if fn["name"] != "Move"]
+        result = self.store.save_function_vocabulary(groups, {"Heat": "Warmth"})
+        self.assertEqual(result["interactionsRemoved"], 1)
+        self.assertEqual(self.store.function_interactions(), [{"a": "Store", "b": "Warmth", "kind": "synergy", "keyword": "Thermal battery", "note": "Holds warmth."}])
+        self.store.export_site()
+        self.assertEqual(len(read_json(self.export_dir / "data" / "vocabulary.json")["interactions"]), 1)
+
+    def test_gate_cm_notes_stay_private(self) -> None:
+        gate = self.store.save_record("archive", None, {"type": "gate-record", "title": "Gate G-30", "published": True, "details": {
+            "designation": "G-30", "domains": ["abyssal"], "knownCreatures": ["Drift jellies"], "gmNotes": "Gate Aspect: Light Draws Attention"}})["id"]
+        self.assertEqual(self.record("archive", gate)["details"]["gmNotes"], "Gate Aspect: Light Draws Attention")
+        self.store.export_site()
+        details = read_json(self.export_dir / "data" / "archive" / f"{gate}.json")["details"]
+        self.assertNotIn("gmNotes", details)
+        self.assertEqual((details["domains"], details["knownCreatures"]), (["abyssal"], ["Drift jellies"]))
+
+    def test_forms_need_the_right_number_of_words(self) -> None:
+        form = self.store.save_record("forms", None, {"name": "Flash Freeze", "tier": "second", "words": ["Absorb", "Heat"], "published": True})["id"]
+        self.assertEqual(self.record("forms", form)["status"], "known")
+        for data in ({"name": "Too few", "tier": "second", "words": ["Heat"]}, {"name": "Too many", "tier": "basic", "words": ["Heat", "Move"]},
+                     {"name": "Unknown", "tier": "first", "words": ["Fly"]}, {"name": "Bad tier", "tier": "fourth", "words": ["Heat"]}):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("forms", None, data)
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "forms" / f"{form}.json")
+        self.assertEqual(set(exported), {"id", "name", "tier", "words", "effect", "status", "projectId"})
+
+    def test_projects_reference_functions_resources_domain_and_gate(self) -> None:
+        gate = self.gate()
+        ember = self.store.save_record("resources", None, {"name": "Emberglass", "gateId": gate, "published": True})["id"]
+        draft = self.store.save_record("resources", None, {"name": "Unpublished ore"})["id"]
+        project = self.store.save_record("projects", None, {
+            "name": "Establish Emberglass Supply", "progress": {"max": 10}, "published": True, "requiredFunctions": ["Heat", "Store"],
+            "requiredResourceIds": [ember, draft], "requiredDomain": "volcanic", "relatedGateId": gate, "resultType": "resource-supply"})["id"]
+        saved = self.record("projects", project)
+        self.assertEqual((saved["requiredResourceIds"], saved["relatedGateId"], saved["resultType"]), ([ember, draft], gate, "resource-supply"))
+        with self.assertRaisesRegex(ManagerError, "Project .* \(requiredResourceIds\)"):
+            self.store.delete_record("resources", ember)
+        with self.assertRaises(ManagerError):
+            self.store.save_record("projects", project, {**saved, "requiredFunctions": ["Teleport"]})
+        with self.assertRaises(ManagerError):
+            self.store.save_record("projects", project, {**saved, "requiredDomain": "astral"})
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "projects" / f"{project}.json")
+        self.assertEqual(exported["requiredResourceIds"], [ember], "unpublished Resources are left out")
+        self.assertEqual((exported["relatedGateId"], exported["requiredDomain"]), (gate, "volcanic"))
+
+    def test_older_databases_gain_the_v8_tables_and_project_gate_column(self) -> None:
+        connection = sqlite3.connect(self.database)
+        connection.execute("DROP TABLE project_resources")
+        connection.execute("DROP TABLE resources")
+        connection.execute("DROP TABLE forms")
+        connection.commit()
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        gate = reopened.save_record("archive", None, {"type": "gate-record", "title": "Old gate", "details": {"designation": "G-01"}})["id"]
+        reopened.save_record("resources", None, {"name": "Works again", "gateId": gate})
+        self.assertEqual(reopened.state()["vocabulary"]["domains"][0], "verdant")
+
     def test_characters_keep_a_coin_count(self) -> None:
         crew = self.store.save_record("characters", None, {"name": "Coin keeper", "published": True})["id"]
         self.assertEqual(self.record("characters", crew)["coins"], 0, "no coins given means none")
@@ -520,6 +741,25 @@ class ContentStoreTests(unittest.TestCase):
                 self.store.save_reading_path(bad)
         self.store.save_reading_path([])
         self.assertTrue(all(post.get("order") is None for post in self.store.state()["game"]))
+
+    def test_learning_paths_split_rules_and_set_a_global_order(self) -> None:
+        ids = [self.store.save_record("game", None, {"type": "rule", "title": f"Rule {n}", "category": "Campaign", "published": n != 4})["id"] for n in range(5)]
+        self.assertEqual(self.store.learning_paths()[0]["key"], "onboarding")
+        self.store.save_learning_paths([{"title": "Onboarding", "ruleIds": [ids[1], ids[0]]},
+                                        {"title": "Crafting & Artificery", "description": "For makers.", "ruleIds": [ids[2], ids[4]]}])
+        paths = self.store.learning_paths()
+        self.assertEqual([(path["key"], path["ruleIds"]) for path in paths], [("onboarding", [ids[1], ids[0]]), ("crafting-artificery", [ids[2], ids[4]])])
+        orders = {post["id"]: post.get("order") for post in self.store.state()["game"]}
+        self.assertEqual([orders[item] for item in ids], [2, 1, 3, None, 4])
+        for bad in ([], [{"title": "Onboarding", "ruleIds": [ids[0]]}, {"title": "Other", "ruleIds": [ids[0]]}],
+                    [{"title": "A"}, {"title": "a"}], [{"title": "Onboarding", "ruleIds": ["missing"]}]):
+            with self.assertRaises(ManagerError):
+                self.store.save_learning_paths(bad)
+        self.store.save_reading_path([ids[2]])
+        self.assertEqual([path["ruleIds"] for path in self.store.learning_paths()], [[ids[2]], [ids[4]]])
+        self.store.export_site()
+        exported = read_json(self.export_dir / "data" / "learning-paths.json")
+        self.assertEqual(exported[1]["ruleIds"], [], "unpublished rules are left out")
 
     def test_rules_with_a_reading_order_come_first_in_that_order(self) -> None:
         for title, order in (("Zeta", 2), ("Alpha", None), ("Omega", 1), ("Beta", "")):
@@ -690,7 +930,8 @@ class ContentStoreTests(unittest.TestCase):
         data = self.export_dir / "data"
         exported = read_json(data / "projects" / f"{prototype}.json")
         self.assertEqual(exported["characterIds"], [mara], "unpublished characters are left out")
-        self.assertEqual(set(exported), {"id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress"})
+        self.assertEqual(set(exported), {"id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress",
+                                         "requiredFunctions", "requiredResourceIds", "requiredDomain", "relatedGateId", "resultType"})
         self.assertEqual(sorted(read_json(data / "projects" / "index.json")), sorted([f"{prototype}.json", f"{harbor}.json"]))
         self.assertEqual(read_json(data / "gear" / f"{rifle}.json")["projectId"], prototype)
         self.assertIsNone(read_json(data / "gear" / f"{lens}.json")["projectId"], "unpublished projects are not named")

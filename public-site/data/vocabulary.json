@@ -1,0 +1,1246 @@
+{
+  "functionGroups": [
+    {
+      "name": "Energy & Light",
+      "functions": [
+        {
+          "name": "Absorb",
+          "definition": "Draw something into itself, taking it out of its surroundings."
+        },
+        {
+          "name": "Amplify",
+          "definition": "Increase the strength or intensity of an effect that already exists."
+        },
+        {
+          "name": "Conduct",
+          "definition": "Carry energy, force or a signal through itself efficiently."
+        },
+        {
+          "name": "Dampen",
+          "definition": "Reduce the strength or intensity of an effect without ending it."
+        },
+        {
+          "name": "Glow",
+          "definition": "Give off light."
+        },
+        {
+          "name": "Heat",
+          "definition": "Raise the temperature of itself or its target."
+        },
+        {
+          "name": "Release",
+          "definition": "Emit or discharge what it holds or can reach, often all at once."
+        },
+        {
+          "name": "Store",
+          "definition": "Hold energy, matter or charge safely for later use."
+        }
+      ]
+    },
+    {
+      "name": "Matter & Structure",
+      "functions": [
+        {
+          "name": "Bind",
+          "definition": "Join separate things and keep them connected."
+        },
+        {
+          "name": "Corrode",
+          "definition": "Break down or degrade matter."
+        },
+        {
+          "name": "Flex",
+          "definition": "Bend, stretch or deform under stress and return to shape without breaking."
+        },
+        {
+          "name": "Regenerate",
+          "definition": "Restore damaged structure or lost substance to what it was."
+        },
+        {
+          "name": "Reinforce",
+          "definition": "Increase resistance to damage, pressure or deformation."
+        },
+        {
+          "name": "Stabilize",
+          "definition": "Resist unwanted change and keep processes steady."
+        },
+        {
+          "name": "Transmute",
+          "definition": "Change matter, or its properties, into another form."
+        }
+      ]
+    },
+    {
+      "name": "Motion & Space",
+      "functions": [
+        {
+          "name": "Anchor",
+          "definition": "Hold fast in place, resisting any force or effect that would shift it."
+        },
+        {
+          "name": "Move",
+          "definition": "Impart, alter, speed up or direct motion."
+        },
+        {
+          "name": "Phase",
+          "definition": "Change how something occupies space, letting it pass partly or wholly through solid matter."
+        },
+        {
+          "name": "Slip",
+          "definition": "Escape grip, friction or restraint, sliding free of whatever would hold it."
+        }
+      ]
+    },
+    {
+      "name": "Signal & Perception",
+      "functions": [
+        {
+          "name": "Hide",
+          "definition": "Conceal from perception or detection, whether senses or instruments."
+        },
+        {
+          "name": "Record",
+          "definition": "Keep impressions, states or patterns that can be read back later."
+        },
+        {
+          "name": "Resonate",
+          "definition": "Respond strongly to a particular frequency, pattern or signature."
+        },
+        {
+          "name": "Sense",
+          "definition": "Detect a target phenomenon or condition."
+        }
+      ]
+    },
+    {
+      "name": "Process & Response",
+      "functions": [
+        {
+          "name": "Adapt",
+          "definition": "Change in response to conditions, in a useful or self-directed way."
+        },
+        {
+          "name": "Catalyze",
+          "definition": "Start, enable or speed up a process without being used up by it."
+        },
+        {
+          "name": "Filter",
+          "definition": "Let some things through while holding others back."
+        },
+        {
+          "name": "Invert",
+          "definition": "Reverse a property, direction or effect: hot to cold, pull to push, growth to decay."
+        },
+        {
+          "name": "Loop",
+          "definition": "Repeat a process, motion or event in a cycle, returning to where it began."
+        },
+        {
+          "name": "Nullify",
+          "definition": "Cancel or suppress a phenomenon outright, especially an anomalous one."
+        },
+        {
+          "name": "React",
+          "definition": "Produce a defined response to a specific trigger."
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "a": "Absorb",
+      "b": "Amplify",
+      "kind": "instability",
+      "keyword": "Overload",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Dampen",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Filter",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Glow",
+      "kind": "opposition",
+      "keyword": "Darkness",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Nullify",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "Feeding",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Release",
+      "kind": "instability",
+      "keyword": "Feedback",
+      "note": ""
+    },
+    {
+      "a": "Absorb",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Flex",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Hide",
+      "kind": "synergy",
+      "keyword": "Camouflage",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Loop",
+      "kind": "opposition",
+      "keyword": "Rigidity",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Nullify",
+      "kind": "opposition",
+      "keyword": "Suppression",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "React",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Record",
+      "kind": "synergy",
+      "keyword": "Learning",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Transmute",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Adapt",
+      "b": "Transmute",
+      "kind": "instability",
+      "keyword": "Runaway mutation",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Conduct",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Conduct",
+      "kind": "instability",
+      "keyword": "Overload",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Dampen",
+      "kind": "opposition",
+      "keyword": "Cancellation",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Glow",
+      "kind": "synergy",
+      "keyword": "Flare",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Heat",
+      "kind": "instability",
+      "keyword": "Overheating",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Hide",
+      "kind": "opposition",
+      "keyword": "Exposure",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Loop",
+      "kind": "instability",
+      "keyword": "Feedback",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Nullify",
+      "kind": "opposition",
+      "keyword": "Cancellation",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "React",
+      "kind": "instability",
+      "keyword": "Escalation",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Regenerate",
+      "kind": "instability",
+      "keyword": "Uncontrolled growth",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Resonate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Sense",
+      "kind": "instability",
+      "keyword": "Sensory overload",
+      "note": ""
+    },
+    {
+      "a": "Amplify",
+      "b": "Store",
+      "kind": "instability",
+      "keyword": "Overload",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Bind",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Dampen",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Move",
+      "kind": "opposition",
+      "keyword": "Strain",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Nullify",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Phase",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Reinforce",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Slip",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Anchor",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Catalyze",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Corrode",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Flex",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Phase",
+      "kind": "opposition",
+      "keyword": "Separation",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "Mending",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Reinforce",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Release",
+      "kind": "instability",
+      "keyword": "Rupture",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Slip",
+      "kind": "opposition",
+      "keyword": "Loosening",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Bind",
+      "b": "Transmute",
+      "kind": "instability",
+      "keyword": "Fusion",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Corrode",
+      "kind": "instability",
+      "keyword": "Runaway decay",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Dampen",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Heat",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Loop",
+      "kind": "instability",
+      "keyword": "Chain reaction",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Move",
+      "kind": "synergy",
+      "keyword": "Propulsion",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Nullify",
+      "kind": "opposition",
+      "keyword": "Suppression",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "React",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Regenerate",
+      "kind": "instability",
+      "keyword": "Runaway growth",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Release",
+      "kind": "instability",
+      "keyword": "Runaway",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Catalyze",
+      "b": "Transmute",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Dampen",
+      "kind": "opposition",
+      "keyword": "Resistance",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Filter",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Heat",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Loop",
+      "kind": "instability",
+      "keyword": "Short circuit",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Nullify",
+      "kind": "opposition",
+      "keyword": "Cancellation",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Resonate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Conduct",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Regenerate",
+      "kind": "opposition",
+      "keyword": "Attrition",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Reinforce",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Store",
+      "kind": "instability",
+      "keyword": "Leak",
+      "note": ""
+    },
+    {
+      "a": "Corrode",
+      "b": "Transmute",
+      "kind": "synergy",
+      "keyword": "Breakdown",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Glow",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Hide",
+      "kind": "synergy",
+      "keyword": "Silence",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Nullify",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Release",
+      "kind": "instability",
+      "keyword": "Pressure buildup",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Resonate",
+      "kind": "opposition",
+      "keyword": "Detuning",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Sense",
+      "kind": "opposition",
+      "keyword": "Signal loss",
+      "note": ""
+    },
+    {
+      "a": "Dampen",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Filter",
+      "b": "Nullify",
+      "kind": "synergy",
+      "keyword": "Purge",
+      "note": ""
+    },
+    {
+      "a": "Filter",
+      "b": "Phase",
+      "kind": "synergy",
+      "keyword": "Selective passage",
+      "note": ""
+    },
+    {
+      "a": "Filter",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Flex",
+      "b": "Reinforce",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Flex",
+      "b": "Release",
+      "kind": "instability",
+      "keyword": "Recoil",
+      "note": ""
+    },
+    {
+      "a": "Flex",
+      "b": "Slip",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Flex",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "Reduced function",
+      "note": ""
+    },
+    {
+      "a": "Flex",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "Spring",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Heat",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Hide",
+      "kind": "opposition",
+      "keyword": "Exposure",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Invert",
+      "kind": "synergy",
+      "keyword": "Shadow",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "React",
+      "kind": "synergy",
+      "keyword": "Signal",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "Flash",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "Illumination",
+      "note": ""
+    },
+    {
+      "a": "Glow",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "Afterglow",
+      "note": ""
+    },
+    {
+      "a": "Heat",
+      "b": "Invert",
+      "kind": "synergy",
+      "keyword": "Chill",
+      "note": ""
+    },
+    {
+      "a": "Heat",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Heat",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Hide",
+      "b": "Phase",
+      "kind": "synergy",
+      "keyword": "Vanishing",
+      "note": ""
+    },
+    {
+      "a": "Hide",
+      "b": "Resonate",
+      "kind": "opposition",
+      "keyword": "Giveaway",
+      "note": ""
+    },
+    {
+      "a": "Hide",
+      "b": "Sense",
+      "kind": "opposition",
+      "keyword": "Detection",
+      "note": ""
+    },
+    {
+      "a": "Hide",
+      "b": "Slip",
+      "kind": "synergy",
+      "keyword": "Evasion",
+      "note": ""
+    },
+    {
+      "a": "Invert",
+      "b": "Loop",
+      "kind": "instability",
+      "keyword": "Paradox",
+      "note": ""
+    },
+    {
+      "a": "Invert",
+      "b": "Move",
+      "kind": "synergy",
+      "keyword": "Rebound",
+      "note": ""
+    },
+    {
+      "a": "Invert",
+      "b": "Nullify",
+      "kind": "instability",
+      "keyword": "Backlash",
+      "note": ""
+    },
+    {
+      "a": "Invert",
+      "b": "Regenerate",
+      "kind": "instability",
+      "keyword": "Withering",
+      "note": ""
+    },
+    {
+      "a": "Invert",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Move",
+      "kind": "synergy",
+      "keyword": "Orbit",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Phase",
+      "kind": "instability",
+      "keyword": "Recursion",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Record",
+      "kind": "synergy",
+      "keyword": "Playback",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "Renewal",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Resonate",
+      "kind": "synergy",
+      "keyword": "Standing wave",
+      "note": ""
+    },
+    {
+      "a": "Loop",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "Steady state",
+      "note": ""
+    },
+    {
+      "a": "Move",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Move",
+      "b": "Slip",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Move",
+      "b": "Slip",
+      "kind": "instability",
+      "keyword": "Loss of control",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Phase",
+      "kind": "instability",
+      "keyword": "Entrapment",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Record",
+      "kind": "opposition",
+      "keyword": "Erasure",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Regenerate",
+      "kind": "opposition",
+      "keyword": "Suppression",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Resonate",
+      "kind": "opposition",
+      "keyword": "Cancellation",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Sense",
+      "kind": "opposition",
+      "keyword": "Blindness",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Nullify",
+      "b": "Transmute",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Phase",
+      "b": "Reinforce",
+      "kind": "opposition",
+      "keyword": "Structural strain",
+      "note": ""
+    },
+    {
+      "a": "Phase",
+      "b": "Reinforce",
+      "kind": "instability",
+      "keyword": "Fracture",
+      "note": ""
+    },
+    {
+      "a": "Phase",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Phase",
+      "b": "Slip",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "React",
+      "b": "Release",
+      "kind": "synergy",
+      "keyword": "Tripwire",
+      "note": ""
+    },
+    {
+      "a": "React",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "Trigger",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Regenerate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Regenerate",
+      "kind": "instability",
+      "keyword": "Replicated flaws",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Resonate",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Record",
+      "b": "Transmute",
+      "kind": "instability",
+      "keyword": "Pattern corruption",
+      "note": ""
+    },
+    {
+      "a": "Regenerate",
+      "b": "Reinforce",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Regenerate",
+      "b": "Transmute",
+      "kind": "instability",
+      "keyword": "Runaway transformation",
+      "note": ""
+    },
+    {
+      "a": "Reinforce",
+      "b": "Stabilize",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Release",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Release",
+      "b": "Store",
+      "kind": "instability",
+      "keyword": "Catastrophic discharge",
+      "note": "When the release is not controlled."
+    },
+    {
+      "a": "Resonate",
+      "b": "Sense",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Resonate",
+      "b": "Stabilize",
+      "kind": "opposition",
+      "keyword": "Detuning",
+      "note": ""
+    },
+    {
+      "a": "Stabilize",
+      "b": "Store",
+      "kind": "synergy",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Stabilize",
+      "b": "Transmute",
+      "kind": "opposition",
+      "keyword": "",
+      "note": ""
+    },
+    {
+      "a": "Store",
+      "b": "Transmute",
+      "kind": "instability",
+      "keyword": "Containment failure",
+      "note": ""
+    }
+  ],
+  "domains": [
+    {
+      "key": "verdant",
+      "name": "Verdant",
+      "colour": "#7cc47a",
+      "description": "Biologically dense places dominated by strange growth: forests, wetlands, fungal systems and other highly active life."
+    },
+    {
+      "key": "volcanic",
+      "name": "Volcanic",
+      "colour": "#e0815c",
+      "description": "Heat, geothermal activity, magma, ash, mineral pressure and intensely energetic geology."
+    },
+    {
+      "key": "abyssal",
+      "name": "Abyssal",
+      "colour": "#6f9fe0",
+      "description": "Deep water: submerged, high-pressure, lightless, oceanic or otherwise deep and hostile places."
+    },
+    {
+      "key": "arid",
+      "name": "Arid",
+      "colour": "#d6b46a",
+      "description": "Dry places: deserts, salt flats, exposed stone, desiccated caverns and mineral wastes."
+    },
+    {
+      "key": "frozen",
+      "name": "Frozen",
+      "colour": "#9fdcec",
+      "description": "Ice, snow, extreme cold, cryogenic conditions and unusual preservation."
+    },
+    {
+      "key": "constructed",
+      "name": "Constructed",
+      "colour": "#b4b4c8",
+      "description": "Places that were clearly built: machine worlds, ancient complexes, artificial ecosystems and megastructures."
+    }
+  ]
+}

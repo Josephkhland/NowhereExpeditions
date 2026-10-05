@@ -1,8 +1,11 @@
-const state = { gear: [], characters: [], archive: [], jobs: [], game: [], outpost: {}, site: {}, settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [] };
-let activeView = "outpost";
+const state = { gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {},
+  settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [],
+  // The shared vocabulary (Functions, Domains...), sent by the server so it is defined in one place.
+  vocabulary: { functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
+let activeView = "home";
 let selectedId = null;
 let draft = false;
-// The reading path being edited (ordered rule IDs), or null when the Game view shows a record instead.
+// The learning paths being edited (in the Learning Paths view), or null.
 let pathEditor = null;
 let filterText = "";
 let listFilters = {};
@@ -692,16 +695,26 @@ const collections = {
         <div class="complication-rows" id="complication-rows">${(record.complications || []).map(complicationRow).join("")}</div>
         <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-complication">+ Add complication</button>
           <span class="helper">An active complication marks the project in red on the site. Resolved ones stay in its complication history.</span></div></div>
-      ${textarea("Expected outcome", "outcome", record.outcome || "", { full: true, rows: 4, help: "What changes in the world when it is completed. Markdown; link Archive entries with [[archive-id]]." })}`;
+      ${textarea("Expected outcome", "outcome", record.outcome || "", { full: true, rows: 4, help: "What changes in the world when it is completed. Markdown; link Archive entries with [[archive-id]]." })}
+      <div class="form-section">Requirements &amp; result</div>
+      ${functionPicker("requiredFunctions", record.requiredFunctions || [], "Required Functions", "Any Resource with these Functions meets the Requirement.")}
+      ${recordChecklist("requiredResourceIds", record.requiredResourceIds || [], "resources", (resource) => resource.name, "Required Resources", "Specific Resources this Project needs, such as the one an Establish Supply Project is for.")}
+      ${selectField("Required Domain", "requiredDomain", record.requiredDomain || "", state.vocabulary.domains.map((key) => [key, domainName(key)]), { emptyLabel: "— None —" })}
+      ${gateSelect("Related Gate", "relatedGateId", record.relatedGateId, "Optional. The Gate this Project depends on, for example the source of a Resource.")}
+      ${selectField("Result", "resultType", record.resultType || "", state.vocabulary.projectResults.map((value) => [value, humanize(value)]), { emptyLabel: "— Not set —", help: "What completing it produces. Link the result back with its own Project field (Gear, Facilities, Resources, Forms)." })}`;
     },
     related: (record) => {
       const facilities = state.facilities.filter((facility) => facility.projectId === record.id);
       const gear = state.gear.filter((item) => item.projectId === record.id);
+      const resources = state.resources.filter((resource) => resource.projectId === record.id);
+      const forms = state.forms.filter((form) => form.projectId === record.id);
       return `<div class="form-section">Derived references</div>
         ${relatedBlock("Brought into the game", [
           ...facilities.map((facility) => `${referenceLink("facilities", facility, facility.name)} <span class="helper">facility</span>`),
-          ...gear.map((item) => `${referenceLink("gear", item, item.name)} <span class="helper">gear</span>`)
-        ], "No facility or gear names this project yet.")}
+          ...gear.map((item) => `${referenceLink("gear", item, item.name)} <span class="helper">gear</span>`),
+          ...resources.map((resource) => `${referenceLink("resources", resource, resource.name)} <span class="helper">resource</span>`),
+          ...forms.map((form) => `${referenceLink("forms", form, form.name)} <span class="helper">spell form</span>`)
+        ], "Nothing names this project as its source yet.")}
         ${linkCheck([record.summary, record.outcome])}`;
     },
     read: (formData, form) => ({
@@ -716,7 +729,11 @@ const collections = {
         text: row.querySelector('[data-complication="text"]').value.trim(),
         resolved: row.querySelector('[data-complication="resolved"]').checked,
         resolution: row.querySelector('[data-complication="resolution"]').value.trim()
-      })).filter((item) => item.text)
+      })).filter((item) => item.text),
+      requiredFunctions: formData.getAll("requiredFunctions"),
+      requiredResourceIds: formData.getAll("requiredResourceIds"),
+      requiredDomain: formText(formData, "requiredDomain"), relatedGateId: formText(formData, "relatedGateId") || null,
+      resultType: formText(formData, "resultType")
     })
   },
   facilities: {
@@ -832,7 +849,8 @@ const collections = {
     filters: [["type", "All types", ARCHIVE_TYPES]],
     idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (archive.html#id) and the target of [[id]] links.",
     fields: (record) => {
-      const type = record.type || listFilters.archive?.type || "history";
+      const listType = listFilters.archive?.type;
+      const type = record.type || (activePreset === "gates" ? "gate-record" : listType && !listType.startsWith("!") && listType !== "gate-record" ? listType : "history");
       const details = record.details || {};
       const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
@@ -849,12 +867,16 @@ const collections = {
       ${section("gate-record", `
         <div class="form-section">Gate Record</div>
         ${field("Designation", "gateDesignation", details.designation || "", { placeholder: "G-17", help: "Required for Gate Records." })}
-        ${selectField("Gate status", "gateStatus", details.gateStatus || "active", enumChoices(["active", "dormant", "collapsed", "lost"]))}
+        ${selectField("Gate status", "gateStatus", details.gateStatus || "active", enumChoices(state.vocabulary.gateStatuses), { help: "Collapsed: Core recovered. Sealed: closed as an unacceptable threat. Emerging: newly opening." })}
+        ${domainPicker("domains", details.domains || [], "Normally one Domain. Two only when that defines the place; its native Resources and creatures inherit it.")}
         ${field("Discovered", "discoveredAt", details.discoveredAt || "", { type: "date" })}
         ${textarea("Environment", "environment", details.environment || "", { full: true, help: "What the Outpost currently knows. Keep GM-only truths out of this record." })}
         ${textarea("Known traits", "knownTraits", listText(details.knownTraits), { help: "One per line." })}
         ${textarea("Known hazards", "knownHazards", listText(details.knownHazards), { help: "One per line." })}
-        ${textarea("Known locations", "knownLocations", listText(details.knownLocations), { full: true, help: "One per line. Only locations the Expeditioners have found or heard of." })}`)}
+        ${textarea("Known locations", "knownLocations", listText(details.knownLocations), { full: true, help: "One per line. Only locations the Expeditioners have found or heard of." })}
+        ${textarea("Known creatures", "knownCreatures", listText(details.knownCreatures), { full: true, help: "One per line. They inherit the Gate's Domain." })}
+        <div class="form-section cm-only">CM only · never published</div>
+        ${textarea("CM notes", "gmNotes", details.gmNotes || "", { full: true, rows: 4, help: "The Gate Aspect, secrets, generator notes." })}`)}
       ${section("session-record", `
         <div class="form-section">Session Record</div>
         ${field("Session date", "sessionDate", details.sessionDate || "", { type: "date" })}
@@ -863,10 +885,16 @@ const collections = {
     },
     related: (record) => {
       const jobs = state.jobs.filter((job) => job.sessionRecordId === record.id);
+      const resources = state.resources.filter((resource) => resource.gateId === record.id);
+      const projects = state.projects.filter((project) => project.relatedGateId === record.id);
+      const gateBlock = record.type === "gate-record" ? `
+        ${relatedBlock("Resources from this Gate", resources.map((resource) => `${referenceLink("resources", resource, resource.name)} <span class="helper">${escapeHtml(resource.availability)}</span>`), "No Resources yet. Add them in Resources or generate them in CM Tools.")}
+        ${relatedBlock("Related projects", projectRows(projects), "No project names this Gate.")}` : "";
       const linkedFrom = [...state.archive, ...state.jobs].filter((other) => other.id !== record.id
         && [other.content, other.summary, other.briefing, other.objective].join("\n").includes(`[[${record.id}`));
       return `<div class="form-section">Derived references</div>
         ${record.type === "session-record" ? relatedBlock("Session Record of", jobs.map((job) => referenceLink("jobs", job, jobLabel(job))), "No Job points at this record yet.") : ""}
+        ${gateBlock}
         ${relatedBlock("Linked from", linkedFrom.map((other) => state.archive.includes(other) ? referenceLink("archive", other, archiveLabel(other)) : referenceLink("jobs", other, jobLabel(other))), "No other record links here.")}
         ${linkCheck([record.summary, record.content])}${legacyNote(record)}`;
     },
@@ -876,7 +904,8 @@ const collections = {
         designation: formText(formData, "gateDesignation"), gateStatus: formText(formData, "gateStatus"),
         discoveredAt: formText(formData, "discoveredAt"), environment: formText(formData, "environment"),
         knownTraits: linesToArray(formData.get("knownTraits")), knownHazards: linesToArray(formData.get("knownHazards")),
-        knownLocations: linesToArray(formData.get("knownLocations"))
+        knownLocations: linesToArray(formData.get("knownLocations")),
+        domains: formData.getAll("domains"), knownCreatures: linesToArray(formData.get("knownCreatures")), gmNotes: formText(formData, "gmNotes")
       } : type === "session-record" ? { sessionDate: formText(formData, "sessionDate"), outcome: formText(formData, "outcome") } : {};
       return {
         type, title: formText(formData, "title"), subtitle: formText(formData, "subtitle"),
@@ -888,7 +917,7 @@ const collections = {
     }
   },
   gear: {
-    title: "Marketplace / Gear", panel: "GEAR CATALOGUE", singular: "Gear",
+    title: "Marketplace", panel: "GEAR CATALOGUE", singular: "Gear",
     name: (record) => record.name,
     meta: (record) => [humanize(record.category), record.featured ? "Featured" : "", record.availability],
     filters: [["category", "All categories", GEAR_CATEGORIES.map((value) => [value, humanize(value)])],
@@ -931,7 +960,7 @@ const collections = {
     })
   },
   game: {
-    title: "Game", panel: "GAME POSTS", singular: "Game post",
+    title: "Announcements & Rules", panel: "ANNOUNCEMENTS & RULES", singular: "Game post",
     name: (record) => record.title,
     meta: (record) => record.type === "announcement"
       ? ["Announcement", record.pinned ? "Pinned" : "", record.publishedAt]
@@ -944,7 +973,7 @@ const collections = {
     idHelp: "Generated from the title when left blank. Announcements are linked as game.html#post-<id>.",
     fields: (record) => {
       const type = record.type || listFilters.game?.type || "announcement";
-      const categories = ["Campaign", "Recruitment Factions", "Campaign Systems", "For Crafters & Artificers", "For Settlement Builders", "Jobs", "Outpost", "Information"];
+      const categories = ["Campaign", "Recruitment Factions", "Campaign Systems", "For Crafters & Artificers", "For Spellcasters", "For Settlement Builders", "Jobs", "Outpost", "Information"];
       if (record.category && !categories.includes(record.category)) categories.push(record.category);
       const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
@@ -956,11 +985,13 @@ const collections = {
         <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
       ${section("rule", `
         ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}
-        <div class="field"><span class="field-label">Reading path</span><p class="path-status">${Number.isInteger(record.order)
-          ? `Step ${record.order} of the Onboarding reading path.` : "Not on the reading path."}</p>
-          <span class="helper">Change it with <strong>Edit reading path…</strong> above the list of Game posts.</span></div>`)}
+        <div class="field"><span class="field-label">Learning path</span><p class="path-status">${(() => {
+          const place = record.id ? pathOfRule(record.id) : null;
+          return place ? `Step ${place.index + 1} of ${place.path.ruleIds.length} on “${escapeHtml(place.path.title)}”.` : "Not on a learning path.";
+        })()}</p>
+          <span class="helper">Change it under <strong>Learning Paths</strong> in the sidebar.</span></div>`)}
       ${textarea("Short summary", "summary", record.summary || "", { full: true })}
-      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]. Put <code>{{reading-path}}</code> on its own line to show the numbered Onboarding reading path there." })}
+      ${textarea("Details", "details", record.details || "", { full: true, rows: 8, help: "Markdown: **bold**, *italic*, # headings, - and 1. lists, > quotes, tables, `code`, [text](url). Link Archive entries with [[archive-id]] or [[archive-id|text]]. Put <code>{{reading-path}}</code> on its own line to show Onboarding and the learning paths there." })}
       ${textarea("Search tags", "tags", listText(record.tags), { full: true, help: "One tag per line. These terms are included in public search." })}
       ${imageField("Art", "image", record.image)}
       <p class="helper field full">Optional. Shown on the right of the post on wide screens, fading into the page, and as a faded banner above it on phones. Wide landscape images work best.</p>`;
@@ -987,6 +1018,957 @@ function legacyNote(record) {
   if (!record.legacy) return "";
   const source = { gates: "Gate", expeditions: "Expedition", expedition_reports: "Expedition Report", rules: "Rule" }[record.legacy.source] || record.legacy.source;
   return `<div class="field full"><span class="helper">Migrated from a v3 ${escapeHtml(source)}. The original record is kept in the database's legacy_records table.</span></div>`;
+}
+
+/* ---------- Functions, Domains, Resources and Spell Forms ---------- */
+
+// Checkboxes for Resource Functions, grouped as in the rules. Read with formData.getAll(name).
+function functionPicker(name, selected, label, help = "") {
+  return `<div class="field full"><span class="field-label">${label}</span>
+    <div class="function-picker-groups">${Object.entries(state.vocabulary.functionGroups).map(([group, names]) => `
+      <div class="function-group"><strong>${escapeHtml(group)}</strong>${names.map((fn) => `
+        <label><input type="checkbox" name="${name}" value="${fn}" ${selected.includes(fn) ? "checked" : ""} />${fn}</label>`).join("")}</div>`).join("")}</div>
+    ${help ? `<span class="helper">${help}</span>` : ""}</div>`;
+}
+
+function domainPicker(name, selected, help = "") {
+  return `<div class="field full"><span class="field-label">Domain</span>
+    <div class="domain-options">${state.vocabulary.domains.map((domain) => `
+      <label><input type="checkbox" name="${name}" value="${domain}" ${selected.includes(domain) ? "checked" : ""} />${escapeHtml(domainName(domain))}</label>`).join("")}</div>
+    ${help ? `<span class="helper">${help}</span>` : ""}</div>`;
+}
+
+// A filterable list of records to tick. Read with formData.getAll(name).
+function recordChecklist(name, selectedIds, key, labelFor, label, help = "") {
+  const records = [...state[key]].sort((left, right) => String(labelFor(left)).localeCompare(String(labelFor(right))));
+  const list = records.length ? records.map((record) => `
+    <label class="check-option" data-search="${escapeHtml(String(labelFor(record)).toLowerCase())}">
+      <input type="checkbox" name="${name}" value="${escapeHtml(record.id)}" ${selectedIds.includes(record.id) ? "checked" : ""} />
+      <span>${escapeHtml(labelFor(record))}${record.published ? "" : " — unpublished"}</span>
+    </label>`).join("") : '<div class="empty-list">None yet.</div>';
+  return `<div class="field full"><span class="field-label">${label}</span>
+    <input type="search" class="reference-filter" data-filter-list="${name}-list" placeholder="Filter" aria-label="Filter ${label}" />
+    <div class="check-list" id="${name}-list">${list}</div>${help ? `<span class="helper">${help}</span>` : ""}</div>`;
+}
+
+const isGate = (entry) => entry.type === "gate-record";
+const gateLabel = (entry) => [entry.details?.designation, entry.title].filter(Boolean).join(" · ");
+const gateSelect = (label, name, value, help) => referenceSelect(label, name, value, "archive", gateLabel, { filter: isGate, emptyLabel: "— No Gate —", help });
+const gateDomains = (gateId) => findRecord("archive", gateId)?.details?.domains || [];
+const resourceDomains = (resource) => resource.domains?.length ? resource.domains : gateDomains(resource.gateId);
+const domainText = (domains) => domains.length ? domains.map(domainName).join(" + ") : "No Domain";
+
+collections.resources = {
+  title: "Resources", panel: "GATE RESOURCES", singular: "Resource",
+  name: (record) => record.name,
+  meta: (record) => [domainText(resourceDomains(record)), humanize(record.availability || "sample"), (record.functions || []).join(" · ")],
+  get filters() {
+    return [["availability", "Any availability", state.vocabulary.resourceAvailability.map((value) => [value, humanize(value)])],
+      ["sourceType", "Any source", state.vocabulary.resourceSources.map((value) => [value, humanize(value)])]];
+  },
+  idHelp: "Generated from the name when left blank. Projects reference this ID.",
+  fields: (record) => `
+    ${field("Name", "name", record.name || "", { required: true, help: "Named by the Expeditioners who discovered it." })}
+    ${selectField("Source", "sourceType", record.sourceType || "other", state.vocabulary.resourceSources.map((value) => [value, humanize(value)]))}
+    ${gateSelect("Origin Gate", "gateId", record.gateId, "The Gate it comes from. It inherits that Gate's Domain unless you pick one below.")}
+    ${selectField("Availability", "availability", record.availability || "sample", state.vocabulary.resourceAvailability.map((value) => [value, humanize(value)]),
+      { help: "Sample: research quantities. Limited: a stock that use consumes. Available: a dependable supply." })}
+    ${domainPicker("domains", record.domains || [], "Leave empty to inherit the origin Gate's Domain.")}
+    ${textarea("Description", "description", record.description || "", { full: true, rows: 3, help: "What it looks, feels and behaves like. Fiction, not mechanics." })}
+    ${functionPicker("functions", record.functions || [], "Known Functions", "What Endros currently understands it can do. Usually 1–3; 4+ is exceptional.")}
+    ${textarea("Special Property", "specialProperty", record.specialProperty || "", { full: true, rows: 2, help: "Strange behavior too specific to be a Function." })}
+    ${field("Supply", "supply", record.supply || "", { full: true, placeholder: "e.g. Established extraction operation", help: "Optional. How Endros gets it." })}
+    ${projectSelect(record)}
+    <div class="form-section cm-only">CM only · never published</div>
+    <div class="field full gm-only">${functionPicker("hiddenFunctions", record.hiddenFunctions || [], "Hidden Functions", "Already in the material, not yet understood. Research can reveal them: move them to Known Functions when it does.")}</div>
+    ${textarea("Harvesting issue", "harvestingIssue", record.harvestingIssue || "", { full: true, rows: 2 })}
+    ${textarea("CM notes", "gmNotes", record.gmNotes || "", { full: true, rows: 3 })}`,
+  related: (record) => {
+    const projects = state.projects.filter((project) => (project.requiredResourceIds || []).includes(record.id));
+    return `<div class="form-section">Derived references</div>
+      ${relatedBlock("Required by projects", projectRows(projects), "No project requires it.")}`;
+  },
+  read: (formData) => ({
+    name: formText(formData, "name"), sourceType: formText(formData, "sourceType"), gateId: formText(formData, "gateId") || null,
+    availability: formText(formData, "availability"), domains: formData.getAll("domains"), description: formText(formData, "description"),
+    functions: formData.getAll("functions"), specialProperty: formText(formData, "specialProperty"), supply: formText(formData, "supply"),
+    projectId: formText(formData, "projectId") || null, hiddenFunctions: formData.getAll("hiddenFunctions"),
+    harvestingIssue: formText(formData, "harvestingIssue"), gmNotes: formText(formData, "gmNotes")
+  })
+};
+
+const FORM_TIER_LABELS = { basic: "Basic Form", first: "First Form", second: "Second Form", third: "Third Form" };
+collections.forms = {
+  title: "Spell Forms", panel: "SPELL FORMS", singular: "Form",
+  name: (record) => record.name,
+  meta: (record) => [FORM_TIER_LABELS[record.tier] || record.tier, (record.words || []).join(" + "), humanize(record.status || "known")],
+  get filters() {
+    return [["tier", "Any tier", Object.keys(state.vocabulary.formTiers).map((tier) => [tier, FORM_TIER_LABELS[tier] || humanize(tier)])],
+      ["status", "Any status", state.vocabulary.formStatuses.map((value) => [value, humanize(value)])]];
+  },
+  idHelp: "Generated from the name when left blank.",
+  fields: (record) => `
+    ${field("Name", "name", record.name || "", { required: true, placeholder: "e.g. Flash Freeze" })}
+    ${selectField("Tier", "tier", record.tier || "first", Object.entries(state.vocabulary.formTiers).map(([tier, words]) => [tier, `${FORM_TIER_LABELS[tier] || humanize(tier)} (${words} Word${words > 1 ? "s" : ""})`]),
+      { help: "Basic manifests one Word. First uses one Word for a defined effect. Second and Third combine two and three Words." })}
+    ${selectField("Status", "status", record.status || "known", state.vocabulary.formStatuses.map((value) => [value, humanize(value)]),
+      { help: "Theoretical: proposed. In development: a Spell Innovation Project is working on it. Known: a learnable Form." })}
+    ${projectSelect(record)}
+    ${functionPicker("words", record.words || [], "Words", "Tick exactly as many Words as the tier uses.")}
+    ${textarea("Effect", "effect", record.effect || "", { full: true, rows: 4, help: "What the Form does. Leave costs and difficulties out until they are finalized." })}
+    <div class="form-section cm-only">CM only · never published</div>
+    ${textarea("CM notes", "gmNotes", record.gmNotes || "", { full: true, rows: 3 })}`,
+  read: (formData) => ({
+    name: formText(formData, "name"), tier: formText(formData, "tier"), status: formText(formData, "status"),
+    projectId: formText(formData, "projectId") || null, words: formData.getAll("words"), effect: formText(formData, "effect"),
+    gmNotes: formText(formData, "gmNotes")
+  })
+};
+
+/* ---------- CM Tools: Resource and Gate generators (drafts, edited before saving) ---------- */
+
+const toolView = {
+  tab: "resource",
+  resourceOptions: { domain: "random", source: "random", count: "random", mode: "mixed", gateId: "", hidden: true, special: true, harvesting: true },
+  gateOptions: { designation: "", domain: "random", secondDomain: "", fauna: "random", flora: "random", ground: "random" },
+  resource: null,
+  gate: null,
+};
+
+const nextGateDesignation = () => {
+  const numbers = state.archive.filter(isGate).map((entry) => Number(String(entry.details?.designation || "").match(/(\d+)/)?.[1]) || 0);
+  return `G-${String(Math.max(0, ...numbers) + 1).padStart(2, "0")}`;
+};
+const optionList = (values, selected, labels = {}) => values.map((value) => `<option value="${escapeHtml(value)}" ${String(value) === String(selected) ? "selected" : ""}>${escapeHtml(labels[value] || humanize(String(value)))}</option>`).join("");
+const listInput = (values) => (values || []).join(", ");
+const parseList = (text) => String(text || "").split(/[,\n]/).map((item) => item.trim()).filter(Boolean);
+
+// One editable Resource draft. `inheritGate` hides the Domain choice for Resources saved with a new Gate.
+function draftCard(resource, index, { inheritGate = false, removable = false } = {}) {
+  const words = Object.values(state.vocabulary.functionGroups).flat().join(", ");
+  return `<div class="draft-card" data-draft-card="${index}">
+    <div class="draft-card-head">
+      <strong>${escapeHtml(humanize(resource.ecology || resource.sourceType || "resource"))}${resource.origin ? ` · ${escapeHtml(resource.origin)}` : ""}</strong>
+      ${removable ? '<label class="inline-check"><input type="checkbox" class="draft-include" checked /> Save this one</label>' : ""}
+    </div>
+    <div class="draft-grid">
+      <label>Name<input type="text" data-draft="name" value="${escapeHtml(resource.name)}" /></label>
+      <label>Source<select data-draft="sourceType">${optionList(state.vocabulary.resourceSources, resource.sourceType)}</select></label>
+      <label>Availability<select data-draft="availability">${optionList(state.vocabulary.resourceAvailability, resource.availability)}</select></label>
+      ${inheritGate ? "" : `<label>Domain<select data-draft="domain"><option value="">Inherit from Gate</option>${optionList(state.vocabulary.domains, resource.domains?.[0] || "", domainLabels())}</select></label>`}
+      <label>Known Functions<input type="text" data-draft="functions" value="${escapeHtml(listInput(resource.functions))}" title="${escapeHtml(words)}" /></label>
+      <label>Hidden Functions (CM only)<input type="text" data-draft="hiddenFunctions" value="${escapeHtml(listInput(resource.hiddenFunctions))}" title="${escapeHtml(words)}" /></label>
+    </div>
+    <label>Description<textarea data-draft="description">${escapeHtml(resource.description)}</textarea></label>
+    <label>Special Property<input type="text" data-draft="specialProperty" value="${escapeHtml(resource.specialProperty || "")}" /></label>
+    <label>Harvesting issue (CM only)<input type="text" data-draft="harvestingIssue" value="${escapeHtml(resource.harvestingIssue || "")}" /></label>
+  </div>`;
+}
+
+function readDraftCard(card) {
+  const value = (key) => card.querySelector(`[data-draft="${key}"]`)?.value.trim() ?? "";
+  const domain = value("domain");
+  return {
+    name: value("name"), sourceType: value("sourceType"), availability: value("availability"), domains: domain ? [domain] : [],
+    functions: parseList(value("functions")), hiddenFunctions: parseList(value("hiddenFunctions")),
+    description: value("description"), specialProperty: value("specialProperty"), harvestingIssue: value("harvestingIssue"), published: false
+  };
+}
+
+function resourceToolPanel() {
+  const options = toolView.resourceOptions;
+  const gates = state.archive.filter(isGate);
+  const draftResource = toolView.resource;
+  return `
+    <div class="tool-options" id="tool-resource-options">
+      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(state.vocabulary.domains, options.domain, domainLabels())}</select></label>
+      <label>Source<select name="source"><option value="random">Random</option>${optionList(["fauna", "flora", "ground"], options.source, { fauna: "Fauna-derived", flora: "Flora-derived", ground: "Ground / ore / stone" })}</select></label>
+      <label>Functions<select name="count">${optionList(["random", 1, 2, 3, 4], options.count, { random: "Random (1–3)", 4: "4 (exceptional)" })}</select></label>
+      <label>Combination<select name="mode">${optionList(["synergy", "mixed", "opposed", "unstable"], options.mode, { synergy: "Naturally synergistic", mixed: "Mixed / ordinary", opposed: "Opposed", unstable: "Unstable / catastrophic" })}</select></label>
+      <label>Origin Gate<select name="gateId"><option value="">None</option>${gates.map((gate) => `<option value="${escapeHtml(gate.id)}" ${gate.id === options.gateId ? "selected" : ""}>${escapeHtml(gateLabel(gate))}</option>`).join("")}</select></label>
+      <label class="inline-check"><input type="checkbox" name="hidden" ${options.hidden ? "checked" : ""} /> Hidden Function</label>
+      <label class="inline-check"><input type="checkbox" name="special" ${options.special ? "checked" : ""} /> Special Property</label>
+      <label class="inline-check"><input type="checkbox" name="harvesting" ${options.harvesting ? "checked" : ""} /> Harvesting issue</label>
+      <div class="tool-actions"><button type="button" class="button button-primary" data-action="tool-generate-resource">${draftResource ? "Generate again" : "Generate Resource"}</button></div>
+    </div>
+    <p class="helper">With an origin Gate, the draft uses that Gate's Domain and leans towards the Functions its other Resources already have.
+      Interactions come from the table in the Resource Functions rule.</p>
+    ${draftResource ? `<div class="tool-draft">${draftCard(draftResource, 0)}
+      <div class="tool-actions"><button type="button" class="button button-primary" data-action="tool-save-resource">Save as unpublished Resource</button></div></div>` : ""}`;
+}
+
+function gateToolPanel() {
+  const options = toolView.gateOptions;
+  const gate = toolView.gate;
+  const counts = ["random", 1, 2, 3];
+  return `
+    <div class="tool-options" id="tool-gate-options">
+      <label>Designation<input type="text" name="designation" value="${escapeHtml(options.designation || nextGateDesignation())}" /></label>
+      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(state.vocabulary.domains, options.domain, domainLabels())}</select></label>
+      <label>Second Domain (rare)<select name="secondDomain"><option value="">None</option>${optionList(state.vocabulary.domains, options.secondDomain, domainLabels())}</select></label>
+      <label>Fauna Resources<select name="fauna">${optionList(counts, options.fauna, { random: "Random (1–3)" })}</select></label>
+      <label>Flora Resources<select name="flora">${optionList(counts, options.flora, { random: "Random (1–3)" })}</select></label>
+      <label>Ground Resources<select name="ground">${optionList(counts, options.ground, { random: "Random (1–3)" })}</select></label>
+      <div class="tool-actions"><button type="button" class="button button-primary" data-action="tool-generate-gate">${gate ? "Generate again" : "Generate Gate"}</button></div>
+    </div>
+    ${gate ? `<div class="tool-draft" id="gate-draft">
+      <div class="draft-card">
+        <div class="draft-card-head"><strong>Gate · ${escapeHtml(gate.domains.map(domainName).join(" + "))}</strong><span class="helper">Signature Functions: ${escapeHtml(gate.signature.join(", "))}</span></div>
+        <div class="draft-grid">
+          <label>Title<input type="text" data-gate="title" value="${escapeHtml(`Gate ${gate.designation}`)}" /></label>
+          <label>Designation<input type="text" data-gate="designation" value="${escapeHtml(gate.designation)}" /></label>
+          <label>Status<select data-gate="gateStatus">${optionList(state.vocabulary.gateStatuses, "emerging")}</select></label>
+        </div>
+        <label>Environment (core concept)<textarea data-gate="environment">${escapeHtml(gate.concept)}</textarea></label>
+        <div class="draft-grid">
+          <label>Known hazards<textarea data-gate="knownHazards">${escapeHtml(gate.hazards.map(cap).join("\n"))}</textarea></label>
+          <label>Landmarks (known locations)<textarea data-gate="knownLocations">${escapeHtml(gate.landmarks.map(cap).join("\n"))}</textarea></label>
+          <label>Known creatures<textarea data-gate="knownCreatures">${escapeHtml(gate.creatures.join("\n"))}</textarea></label>
+        </div>
+        <label>CM notes (never published)<textarea data-gate="gmNotes" rows="8">${escapeHtml([
+          `Gate Aspect: ${gate.aspect}`,
+          `Signature Functions: ${gate.signature.join(", ")}`,
+          `Visual identity: ${gate.inferred.visualIdentity}`,
+          `Ecology: ${gate.inferred.ecology}`,
+          `Likely hazards: ${gate.inferred.likelyHazards}`,
+          `Extraction: ${gate.inferred.extraction}`,
+          `Research hooks: ${gate.inferred.researchHooks}`,
+          `Technology it could unlock: ${gate.inferred.technology}`
+        ].join("\n"))}</textarea></label>
+      </div>
+      <h3>Resources (${gate.resources.length})</h3>
+      ${gate.resources.map((resource, index) => draftCard(resource, index, { inheritGate: true, removable: true })).join("")}
+      <div class="tool-actions"><button type="button" class="button button-primary" data-action="tool-save-gate">Save Gate and ticked Resources as unpublished drafts</button></div>
+    </div>` : ""}`;
+}
+
+function renderTools() {
+  const tab = (key, label) => `<button type="button" class="outpost-tab" role="tab" data-action="tool-tab" data-tab="${key}" aria-selected="${toolView.tab === key}">${label}</button>`;
+  document.getElementById("work-area").innerHTML = `
+    <section class="editor-panel tools-editor" aria-label="CM tools"><div class="editor-content tools-panel">
+      <div class="editor-title"><div><h2>Generators</h2><p>Every result is an editable draft. Saved records start unpublished.</p></div></div>
+      <div class="outpost-tabs" role="tablist" aria-label="Generators">${tab("resource", "Resource Generator")}${tab("gate", "Gate Generator")}</div>
+      ${toolView.tab === "resource" ? resourceToolPanel() : gateToolPanel()}
+    </div></section>`;
+}
+
+function readToolOptions(id) {
+  const root = document.getElementById(id);
+  const options = {};
+  root.querySelectorAll("select, input").forEach((control) => { options[control.name] = control.type === "checkbox" ? control.checked : control.value; });
+  return options;
+}
+
+async function handleToolAction(action, button) {
+  if (action === "tool-tab") {
+    toolView.tab = button.dataset.tab;
+  } else if (action === "tool-generate-resource") {
+    const options = toolView.resourceOptions = readToolOptions("tool-resource-options");
+    const gate = options.gateId ? findRecord("archive", options.gateId) : null;
+    const gateFunctions = gate ? state.resources.filter((resource) => resource.gateId === gate.id).flatMap((resource) => resource.functions || []) : [];
+    const domain = gate?.details?.domains?.length ? pick(gate.details.domains) : options.domain;
+    toolView.resource = generateResource({ ...options, domain, gateFunctions });
+    if (gate) toolView.resource.domains = [];
+  } else if (action === "tool-save-resource") {
+    const data = { ...readDraftCard(document.querySelector("[data-draft-card]")), gateId: toolView.resourceOptions.gateId || null };
+    const result = await api("/api/resources", { method: "POST", body: JSON.stringify({ data }) });
+    toolView.resource = null;
+    await loadState();
+    activeView = "resources"; selectedId = result.id; draft = false;
+    updateNavigation(); renderContent();
+    showNotice(`${data.name} saved as an unpublished Resource.`);
+    return;
+  } else if (action === "tool-generate-gate") {
+    const options = toolView.gateOptions = readToolOptions("tool-gate-options");
+    toolView.gate = generateGate(options);
+  } else if (action === "tool-save-gate") {
+    const draftRoot = document.getElementById("gate-draft");
+    const value = (key) => draftRoot.querySelector(`[data-gate="${key}"]`).value.trim();
+    const lines = (key) => value(key).split("\n").map((line) => line.trim()).filter(Boolean);
+    const gate = await api("/api/archive", { method: "POST", body: JSON.stringify({ data: {
+      type: "gate-record", title: value("title"), published: false,
+      details: { designation: value("designation"), gateStatus: value("gateStatus"), domains: toolView.gate.domains, environment: value("environment"),
+        knownTraits: [], knownHazards: lines("knownHazards"), knownLocations: lines("knownLocations"), knownCreatures: lines("knownCreatures"),
+        gmNotes: value("gmNotes") }
+    } }) });
+    const failures = [];
+    let saved = 0;
+    for (const card of draftRoot.querySelectorAll("[data-draft-card]")) {
+      if (!card.querySelector(".draft-include")?.checked) continue;
+      const data = { ...readDraftCard(card), gateId: gate.id };
+      try {
+        await api("/api/resources", { method: "POST", body: JSON.stringify({ data }) });
+        saved += 1;
+      } catch (error) {
+        failures.push(`${data.name}: ${error.message}`);
+      }
+    }
+    toolView.gate = null;
+    toolView.gateOptions.designation = "";
+    await loadState();
+    activeView = "archive"; selectedId = gate.id; draft = false;
+    updateNavigation(); renderContent();
+    showNotice(`Gate saved with ${saved} Resource${saved === 1 ? "" : "s"}, all unpublished.${failures.length ? ` Not saved: ${failures.join("; ")}` : ""}`, Boolean(failures.length));
+    return;
+  }
+  renderTools();
+}
+
+/* ---------- Domains: the kinds of Gate environment ---------- */
+
+// Records store a Domain's key; everything shown to the GM uses its current name.
+const domainList = () => state.vocabulary.domainList || [];
+const domainName = (key) => domainList().find((domain) => domain.key === key)?.name || humanize(key);
+const domainLabels = () => Object.fromEntries(domainList().map((domain) => [domain.key, domain.name]));
+
+let vocabTab = "functions";
+let domainDraft = null;
+const startDomainDraft = () => { domainDraft = domainList().map((domain) => ({ ...domain, isNew: false })); };
+
+function domainUsage() {
+  const usage = {};
+  const add = (key) => { if (key) usage[key] = (usage[key] || 0) + 1; };
+  state.archive.forEach((entry) => (entry.details?.domains || []).forEach(add));
+  state.resources.forEach((resource) => (resource.domains || []).forEach(add));
+  state.projects.forEach((project) => add(project.requiredDomain));
+  return usage;
+}
+
+const vocabTabs = () => `<div class="outpost-tabs" role="tablist" aria-label="Vocabulary">
+  <button type="button" class="outpost-tab" role="tab" data-action="vocab-tab" data-tab="functions" aria-selected="${vocabTab === "functions"}">Function Words</button>
+  <button type="button" class="outpost-tab" role="tab" data-action="vocab-tab" data-tab="interactions" aria-selected="${vocabTab === "interactions"}">Interactions</button>
+  <button type="button" class="outpost-tab" role="tab" data-action="vocab-tab" data-tab="domains" aria-selected="${vocabTab === "domains"}">Domains</button>
+</div>`;
+
+function renderDomainEditor() {
+  if (!domainDraft) startDomainDraft();
+  const usage = domainUsage();
+  document.getElementById("work-area").innerHTML = `
+    <section class="editor-panel" aria-label="Domains"><div class="editor-content">
+      <div class="editor-title">
+        <div><h2>Vocabulary</h2><p>The shared lists Gates, Resources, Projects and spells draw on.</p></div>
+        <div class="editor-actions">
+          <button type="button" class="button button-secondary" data-action="vocab-domain-reset">Discard changes</button>
+          <button type="button" class="button button-primary" data-action="vocab-domain-save">Save Domains</button>
+        </div>
+      </div>
+      ${vocabTabs()}
+      <div class="path-help helper">
+        <p>A Gate normally has one Domain; its Resources and creatures inherit it. <strong>Renaming</strong> a Domain is safe: records keep
+          pointing at it by its key, which never changes. <strong>Removing</strong> one is refused while a Gate, Resource or Project uses it.</p>
+        <p>The colour is used for the Domain's label on the site. The Domains rule lists these automatically.</p>
+      </div>
+      <div class="vocab-rows domain-rows">${domainDraft.map((domain, index) => {
+        const used = domain.isNew ? 0 : usage[domain.key] || 0;
+        return `<div class="vocab-row domain-row">
+          <input type="text" data-domain-field="${index}:name" value="${escapeHtml(domain.name)}" aria-label="Domain name" />
+          <input type="color" data-domain-field="${index}:colour" value="${escapeHtml(domain.colour || "#b4b4c8")}" aria-label="Colour" />
+          <input type="text" data-domain-field="${index}:description" value="${escapeHtml(domain.description || "")}" placeholder="What kind of place it is" aria-label="Description" />
+          <span class="vocab-usage">${domain.isNew ? "new" : `${used} in use · key ${escapeHtml(domain.key)}`}</span>
+          <span class="roadmap-move">
+            <button type="button" class="button button-secondary" data-action="vocab-domain-up" data-index="${index}" ${index === 0 ? "disabled" : ""} aria-label="Move up">↑</button>
+            <button type="button" class="button button-secondary" data-action="vocab-domain-down" data-index="${index}" ${index === domainDraft.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button>
+            <button type="button" class="button button-secondary" data-action="vocab-domain-remove" data-index="${index}" ${used ? `disabled title="In use by ${used} record${used > 1 ? "s" : ""}"` : ""}>Remove</button>
+          </span>
+        </div>`;
+      }).join("")}</div>
+      <div class="tool-actions"><button type="button" class="button button-secondary" data-action="vocab-domain-add">+ Add Domain</button></div>
+    </div></section>`;
+}
+
+async function handleDomainAction(action, button) {
+  const index = Number(button.dataset.index);
+  const swap = (from, to) => { if (to >= 0 && to < domainDraft.length) [domainDraft[from], domainDraft[to]] = [domainDraft[to], domainDraft[from]]; };
+  if (action === "vocab-domain-add") domainDraft.push({ key: "", name: "", colour: "#b4b4c8", description: "", isNew: true });
+  else if (action === "vocab-domain-remove") domainDraft.splice(index, 1);
+  else if (action === "vocab-domain-up") swap(index, index - 1);
+  else if (action === "vocab-domain-down") swap(index, index + 1);
+  else if (action === "vocab-domain-reset") startDomainDraft();
+  else if (action === "vocab-domain-save") {
+    const data = domainDraft.filter((domain) => domain.name.trim())
+      .map(({ key, name, colour, description, isNew }) => ({ key: isNew ? "" : key, name: name.trim(), colour, description: description.trim() }));
+    await api("/api/domains", { method: "POST", body: JSON.stringify({ data }) });
+    domainDraft = null;
+    await loadState();
+    showNotice("Domains saved.");
+    return;
+  }
+  renderDomainEditor();
+}
+
+/* ---------- Interactions: how two Words behave together ---------- */
+
+const INTERACTION_LABELS = { synergy: "Synergy", opposition: "Opposition", instability: "Instability" };
+// Suggested keywords; any short word or phrase is allowed.
+const INTERACTION_KEYWORDS = ["Cancellation", "Suppression", "Strain", "Separation", "Detuning", "Erasure", "Blindness", "Signal loss",
+  "Runaway", "Overload", "Rupture", "Feedback", "Corruption", "Discharge", "Fracture", "Containment failure"];
+let interactionDraft = null;
+let interactionFilter = "";
+const startInteractionDraft = () => { interactionDraft = (state.vocabulary.interactions || []).map((entry) => ({ ...entry })); };
+
+function renderInteractionEditor() {
+  if (!interactionDraft) startInteractionDraft();
+  const words = Object.values(state.vocabulary.functionGroups).flat().sort();
+  const wordOptions = (selected) => `<option value="">—</option>${words.map((word) => `<option value="${word}" ${word === selected ? "selected" : ""}>${word}</option>`).join("")}`;
+  const shown = interactionDraft.map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => !interactionFilter || entry.a === interactionFilter || entry.b === interactionFilter);
+  const counts = Object.fromEntries(Object.keys(INTERACTION_LABELS).map((kind) => [kind, interactionDraft.filter((entry) => entry.kind === kind).length]));
+  document.getElementById("work-area").innerHTML = `
+    <section class="editor-panel" aria-label="Interactions"><div class="editor-content">
+      <div class="editor-title">
+        <div><h2>Vocabulary</h2><p>The shared lists Gates, Resources, Projects and spells draw on.</p></div>
+        <div class="editor-actions">
+          <button type="button" class="button button-secondary" data-action="vocab-interaction-reset">Discard changes</button>
+          <button type="button" class="button button-primary" data-action="vocab-interaction-save">Save interactions</button>
+        </div>
+      </div>
+      ${vocabTabs()}
+      <div class="path-help helper">
+        <p>How two Words behave together. <strong>Synergy</strong>: they support each other. <strong>Opposition</strong>: they work against each other.
+          <strong>Instability</strong>: dangerous or unpredictable together. A pair can have more than one kind (Store + Release is both a synergy and an instability).</p>
+        <p>The <strong>keyword</strong> names the specific effect in a word or two, such as Runaway or Cancellation; the note can say more. Players see all of this in the Functions explorer, and the generators use it.</p>
+      </div>
+      <div class="interaction-toolbar">
+        <label>Show <select data-interaction-filter><option value="">All Words</option>${words.map((word) => `<option value="${word}" ${word === interactionFilter ? "selected" : ""}>${word}</option>`).join("")}</select></label>
+        <span class="helper">${interactionDraft.length} interactions · ${counts.synergy} synergy · ${counts.opposition} opposition · ${counts.instability} instability</span>
+        <button type="button" class="button button-secondary" data-action="vocab-interaction-add">+ Add interaction</button>
+      </div>
+      <datalist id="interaction-keywords">${INTERACTION_KEYWORDS.map((word) => `<option value="${word}"></option>`).join("")}</datalist>
+      <div class="interaction-rows">${shown.map(({ entry, index }) => `
+        <div class="interaction-row is-${entry.kind}">
+          <select data-interaction-field="${index}:a" aria-label="First Word">${wordOptions(entry.a)}</select>
+          <span aria-hidden="true">+</span>
+          <select data-interaction-field="${index}:b" aria-label="Second Word">${wordOptions(entry.b)}</select>
+          <select data-interaction-field="${index}:kind" aria-label="Kind">${Object.entries(INTERACTION_LABELS).map(([kind, label]) => `<option value="${kind}" ${kind === entry.kind ? "selected" : ""}>${label}</option>`).join("")}</select>
+          <input type="text" list="interaction-keywords" maxlength="40" data-interaction-field="${index}:keyword" value="${escapeHtml(entry.keyword || "")}" placeholder="Keyword" aria-label="Keyword" />
+          <input type="text" data-interaction-field="${index}:note" value="${escapeHtml(entry.note || "")}" placeholder="Note (optional)" aria-label="Note" />
+          <button type="button" class="button button-secondary" data-action="vocab-interaction-remove" data-index="${index}">Remove</button>
+        </div>`).join("") || '<p class="helper">No interactions for this Word yet.</p>'}</div>
+    </div></section>`;
+}
+
+async function handleInteractionAction(action, button) {
+  if (action === "vocab-interaction-add") interactionDraft.unshift({ a: interactionFilter || "", b: "", kind: "synergy", keyword: "", note: "" });
+  else if (action === "vocab-interaction-remove") interactionDraft.splice(Number(button.dataset.index), 1);
+  else if (action === "vocab-interaction-reset") startInteractionDraft();
+  else if (action === "vocab-interaction-save") {
+    const data = interactionDraft.filter((entry) => entry.a && entry.b);
+    const result = await api("/api/interactions", { method: "POST", body: JSON.stringify({ data }) });
+    interactionDraft = null;
+    await loadState();
+    showNotice(`${result.count} interactions saved.`);
+    return;
+  }
+  renderInteractionEditor();
+}
+
+/* ---------- Function Vocabulary: the Words Resources, Projects and spells share ---------- */
+
+// The working copy while editing. Each Function remembers the name it was saved under, so a rename can be
+// carried through every Resource, Form and Project that uses it.
+let vocabDraft = null;
+
+const startVocabDraft = () => {
+  vocabDraft = (state.vocabulary.functions || []).map((group) => ({
+    name: group.name,
+    functions: group.functions.map((fn) => ({ name: fn.name, definition: fn.definition || "", original: fn.name }))
+  }));
+};
+
+// How many records use each Function (by its saved name).
+function functionUsage() {
+  const usage = {};
+  const count = (names) => (names || []).forEach((name) => { usage[name] = (usage[name] || 0) + 1; });
+  state.resources.forEach((resource) => { count(resource.functions); count(resource.hiddenFunctions); });
+  state.forms.forEach((form) => count(form.words));
+  state.projects.forEach((project) => count(project.requiredFunctions));
+  return usage;
+}
+
+function renderVocabularyEditor() {
+  if (vocabTab === "domains") return renderDomainEditor();
+  if (vocabTab === "interactions") return renderInteractionEditor();
+  if (!vocabDraft) startVocabDraft();
+  const usage = functionUsage();
+  const groupOptions = (selected) => vocabDraft.map((group, index) => `<option value="${index}" ${index === selected ? "selected" : ""}>${escapeHtml(group.name || `Group ${index + 1}`)}</option>`).join("");
+  document.getElementById("work-area").innerHTML = `
+    <section class="editor-panel" aria-label="Function vocabulary"><div class="editor-content">
+      <div class="editor-title">
+        <div><h2>Vocabulary</h2><p>The shared lists Gates, Resources, Projects and spells draw on.</p></div>
+        <div class="editor-actions">
+          <button type="button" class="button button-secondary" data-action="vocab-reset">Discard changes</button>
+          <button type="button" class="button button-primary" data-action="vocab-save">Save vocabulary</button>
+        </div>
+      </div>
+      ${vocabTabs()}
+      <div class="path-help helper">
+        <p><strong>Renaming</strong> a Function updates every Resource, Form and Project that uses it.
+          <strong>Removing</strong> one is refused while anything still uses it.</p>
+        <p>Rules text isn't rewritten. After a rename, the manager lists the Game posts that mention the old name.
+          The vocabulary list in the Resource Functions rule updates on its own, but its interaction table is ordinary text: add rows there for new Functions.</p>
+      </div>
+      ${vocabDraft.map((group, groupIndex) => `
+        <div class="vocab-group">
+          <div class="vocab-group-head">
+            <input type="text" class="vocab-group-name" data-vocab-group="${groupIndex}" value="${escapeHtml(group.name)}" aria-label="Group name" />
+            <span class="roadmap-move">
+              <button type="button" class="button button-secondary" data-action="vocab-group-up" data-group="${groupIndex}" ${groupIndex === 0 ? "disabled" : ""} aria-label="Move group up">↑</button>
+              <button type="button" class="button button-secondary" data-action="vocab-group-down" data-group="${groupIndex}" ${groupIndex === vocabDraft.length - 1 ? "disabled" : ""} aria-label="Move group down">↓</button>
+              <button type="button" class="button button-secondary" data-action="vocab-remove-group" data-group="${groupIndex}" ${group.functions.length ? "disabled title=\"Move or remove its Functions first\"" : ""}>Remove group</button>
+            </span>
+          </div>
+          <div class="vocab-rows">${group.functions.map((fn, index) => {
+            const used = fn.original ? usage[fn.original] || 0 : 0;
+            return `<div class="vocab-row">
+              <input type="text" data-vocab-name="${groupIndex}:${index}" value="${escapeHtml(fn.name)}" aria-label="Function name" />
+              <input type="text" data-vocab-definition="${groupIndex}:${index}" value="${escapeHtml(fn.definition)}" placeholder="What it does" aria-label="Definition" />
+              <span class="vocab-usage" title="Resources, Forms and Projects using it">${fn.original ? `${used} in use` : "new"}${fn.original && fn.original !== fn.name ? ` · was ${escapeHtml(fn.original)}` : ""}</span>
+              <select data-vocab-move="${groupIndex}:${index}" aria-label="Group">${groupOptions(groupIndex)}</select>
+              <span class="roadmap-move">
+                <button type="button" class="button button-secondary" data-action="vocab-up" data-group="${groupIndex}" data-index="${index}" ${index === 0 ? "disabled" : ""} aria-label="Move up">↑</button>
+                <button type="button" class="button button-secondary" data-action="vocab-down" data-group="${groupIndex}" data-index="${index}" ${index === group.functions.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button>
+                <button type="button" class="button button-secondary" data-action="vocab-remove" data-group="${groupIndex}" data-index="${index}" ${used ? `disabled title="In use by ${used} record${used > 1 ? "s" : ""}"` : ""}>Remove</button>
+              </span>
+            </div>`;
+          }).join("")}</div>
+          <button type="button" class="button button-secondary" data-action="vocab-add" data-group="${groupIndex}">+ Add Function</button>
+        </div>`).join("")}
+      <div class="tool-actions"><button type="button" class="button button-secondary" data-action="vocab-add-group">+ Add group</button></div>
+    </div></section>`;
+}
+
+async function handleVocabAction(action, button) {
+  if (action === "vocab-tab") {
+    vocabTab = button.dataset.tab;
+    return renderVocabularyEditor();
+  }
+  if (action.startsWith("vocab-domain-")) return handleDomainAction(action, button);
+  if (action.startsWith("vocab-interaction-")) return handleInteractionAction(action, button);
+  const group = Number(button.dataset.group);
+  const index = Number(button.dataset.index);
+  const swap = (list, from, to) => { if (to >= 0 && to < list.length) [list[from], list[to]] = [list[to], list[from]]; };
+  if (action === "vocab-add") vocabDraft[group].functions.push({ name: "", definition: "", original: null });
+  else if (action === "vocab-remove") vocabDraft[group].functions.splice(index, 1);
+  else if (action === "vocab-up") swap(vocabDraft[group].functions, index, index - 1);
+  else if (action === "vocab-down") swap(vocabDraft[group].functions, index, index + 1);
+  else if (action === "vocab-add-group") vocabDraft.push({ name: "New group", functions: [] });
+  else if (action === "vocab-remove-group") vocabDraft.splice(group, 1);
+  else if (action === "vocab-group-up") swap(vocabDraft, group, group - 1);
+  else if (action === "vocab-group-down") swap(vocabDraft, group, group + 1);
+  else if (action === "vocab-reset") startVocabDraft();
+  else if (action === "vocab-save") {
+    const data = vocabDraft.map((item) => ({ name: item.name.trim(), functions: item.functions
+      .filter((fn) => fn.name.trim()).map((fn) => ({ name: fn.name.trim(), definition: fn.definition.trim() })) }));
+    const renames = Object.fromEntries(vocabDraft.flatMap((item) => item.functions)
+      .filter((fn) => fn.original && fn.name.trim() && fn.original !== fn.name.trim()).map((fn) => [fn.original, fn.name.trim()]));
+    const result = await api("/api/vocabulary", { method: "POST", body: JSON.stringify({ data, renames }) });
+    vocabDraft = null;
+    await loadState();
+    showNotice(`Vocabulary saved${result.recordsUpdated ? `; ${result.recordsUpdated} record${result.recordsUpdated > 1 ? "s" : ""} updated` : ""}.`
+      + (result.ruleMentions.length ? ` Rules still mention old names: ${result.ruleMentions.join(", ")}.` : ""), Boolean(result.ruleMentions.length));
+    return;
+  }
+  renderVocabularyEditor();
+}
+
+// Typing updates the working copy without redrawing; moving a Function to another group redraws.
+function handleVocabInput(target) {
+  if (target.dataset.interactionFilter !== undefined) {
+    interactionFilter = target.value;
+    renderInteractionEditor();
+    return;
+  }
+  if (target.dataset.interactionField !== undefined) {
+    const [index, field] = target.dataset.interactionField.split(":");
+    interactionDraft[Number(index)][field] = target.value;
+    if (field === "kind") target.closest(".interaction-row").className = `interaction-row is-${target.value}`;
+    return;
+  }
+  if (target.dataset.domainField !== undefined) {
+    const [index, field] = target.dataset.domainField.split(":");
+    domainDraft[Number(index)][field] = target.value;
+    return;
+  }
+  if (target.dataset.vocabGroup !== undefined) vocabDraft[Number(target.dataset.vocabGroup)].name = target.value;
+  const [group, index] = String(target.dataset.vocabName ?? target.dataset.vocabDefinition ?? target.dataset.vocabMove ?? "").split(":").map(Number);
+  if (target.dataset.vocabName !== undefined) vocabDraft[group].functions[index].name = target.value;
+  if (target.dataset.vocabDefinition !== undefined) vocabDraft[group].functions[index].definition = target.value;
+  if (target.dataset.vocabMove !== undefined && Number(target.value) !== group) {
+    const [fn] = vocabDraft[group].functions.splice(index, 1);
+    vocabDraft[Number(target.value)].functions.push(fn);
+    renderVocabularyEditor();
+  }
+}
+
+/* ---------- Navigation: views, history, unsaved changes ---------- */
+
+// Gates and lore are both Archive entries; the sidebar opens the Archive with one of these presets.
+let activePreset = "";
+// Where "← Back" returns to after following a link, newest last.
+const navHistory = [];
+// Per collection: which records the list shows ("all", "unpublished", "published") and how it sorts ("name", "recent").
+const listView = {};
+// Records ticked in the list for a bulk action, by collection.
+let bulkSelection = new Set();
+// The record form as it was when drawn, to notice unsaved edits.
+let formSnapshot = null;
+
+const SPECIAL_VIEWS = {
+  home: "Home", outpost: "Outpost Sheet", site: "Site & Launch", tools: "CM Tools · Generators",
+  vocabulary: "CM Tools · Vocabulary", readingpath: "Learning Paths",
+};
+const viewTitle = () => SPECIAL_VIEWS[activeView]
+  || (activeView === "archive" ? (activePreset === "gates" ? "Gates" : "Archive (lore)") : collections[activeView]?.title || activeView);
+const viewLabelFor = (view, preset) => SPECIAL_VIEWS[view] || (view === "archive" ? (preset === "gates" ? "Gates" : "Archive (lore)") : collections[view]?.title || view);
+const isGateRecord = (id) => findRecord("archive", id)?.type === "gate-record";
+
+const draftSnapshot = () => {
+  try { return JSON.stringify(currentDraft()?.data ?? null); } catch { return "invalid"; }
+};
+
+// True when leaving now would lose work: an edited form, an edited vocabulary or reading path, or an unsaved generated draft.
+function hasUnsavedChanges() {
+  if (activeView === "vocabulary") {
+    const savedFunctions = JSON.stringify((state.vocabulary.functions || []).map((group) => [group.name, group.functions.map((fn) => [fn.name, fn.definition || ""])]));
+    const draftFunctions = vocabDraft && JSON.stringify(vocabDraft.map((group) => [group.name, group.functions.map((fn) => [fn.name, fn.definition || ""])]));
+    const savedDomains = JSON.stringify(domainList().map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || ""]));
+    const draftDomains = domainDraft && JSON.stringify(domainDraft.map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || ""]));
+    const interactionKey = (list) => JSON.stringify((list || []).filter((entry) => entry.a && entry.b).map((entry) => [entry.a, entry.b, entry.kind, entry.keyword || "", entry.note || ""]));
+    const interactionsChanged = interactionDraft && interactionKey(interactionDraft) !== interactionKey(state.vocabulary.interactions);
+    return Boolean((draftFunctions && draftFunctions !== savedFunctions) || (draftDomains && draftDomains !== savedDomains) || interactionsChanged);
+  }
+  if (activeView === "readingpath") {
+    const key = (paths) => JSON.stringify((paths || []).map((path) => [path.title, path.description || "", path.ruleIds]));
+    return Boolean(pathEditor) && key(pathEditor) !== key(savedPaths());
+  }
+  if (activeView === "tools") return Boolean(toolView.resource || toolView.gate);
+  return formSnapshot !== null && draftSnapshot() !== formSnapshot;
+}
+
+function confirmLeave() {
+  if (!hasUnsavedChanges()) return true;
+  if (!confirm("You have unsaved changes here. Leave without saving them?")) return false;
+  toolView.resource = null;
+  toolView.gate = null;
+  return true;
+}
+
+/* navigateTo(view, id, { preset, remember, force }): the one way to change what the work area shows.
+   `remember` puts the current place on the back stack (used when following links). */
+function navigateTo(view, id = null, options = {}) {
+  if (!options.force && !confirmLeave()) return false;
+  if (options.remember && (view !== activeView || id !== selectedId)) {
+    navHistory.push({ view: activeView, id: selectedId, preset: activePreset, label: currentPlaceLabel() });
+    if (navHistory.length > 20) navHistory.shift();
+  }
+  if (view !== activeView) { vocabDraft = null; domainDraft = null; interactionDraft = null; pathEditor = null; bulkSelection = new Set(); }
+  if (view === "archive") activePreset = options.preset || (id ? (isGateRecord(id) ? "gates" : "lore") : activePreset || "gates");
+  else activePreset = "";
+  activeView = view;
+  selectedId = id;
+  draft = false;
+  filterText = "";
+  stashView = { tab: "stash", query: "", category: "" };
+  updateNavigation();
+  renderContent();
+  window.scrollTo({ top: 0 });
+  return true;
+}
+
+function currentPlaceLabel() {
+  const config = collections[activeView];
+  const record = config && selectedId ? findRecord(activeView, selectedId) : null;
+  return record ? `${config.name(record) || record.id}` : viewTitle();
+}
+
+function renderBackBar() {
+  const bar = document.getElementById("back-bar");
+  const last = navHistory.at(-1);
+  bar.hidden = !last;
+  bar.innerHTML = last ? `<button type="button" class="back-link" data-nav-back>← Back to ${escapeHtml(last.label)}</button>` : "";
+}
+
+function goBack() {
+  const last = navHistory.at(-1);
+  if (!last || !confirmLeave()) return;
+  navHistory.pop();
+  navigateTo(last.view, last.id, { preset: last.preset, force: true });
+}
+
+// Runs after every render: remember the form, offer section links, show the back link.
+function afterRender() {
+  formSnapshot = document.getElementById("record-form") || document.getElementById("outpost-form") || document.getElementById("site-form") ? draftSnapshot() : null;
+  buildSectionJump();
+  renderBackBar();
+}
+
+/* ---------- Long forms: section links and a header that stays in view ---------- */
+
+function buildSectionJump() {
+  const nav = document.querySelector("[data-section-jump]");
+  const form = document.getElementById("record-form");
+  if (!nav || !form) return;
+  const sections = [...form.querySelectorAll(".form-section")].filter((section) => !section.closest("[hidden]"));
+  if (sections.length < 2) { nav.hidden = true; return; }
+  sections.forEach((section, index) => { section.id = `form-section-${index}`; });
+  nav.innerHTML = `<button type="button" data-jump-section="top">Details</button>${sections.map((section, index) =>
+    `<button type="button" data-jump-section="form-section-${index}">${escapeHtml(section.textContent.replace(/·.*$/, "").trim())}</button>`).join("")}`;
+  nav.hidden = false;
+}
+
+function jumpToSection(target) {
+  const sticky = document.querySelector(".editor-sticky");
+  const offset = (sticky?.offsetHeight || 0) + 12;
+  const element = target === "top" ? document.getElementById("record-form") : document.getElementById(target);
+  if (element) window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - (target === "top" ? 20 : offset), behavior: "smooth" });
+}
+
+/* ---------- Lists: status filter, sort, and bulk actions ---------- */
+
+const listOptions = (key) => listView[key] || (listView[key] = { status: "all", sort: "name" });
+
+function listControls(key) {
+  const options = listOptions(key);
+  return `<div class="list-controls">
+    <select data-list-status aria-label="Show">
+      <option value="all" ${options.status === "all" ? "selected" : ""}>All records</option>
+      <option value="unpublished" ${options.status === "unpublished" ? "selected" : ""}>Unpublished only</option>
+      <option value="published" ${options.status === "published" ? "selected" : ""}>Published only</option>
+    </select>
+    <select data-list-sort aria-label="Sort">
+      <option value="name" ${options.sort === "name" ? "selected" : ""}>Sort: name</option>
+      <option value="recent" ${options.sort === "recent" ? "selected" : ""}>Sort: recently edited</option>
+    </select>
+  </div>`;
+}
+
+function bulkBar() {
+  const count = bulkSelection.size;
+  return `<div class="bulk-bar${count ? " has-selection" : ""}" data-bulk-bar>
+    <label class="bulk-all"><input type="checkbox" data-bulk-all ${count && count === document.querySelectorAll(".bulk-check").length ? "checked" : ""} /> ${count ? `${count} selected` : "Select"}</label>
+    ${count ? `<span class="bulk-actions">
+      <button type="button" class="button button-primary" data-action="bulk-publish">Publish</button>
+      <button type="button" class="button button-secondary" data-action="bulk-unpublish">Unpublish</button>
+      <button type="button" class="button button-secondary" data-action="bulk-sample">Mark as sample</button>
+      ${state.settings.includeSamples ? '<button type="button" class="button button-secondary" data-action="bulk-unsample">Not a sample</button>' : ""}
+    </span>` : '<span class="helper">Tick records to publish them or mark them as samples together.</span>'}
+  </div>`;
+}
+
+function refreshBulkBar() {
+  const bar = document.querySelector("[data-bulk-bar]");
+  if (bar) bar.outerHTML = bulkBar();
+}
+
+async function runBulkAction(action) {
+  const ids = [...bulkSelection];
+  const labels = { publish: "published", unpublish: "unpublished", sample: "marked as sample", unsample: "no longer marked as sample" };
+  if (action === "sample" && !confirm(`Mark ${ids.length} record${ids.length > 1 ? "s" : ""} as sample content? Samples are hidden from the site and from these lists while "Show sample content" is off.`)) return;
+  const result = await api("/api/bulk", { method: "POST", body: JSON.stringify({ collection: activeView, ids, action }) });
+  bulkSelection = new Set();
+  await loadState();
+  showNotice(`${result.changed} record${result.changed === 1 ? "" : "s"} ${labels[action]}. Sync data to update the site.`);
+}
+
+/* ---------- Home ---------- */
+
+const HOME_SECTIONS = [
+  ["outpost", "", "Outpost Sheet"], ["facilities", "", "Facilities"], ["projects", "", "Projects"], ["gear", "", "Marketplace"],
+  ["jobs", "", "Job Board"], ["archive", "gates", "Gates"], ["resources", "", "Resources"], ["characters", "", "Characters"],
+  ["archive", "lore", "Archive (lore)"], ["forms", "", "Spell Forms"], ["game", "", "Announcements & Rules"],
+];
+
+function sectionRecords(view, preset) {
+  if (!Array.isArray(state[view])) return [];
+  if (view !== "archive") return state[view];
+  return state.archive.filter((entry) => (preset === "gates") === (entry.type === "gate-record"));
+}
+
+function renderHome() {
+  const navLink = (view, id, label, preset = "") => `<button type="button" class="home-link" data-home-open="${view}" data-home-id="${escapeHtml(id || "")}" data-home-preset="${preset}">${escapeHtml(label)}</button>`;
+  const recordLabel = (view, record) => collections[view]?.name(record) || record.id;
+  const all = Object.keys(collections).flatMap((view) => state[view].map((record) => ({ view, record })));
+  const unpublished = all.filter(({ record }) => !record.published && !record.sample);
+  const recent = all.filter(({ record }) => record.updatedAt).sort((left, right) => right.record.updatedAt.localeCompare(left.record.updatedAt)).slice(0, 8);
+  const attention = [
+    ...state.projects.filter((project) => (project.complications || []).some((item) => !item.resolved))
+      .map((project) => ["projects", project, "has an active complication"]),
+    ...state.resources.filter((resource) => !resource.gateId && !(resource.domains || []).length)
+      .map((resource) => ["resources", resource, "has no origin Gate and no Domain"]),
+    ...state.archive.filter((entry) => entry.type === "gate-record" && !(entry.details?.domains || []).length)
+      .map((entry) => ["archive", entry, "Gate has no Domain"]),
+    ...state.characters.filter((character) => Number(character.downtime) >= 8)
+      .map((character) => ["characters", character, "has 8 Downtime (full)"]),
+  ];
+  const sync = state.sync || {};
+  const when = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "never";
+  document.getElementById("work-area").innerHTML = `
+    <div class="home-grid">
+      <section class="home-card home-sync${sync.pending ? " is-pending" : ""}">
+        <h2>Site</h2>
+        <p>${sync.pending ? "<strong>You have changes that are not on the site yet.</strong>" : "The site data is up to date with the manager."}</p>
+        <p class="helper">Last edit: ${when(sync.lastChangeAt)} · Last sync: ${when(sync.lastSyncAt)}</p>
+        <button type="button" class="button button-primary" data-home-sync>⟳ Sync data</button>
+      </section>
+      <section class="home-card">
+        <h2>Quick actions</h2>
+        <div class="home-actions">
+          <button type="button" class="button button-secondary" data-home-new="game">New announcement or rule</button>
+          <button type="button" class="button button-secondary" data-home-new="jobs">New job</button>
+          <button type="button" class="button button-secondary" data-home-tool="gate">Generate a Gate</button>
+          <button type="button" class="button button-secondary" data-home-tool="resource">Generate a Resource</button>
+        </div>
+      </section>
+      <section class="home-card home-wide">
+        <h2>Sections</h2>
+        <div class="home-sections">${HOME_SECTIONS.map(([view, preset, label]) => {
+          const records = sectionRecords(view, preset);
+          const drafts = records.filter((record) => !record.published && !record.sample).length;
+          return `<button type="button" class="home-section" data-home-open="${view}" data-home-id="" data-home-preset="${preset}">
+            <strong>${escapeHtml(label)}</strong><span>${view === "outpost" ? "Sheet" : `${records.length} record${records.length === 1 ? "" : "s"}`}${drafts ? ` · ${drafts} unpublished` : ""}</span></button>`;
+        }).join("")}</div>
+      </section>
+      <section class="home-card">
+        <h2>Waiting to publish <span class="chip-count">${unpublished.length}</span></h2>
+        ${unpublished.length ? `<ul class="home-list">${unpublished.slice(0, 12).map(({ view, record }) =>
+          `<li>${navLink(view, record.id, recordLabel(view, record))} <span class="helper">${escapeHtml(viewLabelFor(view, view === "archive" && record.type === "gate-record" ? "gates" : "lore"))}</span></li>`).join("")}</ul>
+          ${unpublished.length > 12 ? `<p class="helper">…and ${unpublished.length - 12} more. Use "Unpublished only" in a section's list to publish them together.</p>` : ""}`
+          : '<p class="helper">Everything is published.</p>'}
+      </section>
+      <section class="home-card">
+        <h2>Needs attention <span class="chip-count">${attention.length}</span></h2>
+        ${attention.length ? `<ul class="home-list">${attention.slice(0, 12).map(([view, record, reason]) =>
+          `<li>${navLink(view, record.id, recordLabel(view, record))} <span class="helper">${escapeHtml(reason)}</span></li>`).join("")}</ul>` : '<p class="helper">Nothing flagged.</p>'}
+      </section>
+      <section class="home-card home-wide">
+        <h2>Recently edited</h2>
+        ${recent.length ? `<ul class="home-list">${recent.map(({ view, record }) =>
+          `<li>${navLink(view, record.id, recordLabel(view, record))} <span class="helper">${escapeHtml(viewLabelFor(view, view === "archive" && record.type === "gate-record" ? "gates" : "lore"))} · ${when(record.updatedAt)}</span></li>`).join("")}</ul>`
+          : '<p class="helper">Edits made from now on appear here.</p>'}
+      </section>
+    </div>`;
+}
+
+/* ---------- Reading Path view ---------- */
+
+function renderReadingPathView() {
+  if (!pathEditor) pathEditor = savedPaths();
+  document.getElementById("work-area").innerHTML = `<section class="editor-panel" aria-label="Learning paths">${readingPathEditor()}</section>`;
+}
+
+/* ---------- Jump to (Ctrl+K) ---------- */
+
+const jump = { open: false, index: 0, results: [] };
+
+function jumpCandidates(query) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const views = [["home", "", "Home"], ["outpost", "", "Outpost Sheet"], ["readingpath", "", "Learning Paths"], ["site", "", "Site & Launch"],
+    ["tools", "", "Generators"], ["vocabulary", "", "Vocabulary"], ...Object.keys(collections).filter((key) => key !== "archive").map((key) => [key, "", collections[key].title]),
+    ["archive", "gates", "Gates"], ["archive", "lore", "Archive (lore)"]]
+    .map(([view, preset, label]) => ({ view, preset, id: null, label, kind: "Section" }));
+  const records = Object.keys(collections).flatMap((view) => state[view].map((record) => ({
+    view, id: record.id, preset: "", label: collections[view].name(record) || record.id,
+    kind: view === "archive" ? (record.type === "gate-record" ? "Gate" : "Archive")
+      : view === "game" ? (record.type === "announcement" ? "Announcement" : "Rule") : collections[view].singular,
+  })));
+  const matches = (item) => words.every((word) => `${item.label} ${item.id || ""} ${item.kind}`.toLowerCase().includes(word));
+  return [...views, ...records].filter(matches).slice(0, 12);
+}
+
+function openJump() {
+  let dialog = document.getElementById("jump-dialog");
+  if (!dialog) {
+    dialog = document.createElement("div");
+    dialog.id = "jump-dialog";
+    dialog.className = "jump-dialog";
+    dialog.innerHTML = `<div class="jump-panel" role="dialog" aria-label="Jump to">
+      <input type="search" id="jump-input" placeholder="Jump to a record or section…" autocomplete="off" aria-label="Jump to" />
+      <ul class="jump-results" id="jump-results" role="listbox"></ul>
+      <p class="helper">↑ ↓ to choose · Enter to open · Esc to close</p></div>`;
+    document.body.append(dialog);
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) closeJump();
+      const item = event.target.closest("[data-jump-index]");
+      if (item) chooseJump(Number(item.dataset.jumpIndex));
+    });
+    dialog.querySelector("#jump-input").addEventListener("input", (event) => { jump.index = 0; renderJump(event.target.value); });
+    dialog.querySelector("#jump-input").addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") { event.preventDefault(); jump.index = Math.min(jump.results.length - 1, jump.index + 1); renderJump(); }
+      else if (event.key === "ArrowUp") { event.preventDefault(); jump.index = Math.max(0, jump.index - 1); renderJump(); }
+      else if (event.key === "Enter") { event.preventDefault(); chooseJump(jump.index); }
+      else if (event.key === "Escape") closeJump();
+    });
+  }
+  dialog.hidden = false;
+  jump.open = true;
+  jump.index = 0;
+  const input = dialog.querySelector("#jump-input");
+  input.value = "";
+  renderJump("");
+  input.focus();
+}
+
+function renderJump(query) {
+  if (query !== undefined) jump.results = jumpCandidates(query);
+  document.getElementById("jump-results").innerHTML = jump.results.length ? jump.results.map((item, index) => `
+    <li role="option" aria-selected="${index === jump.index}" class="${index === jump.index ? "is-active" : ""}" data-jump-index="${index}">
+      <span>${escapeHtml(item.label)}</span><span class="jump-kind">${escapeHtml(item.kind)}</span></li>`).join("")
+    : '<li class="jump-empty">Nothing matches.</li>';
+}
+
+function closeJump() {
+  const dialog = document.getElementById("jump-dialog");
+  if (dialog) dialog.hidden = true;
+  jump.open = false;
+}
+
+function chooseJump(index) {
+  const item = jump.results[index];
+  if (!item) return;
+  closeJump();
+  navigateTo(item.view, item.id, { preset: item.preset, remember: Boolean(item.id) });
+}
+
+/* ---------- Publishing bar ---------- */
+
+function updateSyncLabel() {
+  const label = document.getElementById("sync-label");
+  const button = document.getElementById("sync-button");
+  if (!label) return;
+  const pending = Boolean(state.sync?.pending);
+  label.textContent = pending ? "Sync data · changes waiting" : "Synced";
+  button.classList.toggle("is-pending", pending);
+  button.title = pending ? "Some saved changes are not on the site yet. Sync writes published content to public-site/data." : "The site data matches the manager.";
+}
+
+async function refreshSyncStatus() {
+  try {
+    const loaded = await api("/api/state");
+    state.sync = loaded.sync;
+    updateSyncLabel();
+  } catch { /* the label just stays as it was */ }
+}
+
+/* ---------- Sidebar groups ---------- */
+
+const NAV_COLLAPSED_KEY = "nowhere-manager:collapsed-groups";
+function setupNavGroups() {
+  let collapsed = [];
+  try { collapsed = JSON.parse(localStorage.getItem(NAV_COLLAPSED_KEY) || "[]"); } catch { collapsed = []; }
+  document.querySelectorAll("[data-nav-toggle]").forEach((toggle) => {
+    const group = toggle.closest(".nav-group");
+    const apply = (isCollapsed) => {
+      group.classList.toggle("is-collapsed", isCollapsed);
+      toggle.setAttribute("aria-expanded", String(!isCollapsed));
+    };
+    apply(collapsed.includes(toggle.dataset.navToggle));
+    toggle.addEventListener("click", () => {
+      const isCollapsed = !group.classList.contains("is-collapsed");
+      apply(isCollapsed);
+      collapsed = isCollapsed ? [...new Set([...collapsed, toggle.dataset.navToggle])] : collapsed.filter((key) => key !== toggle.dataset.navToggle);
+      try { localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(collapsed)); } catch { /* not remembered */ }
+    });
+  });
 }
 
 /* ---------- Batch import of character sheet files ---------- */
@@ -1379,6 +2361,9 @@ async function loadState() {
   state.site = loaded.site || {};
   state.settings = loaded.settings || { includeSamples: false, sampleCount: 0 };
   state.hiddenSamples = loaded.hiddenSamples || [];
+  if (loaded.vocabulary) state.vocabulary = loaded.vocabulary;
+  state.sync = loaded.sync || {};
+  state.learningPaths = loaded.learningPaths || [];
   renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
@@ -1390,31 +2375,52 @@ function updateNavigation() {
     const counter = document.getElementById(`${key}-count`);
     if (counter) counter.textContent = state[key].length;
   }
+  const gates = state.archive.filter((entry) => entry.type === "gate-record").length;
+  document.getElementById("gates-count").textContent = gates;
+  document.getElementById("lore-count").textContent = state.archive.length - gates;
   document.querySelectorAll(".nav-item").forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === activeView);
-    button.setAttribute("aria-current", button.dataset.view === activeView ? "page" : "false");
+    const active = button.dataset.view === activeView && (button.dataset.preset || "") === activePreset;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
   });
-  document.getElementById("page-title").textContent = activeView === "outpost" ? "Outpost Sheet" : activeView === "site" ? "Site & launch" : collections[activeView].title;
-  document.getElementById("search-wrap").hidden = activeView === "outpost" || activeView === "site";
+  document.getElementById("page-title").textContent = viewTitle();
+  document.getElementById("search-wrap").hidden = Boolean(SPECIAL_VIEWS[activeView]);
   document.getElementById("collection-search").value = filterText;
+  updateSyncLabel();
 }
 
 function filteredRecords(key) {
   const config = collections[key];
   const query = filterText.trim().toLowerCase();
-  const filters = listFilters[key] || {};
+  const filters = { ...(listFilters[key] || {}) };
+  // The Archive is shown as two sections: Gates, and everything else (lore).
+  if (key === "archive") {
+    if (activePreset === "gates") filters.type = "gate-record";
+    else if (!filters.type || filters.type === "gate-record") filters.type = "!gate-record";
+  }
+  const options = listOptions(key);
+  const byName = (left, right) => config.sortKey
+    ? config.sortKey(left).localeCompare(config.sortKey(right))
+    : String(config.name(left) || "").localeCompare(String(config.name(right) || ""));
   return state[key]
-    .filter((record) => Object.entries(filters).every(([field, value]) => !value || record[field] === value))
+    .filter((record) => Object.entries(filters).every(([field, value]) => !value
+      || (String(value).startsWith("!") ? record[field] !== value.slice(1) : record[field] === value)))
+    .filter((record) => options.status === "all" || (options.status === "published") === Boolean(record.published))
     .filter((record) => !query || JSON.stringify(record).toLowerCase().includes(query))
-    .sort((left, right) => config.sortKey
-      ? config.sortKey(left).localeCompare(config.sortKey(right))
-      : String(config.name(left) || "").localeCompare(String(config.name(right) || "")));
+    .sort(options.sort === "recent"
+      ? (left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")) || byName(left, right)
+      : byName);
 }
 
 function renderContent() {
-  if (activeView === "outpost") renderOutpostEditor();
+  if (activeView === "home") renderHome();
+  else if (activeView === "outpost") renderOutpostEditor();
   else if (activeView === "site") renderSiteEditor();
+  else if (activeView === "tools") renderTools();
+  else if (activeView === "vocabulary") renderVocabularyEditor();
+  else if (activeView === "readingpath") renderReadingPathView();
   else renderCollection(activeView);
+  afterRender();
   if (preview.open) schedulePreview(0);
 }
 
@@ -1434,7 +2440,10 @@ const PREVIEW_PAGES = {
   jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
   archive: (id) => `archive.html#${encodeURIComponent(id)}`,
   gear: (id) => `marketplace.html#gear-${encodeURIComponent(id)}`,
-  game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`
+  game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`,
+  // A Resource shows on its Gate's Archive page, or in the catalogue in the Resources rule.
+  resources: (id, data) => data?.gateId ? `archive.html#${encodeURIComponent(data.gateId)}` : "game.html#post-resources",
+  forms: () => "game.html#post-spellcasting"
 };
 
 function currentDraft() {
@@ -1566,88 +2575,149 @@ function renderCollection(key) {
   const selected = draft ? null : items.find((record) => record.id === selectedId) || items[0] || null;
   if (!draft) selectedId = selected?.id || null;
   const listMarkup = items.length ? items.map((record) => `
-    <button type="button" class="record-button ${selected?.id === record.id && !(key === "game" && pathEditor) ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
+    <div class="record-row">
+    <input type="checkbox" class="bulk-check" value="${escapeHtml(record.id)}" ${bulkSelection.has(record.id) ? "checked" : ""} aria-label="Select ${escapeHtml(config.name(record) || record.id)}" />
+    <button type="button" class="record-button ${selected?.id === record.id ? "active" : ""}" data-record-id="${escapeHtml(record.id)}">
       <span class="record-name">${escapeHtml(config.name(record) || "Untitled")}</span>
       <span class="record-meta">${config.meta(record).filter(Boolean).map((part, index, parts) => `<span class="${index === parts.length - 1 ? "record-status" : ""}">${escapeHtml(part)}</span>`).join("")}${record.published ? "" : '<span class="record-draft">Unpublished</span>'}${record.sample ? '<span class="record-sample">Sample</span>' : ""}</span>
     </button>
+    </div>
   `).join("") : '<div class="empty-list">No matching records yet.</div>';
-  const editor = key === "game" && pathEditor ? readingPathEditor() : draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
+  const editor = draft ? recordForm(key, null) : selected ? recordForm(key, selected) : `
     <div class="editor-content"><div class="empty-list">Choose a record to edit, or create a new ${config.singular.toLowerCase()}.</div></div>`;
 
   document.getElementById("work-area").innerHTML = `
     <div class="collection-layout">
       <section class="record-list-panel" aria-label="${config.title} list">
-        <div class="panel-head"><h2>${config.panel}</h2><button class="button button-secondary" type="button" data-action="new-record">+ New</button></div>
+        <div class="panel-head"><h2>${key === "archive" ? (activePreset === "gates" ? "GATE RECORDS" : "ARCHIVE ENTRIES") : config.panel}</h2><button class="button button-secondary" type="button" data-action="new-record">+ New</button></div>
         ${key === "characters" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="batch-import" title="Review and import a folder of player sheet files">Batch import sheet files…</button></div>' : ""}
-        ${key === "game" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="path-edit" title="Choose and order the rules new players should read">Edit reading path…</button></div>' : ""}
+        ${key === "game" ? '<div class="panel-tools"><button class="button button-secondary" type="button" data-action="path-edit" title="Onboarding and the optional learning paths">Open Learning Paths…</button></div>' : ""}
         ${listFilterBar(key)}
+        ${listControls(key)}
+        ${bulkBar()}
         <div class="record-list">${listMarkup}</div>
       </section>
       <section class="editor-panel" aria-label="${config.singular} editor">${editor}</section>
     </div>`;
 }
 
-/* ---------- Reading path: the ordered rules new players read (the Onboarding topic) ---------- */
+/* ---------- Learning paths: Onboarding first, then optional paths that each teach one area ---------- */
 
-const currentReadingPath = () => state.game.filter((post) => post.type !== "announcement" && Number.isInteger(post.order))
-  .sort((left, right) => left.order - right.order).map((post) => post.id);
+// The paths as saved, copied so the editor can change its own version.
+const savedPaths = () => (state.learningPaths || []).map((path) => ({ ...path, ruleIds: [...path.ruleIds] }));
+const pathOfRule = (ruleId) => {
+  const path = (state.learningPaths || []).find((item) => item.ruleIds.includes(ruleId));
+  return path ? { path, index: path.ruleIds.indexOf(ruleId) } : null;
+};
 
 function readingPathEditor() {
   const rules = state.game.filter((post) => post.type !== "announcement");
   const byId = Object.fromEntries(rules.map((rule) => [rule.id, rule]));
-  const available = rules.filter((rule) => !pathEditor.includes(rule.id))
-    .sort((left, right) => String(left.title).localeCompare(String(right.title)));
-  const rows = pathEditor.filter((id) => byId[id]).map((id, index, ids) => {
+  const placed = new Set(pathEditor.flatMap((path) => path.ruleIds));
+  const unplaced = rules.filter((rule) => !placed.has(rule.id)).sort((left, right) => String(left.title).localeCompare(String(right.title)));
+  const pathOptions = (current) => pathEditor.map((path, index) => `<option value="${index}" ${index === current ? "selected" : ""}>${escapeHtml(path.title || `Path ${index + 1}`)}</option>`).join("");
+  const ruleRow = (id, ruleIndex, pathIndex, count) => {
     const rule = byId[id];
-    return `<li class="path-row" data-path-id="${escapeHtml(id)}">
-      <span class="path-number">${index + 1}</span>
+    if (!rule) return "";
+    return `<li class="path-row">
+      <span class="path-number">${ruleIndex + 1}</span>
       <span class="path-title"><strong>${escapeHtml(rule.title || id)}</strong>
         <span class="record-meta"><span>${escapeHtml(rule.category || "Uncategorized")}</span>${rule.published ? "" : '<span class="record-draft">Unpublished</span>'}</span></span>
+      <select data-path-move="${pathIndex}:${ruleIndex}" aria-label="Move to path">${pathOptions(pathIndex)}</select>
       <span class="roadmap-move">
-        <button type="button" class="button button-secondary" data-action="path-up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
-        <button type="button" class="button button-secondary" data-action="path-down" aria-label="Move down" ${index === ids.length - 1 ? "disabled" : ""}>↓</button>
-        <button type="button" class="button button-secondary" data-action="path-remove">Remove</button>
+        <button type="button" class="button button-secondary" data-action="lp-rule-up" data-path="${pathIndex}" data-index="${ruleIndex}" aria-label="Move up" ${ruleIndex === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="button button-secondary" data-action="lp-rule-down" data-path="${pathIndex}" data-index="${ruleIndex}" aria-label="Move down" ${ruleIndex === count - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" class="button button-secondary" data-action="lp-rule-remove" data-path="${pathIndex}" data-index="${ruleIndex}">Take off</button>
       </span>
     </li>`;
-  }).join("");
+  };
   return `
     <div class="editor-content">
       <div class="editor-title">
-        <div><h2>Reading path</h2><p>The Onboarding topic on the Rules tab</p></div>
+        <div><h2>Learning Paths</h2><p>Onboarding first, then optional paths that each teach one area</p></div>
         <div class="editor-actions">
-          <button type="button" class="button button-secondary" data-action="path-cancel">Cancel</button>
-          <button type="button" class="button button-primary" data-action="path-save">Save reading path</button>
+          <button type="button" class="button button-secondary" data-action="lp-reset">Discard changes</button>
+          <button type="button" class="button button-primary" data-action="lp-save">Save learning paths</button>
         </div>
       </div>
       <div class="path-help helper">
-        <p>The rules new players should read, in order. On the site they are listed under the <strong>Onboarding</strong> topic on the Rules tab,
-          and each one ends with <em>Previous</em> and <em>Next</em> links.</p>
-        <p>To show this list inside a post, such as the Game Listing, put <code>{{reading-path}}</code> on its own line in that post's Details.
-          Write the text around it in the post itself. The list is grouped under each rule's category; unpublished rules are left out on the site.</p>
+        <p><strong>Onboarding</strong> is what every new player reads: keep it short, ideally around five rules. The other paths are optional:
+          players pick one up when it matters to them. Each path is a topic on the Rules tab, and its rules end with <em>Previous</em> / <em>Next</em> links.
+          A rule belongs to one path at most.</p>
+        <p>Put <code>{{reading-path}}</code> on its own line in a post (such as the Game Listing) to show Onboarding and the list of learning paths there.</p>
       </div>
-      ${rows ? `<ol class="path-rows">${rows}</ol>` : '<div class="empty-list">No rules on the reading path yet.</div>'}
-      <div class="path-add">
-        <select id="path-add-select" aria-label="Rule to add">
-          ${available.length ? available.map((rule) => `<option value="${escapeHtml(rule.id)}">${escapeHtml(rule.title || rule.id)} (${escapeHtml(rule.category || "Uncategorized")})</option>`).join("")
-            : "<option value=\"\">Every rule is already on the path</option>"}
-        </select>
-        <button type="button" class="button button-secondary" data-action="path-add" ${available.length ? "" : "disabled"}>Add to the end</button>
-      </div>
+      ${pathEditor.map((path, pathIndex) => `
+        <div class="vocab-group learning-path">
+          <div class="vocab-group-head">
+            <input type="text" class="vocab-group-name" data-path-field="${pathIndex}:title" value="${escapeHtml(path.title)}" aria-label="Path title" ${pathIndex === 0 ? "" : ""} />
+            ${pathIndex === 0 ? '<span class="helper">Always first</span>' : `<span class="roadmap-move">
+              <button type="button" class="button button-secondary" data-action="lp-path-up" data-path="${pathIndex}" ${pathIndex === 1 ? "disabled" : ""} aria-label="Move path up">↑</button>
+              <button type="button" class="button button-secondary" data-action="lp-path-down" data-path="${pathIndex}" ${pathIndex === pathEditor.length - 1 ? "disabled" : ""} aria-label="Move path down">↓</button>
+              <button type="button" class="button button-secondary" data-action="lp-path-remove" data-path="${pathIndex}">Remove path</button></span>`}
+          </div>
+          <input type="text" class="path-description" data-path-field="${pathIndex}:description" value="${escapeHtml(path.description || "")}" placeholder="Who it is for and what it teaches" aria-label="Path description" />
+          <span class="helper">${path.ruleIds.length} rule${path.ruleIds.length === 1 ? "" : "s"}${pathIndex === 0 && path.ruleIds.length > 8 ? " · consider moving some to an optional path" : ""}</span>
+          ${path.ruleIds.length ? `<ol class="path-rows">${path.ruleIds.map((id, ruleIndex) => ruleRow(id, ruleIndex, pathIndex, path.ruleIds.length)).join("")}</ol>` : '<div class="empty-list">No rules on this path yet.</div>'}
+          <div class="path-add">
+            <select data-path-add="${pathIndex}" aria-label="Rule to add">
+              ${unplaced.length ? unplaced.map((rule) => `<option value="${escapeHtml(rule.id)}">${escapeHtml(rule.title || rule.id)}</option>`).join("") : '<option value="">Every rule is on a path</option>'}
+            </select>
+            <button type="button" class="button button-secondary" data-action="lp-rule-add" data-path="${pathIndex}" ${unplaced.length ? "" : "disabled"}>Add to this path</button>
+          </div>
+        </div>`).join("")}
+      <div class="tool-actions"><button type="button" class="button button-secondary" data-action="lp-path-add">+ New learning path</button></div>
+      ${unplaced.length ? `<p class="helper">On no path: ${unplaced.map((rule) => escapeHtml(rule.title || rule.id)).join(", ")}. They are still listed under All rules.</p>` : ""}
     </div>`;
 }
 
-async function saveReadingPath() {
-  await api("/api/reading-path", { method: "POST", body: JSON.stringify({ ruleIds: pathEditor }) });
-  pathEditor = null;
-  await loadState();
-  showNotice("Reading path saved in the local manager. Sync data to publish it.");
+async function handlePathAction(action, button) {
+  const pathIndex = Number(button.dataset.path);
+  const ruleIndex = Number(button.dataset.index);
+  const swap = (list, from, to) => { if (to >= 0 && to < list.length) [list[from], list[to]] = [list[to], list[from]]; };
+  if (action === "lp-reset") pathEditor = savedPaths();
+  else if (action === "lp-path-add") pathEditor.push({ key: "", title: "New learning path", description: "", ruleIds: [] });
+  else if (action === "lp-path-remove") pathEditor.splice(pathIndex, 1);
+  else if (action === "lp-path-up" && pathIndex > 1) swap(pathEditor, pathIndex, pathIndex - 1);
+  else if (action === "lp-path-down") swap(pathEditor, pathIndex, pathIndex + 1);
+  else if (action === "lp-rule-up") swap(pathEditor[pathIndex].ruleIds, ruleIndex, ruleIndex - 1);
+  else if (action === "lp-rule-down") swap(pathEditor[pathIndex].ruleIds, ruleIndex, ruleIndex + 1);
+  else if (action === "lp-rule-remove") pathEditor[pathIndex].ruleIds.splice(ruleIndex, 1);
+  else if (action === "lp-rule-add") {
+    const ruleId = document.querySelector(`[data-path-add="${pathIndex}"]`).value;
+    if (ruleId) pathEditor[pathIndex].ruleIds.push(ruleId);
+  } else if (action === "lp-save") {
+    await api("/api/learning-paths", { method: "POST", body: JSON.stringify({ data: pathEditor }) });
+    pathEditor = null;
+    await loadState();
+    showNotice("Learning paths saved in the local manager. Sync data to publish them.");
+    return;
+  }
+  renderContent();
+}
+
+function handlePathInput(target) {
+  if (target.dataset.pathField !== undefined) {
+    const [index, field] = target.dataset.pathField.split(":");
+    pathEditor[Number(index)][field] = target.value;
+    return;
+  }
+  if (target.dataset.pathMove !== undefined) {
+    const [from, ruleIndex] = target.dataset.pathMove.split(":").map(Number);
+    const to = Number(target.value);
+    if (to === from) return;
+    const [ruleId] = pathEditor[from].ruleIds.splice(ruleIndex, 1);
+    pathEditor[to].ruleIds.push(ruleId);
+    renderContent();
+  }
 }
 
 function listFilterBar(key) {
   const config = collections[key];
-  if (!config.filters) return "";
+  let filters = config.filters;
+  if (key === "archive") filters = activePreset === "gates" ? [] : [["type", "All lore", ARCHIVE_TYPES.filter(([value]) => value !== "gate-record")]];
+  if (!filters?.length) return "";
   const current = listFilters[key] || {};
-  return `<div class="list-filters">${config.filters.map(([fieldName, allLabel, choices]) => `
+  return `<div class="list-filters">${filters.map(([fieldName, allLabel, choices]) => `
     <select data-list-filter="${fieldName}" aria-label="Filter by ${fieldName}">
       <option value="">${allLabel}</option>
       ${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${current[fieldName] === value ? "selected" : ""}>${escapeHtml(text)} (${state[key].filter((record) => record[fieldName] === value).length})</option>`).join("")}
@@ -1661,6 +2731,7 @@ function recordForm(key, record) {
   return `
     <form id="record-form" data-collection="${key}" data-editing-id="${escapeHtml(record?.id || "")}">
       <div class="editor-content">
+        <div class="editor-sticky">
         <div class="editor-title">
           <div><h2>${record ? escapeHtml(config.name(record) || `Edit ${singular}`) : `New ${singular}`}</h2><p>${record ? `ID: ${escapeHtml(record.id)}` : "Create a new record"}</p></div>
           <div class="editor-actions">
@@ -1668,6 +2739,8 @@ function recordForm(key, record) {
             <button type="button" class="button button-secondary" data-action="open-preview" title="See this record on the site, including unsaved changes">Preview</button>
             <button type="submit" class="button button-primary">Save ${singular}</button>
           </div>
+        </div>
+        <nav class="section-jump" data-section-jump hidden aria-label="Form sections"></nav>
         </div>
         <div class="form-grid">
           <label class="publish-toggle field full"><input type="checkbox" name="published" ${published ? "checked" : ""} /><span><strong>Published</strong><span class="helper">When unchecked, Sync data and Export to site leave this record out of the public site.</span></span></label>
@@ -1902,6 +2975,7 @@ async function syncDataToSite() {
   if (!confirm("Replace the entire public-site/data folder with the current SQLite data? Any files in data/ not managed here will be removed. All other public-site files stay unchanged.")) return;
   const result = await api("/api/sync", { method: "POST", body: "{}" });
   showNotice(`Synced ${publishSummary(result)} (${result.files} files) to ${result.destination}.`);
+  await refreshSyncStatus();
 }
 
 async function importFromSite() {
@@ -1923,19 +2997,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     showNotice(error.message, true);
   }
 
-  const openView = (view, id = null) => {
-    activeView = view;
-    selectedId = id;
-    draft = false;
-    filterText = "";
-    stashView = { tab: "stash", query: "", category: "" };
-    updateNavigation();
-    renderContent();
-  };
+  const openView = (view, id = null) => navigateTo(view, id, { remember: true });
 
-  document.querySelectorAll(".nav-item").forEach((button) => button.addEventListener("click", () => openView(button.dataset.view)));
+  // The sidebar starts a new trail; links inside records remember where you came from.
+  document.querySelectorAll(".nav-item").forEach((button) => button.addEventListener("click", () => {
+    if (navigateTo(button.dataset.view, null, { preset: button.dataset.preset || "" })) {
+      navHistory.length = 0;
+      renderBackBar();
+    }
+  }));
+  setupNavGroups();
+  document.getElementById("back-bar").addEventListener("click", (event) => { if (event.target.closest("[data-nav-back]")) goBack(); });
+  document.getElementById("jump-button").addEventListener("click", openJump);
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      if (jump.open) closeJump(); else openJump();
+    }
+  });
+  window.addEventListener("beforeunload", (event) => {
+    if (hasUnsavedChanges()) { event.preventDefault(); event.returnValue = ""; }
+  });
 
   document.getElementById("collection-search").addEventListener("input", (event) => {
+    if (!confirmLeave()) { event.target.value = filterText; return; }
     filterText = event.target.value;
     selectedId = null;
     draft = false;
@@ -2042,46 +3127,63 @@ document.addEventListener("DOMContentLoaded", async () => {
       actionButton.closest(".sheet-row").remove();
       return;
     }
-    const jump = event.target.closest("[data-jump-view]");
-    if (jump) {
-      if (jump.dataset.jumpView === "outpost") activeOutpostTab = "capabilities";
-      openView(jump.dataset.jumpView, jump.dataset.jumpId);
+    const jumpLink = event.target.closest("[data-jump-view]");
+    if (jumpLink) {
+      if (jumpLink.dataset.jumpView === "outpost") activeOutpostTab = "capabilities";
+      openView(jumpLink.dataset.jumpView, jumpLink.dataset.jumpId);
       return;
     }
+    const sectionJump = event.target.closest("[data-jump-section]");
+    if (sectionJump) { jumpToSection(sectionJump.dataset.jumpSection); return; }
+    const homeOpen = event.target.closest("[data-home-open]");
+    if (homeOpen) {
+      navigateTo(homeOpen.dataset.homeOpen, homeOpen.dataset.homeId || null, { preset: homeOpen.dataset.homePreset || "", remember: true });
+      return;
+    }
+    if (event.target.closest("[data-home-sync]")) {
+      try { await syncDataToSite(); } catch (error) { showNotice(error.message, true); }
+      if (activeView === "home") renderContent();
+      return;
+    }
+    const homeNew = event.target.closest("[data-home-new]");
+    if (homeNew) {
+      if (navigateTo(homeNew.dataset.homeNew, null, { remember: true })) { draft = true; selectedId = null; renderContent(); }
+      return;
+    }
+    const homeTool = event.target.closest("[data-home-tool]");
+    if (homeTool) {
+      toolView.tab = homeTool.dataset.homeTool;
+      navigateTo("tools", null, { remember: true });
+      return;
+    }
+    if (action?.startsWith("bulk-")) {
+      try { await runBulkAction(action.slice(5)); } catch (error) { showNotice(error.message, true); }
+      return;
+    }
+    if (event.target.closest(".bulk-check, [data-bulk-all]")) return;
     const navRecord = event.target.closest("[data-record-id]");
     if (navRecord) {
+      if (navRecord.dataset.recordId !== selectedId && !confirmLeave()) return;
       selectedId = navRecord.dataset.recordId;
       draft = false;
       pathEditor = null;
       renderContent();
       return;
     }
-    if (action === "new-record") {
+    if (action?.startsWith("vocab-")) {
+      try { await handleVocabAction(action, actionButton); } catch (error) { showNotice(error.message, true); }
+    } else if (action?.startsWith("tool-")) {
+      try { await handleToolAction(action, actionButton); } catch (error) { showNotice(error.message, true); }
+    } else if (action === "new-record") {
+      if (!confirmLeave()) return;
       selectedId = null;
       draft = true;
       pathEditor = null;
       renderContent();
     } else if (action === "path-edit") {
-      pathEditor = currentReadingPath();
-      draft = false;
-      renderContent();
-    } else if (action === "path-cancel") {
-      pathEditor = null;
-      renderContent();
-    } else if (action === "path-save") {
-      try { await saveReadingPath(); } catch (error) { showNotice(error.message, true); }
-    } else if (action === "path-add") {
-      const ruleId = document.getElementById("path-add-select").value;
-      if (ruleId) pathEditor.push(ruleId);
-      renderContent();
-    } else if (action === "path-up" || action === "path-down" || action === "path-remove") {
-      const index = pathEditor.indexOf(actionButton.closest("[data-path-id]").dataset.pathId);
-      if (action === "path-remove") pathEditor.splice(index, 1);
-      else {
-        const target = action === "path-up" ? index - 1 : index + 1;
-        if (target >= 0 && target < pathEditor.length) [pathEditor[index], pathEditor[target]] = [pathEditor[target], pathEditor[index]];
-      }
-      renderContent();
+      navigateTo("readingpath", null, { remember: true });
+    } else if (action?.startsWith("lp-")) {
+      try { await handlePathAction(action, actionButton); } catch (error) { showNotice(error.message, true); }
     } else if (action === "add-prerequisite" || action === "add-complication") {
       const list = document.getElementById(action === "add-prerequisite" ? "prerequisite-rows" : "complication-rows");
       list.insertAdjacentHTML("beforeend", action === "add-prerequisite" ? prerequisiteRow() : complicationRow());
@@ -2152,7 +3254,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       stashView.category = event.target.value;
       rerenderStash(readStash());
     }
+    if (activeView === "readingpath" && event.target.matches("select[data-path-move]")) {
+      handlePathInput(event.target);
+      return;
+    }
+    if (activeView === "vocabulary" && event.target.matches("[data-interaction-filter], select[data-interaction-field]")) {
+      handleVocabInput(event.target);
+      return;
+    }
+    if (event.target.matches(".bulk-check")) {
+      if (event.target.checked) bulkSelection.add(event.target.value); else bulkSelection.delete(event.target.value);
+      refreshBulkBar();
+      return;
+    }
+    if (event.target.matches("[data-bulk-all]")) {
+      document.querySelectorAll(".bulk-check").forEach((checkbox) => {
+        checkbox.checked = event.target.checked;
+        if (checkbox.checked) bulkSelection.add(checkbox.value); else bulkSelection.delete(checkbox.value);
+      });
+      refreshBulkBar();
+      return;
+    }
+    if (event.target.matches("[data-list-status], [data-list-sort]")) {
+      if (!confirmLeave()) { renderContent(); return; }
+      const options = listOptions(activeView);
+      if (event.target.matches("[data-list-status]")) options.status = event.target.value; else options.sort = event.target.value;
+      bulkSelection = new Set();
+      selectedId = null;
+      draft = false;
+      renderContent();
+      return;
+    }
     if (event.target.matches("[data-list-filter]")) {
+      if (!confirmLeave()) { renderContent(); return; }
       listFilters[activeView] = { ...(listFilters[activeView] || {}), [event.target.dataset.listFilter]: event.target.value };
       selectedId = null;
       draft = false;
@@ -2194,8 +3328,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  const closeMoreMenu = () => document.querySelector(".more-menu")?.removeAttribute("open");
   document.getElementById("export-button").addEventListener("click", async () => {
-    try { await exportToSite(); } catch (error) { showNotice(error.message, true); }
+    closeMoreMenu();
+    try { await exportToSite(); await refreshSyncStatus(); } catch (error) { showNotice(error.message, true); }
   });
   document.getElementById("sync-button").addEventListener("click", async () => {
     try { await syncDataToSite(); } catch (error) { showNotice(error.message, true); }
@@ -2206,6 +3342,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (event.target.closest("[data-preview-size]")) setPreviewSize(event.target.closest("[data-preview-size]").dataset.previewSize);
   });
   workArea.addEventListener("input", (event) => {
+    if (activeView === "vocabulary") handleVocabInput(event.target);
+    if (activeView === "readingpath") handlePathInput(event.target);
     if (event.target.matches('[data-stash-quantity], [data-stash-action], [name="carryLimit"]')) updateCarried();
     if (preview.open) schedulePreview();
   });
@@ -2229,6 +3367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try { await setIncludeSamples(event.target.checked); } catch (error) { showNotice(error.message, true); event.target.checked = !event.target.checked; }
   });
   document.getElementById("import-button").addEventListener("click", async () => {
+    closeMoreMenu();
     try { await importFromSite(); } catch (error) { showNotice(error.message, true); }
   });
 });

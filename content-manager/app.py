@@ -12,6 +12,7 @@ import sqlite3
 import tempfile
 import threading
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -43,11 +44,12 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
-GATE_STATUSES = ("active", "dormant", "collapsed", "lost")
+# collapsed: the Core was recovered; sealed: deliberately closed as an unacceptable threat; emerging: newly opening.
+GATE_STATUSES = ("active", "emerging", "dormant", "collapsed", "sealed", "lost")
 JOB_TYPES = ("expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other")
 JOB_STATUSES = ("open", "scheduled", "in-progress", "completed", "failed", "cancelled")
 ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "history", "folklore")
@@ -55,6 +57,115 @@ SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
 GAME_POST_TYPES = ("announcement", "rule")
+
+# The shared vocabulary of Resources, Projects and Spellcasting: Resource Functions, manifested as Words.
+# The GM manages it in the content manager (stored in metadata); this is only the starting vocabulary.
+DEFAULT_FUNCTION_VOCABULARY = [
+    {"name": "Energy & Light", "functions": [
+        {"name": "Absorb", "definition": "Draw something into itself, taking it out of its surroundings."},
+        {"name": "Amplify", "definition": "Increase the strength or intensity of an effect that already exists."},
+        {"name": "Conduct", "definition": "Carry energy, force or a signal through itself efficiently."},
+        {"name": "Dampen", "definition": "Reduce the strength or intensity of an effect without ending it."},
+        {"name": "Glow", "definition": "Give off light."},
+        {"name": "Heat", "definition": "Raise the temperature of itself or its target."},
+        {"name": "Release", "definition": "Emit or discharge what it holds or can reach, often all at once."},
+        {"name": "Store", "definition": "Hold energy, matter or charge safely for later use."}]},
+    {"name": "Matter & Structure", "functions": [
+        {"name": "Bind", "definition": "Join separate things and keep them connected."},
+        {"name": "Corrode", "definition": "Break down or degrade matter."},
+        {"name": "Flex", "definition": "Bend, stretch or deform under stress and return to shape without breaking."},
+        {"name": "Regenerate", "definition": "Restore damaged structure or lost substance to what it was."},
+        {"name": "Reinforce", "definition": "Increase resistance to damage, pressure or deformation."},
+        {"name": "Stabilize", "definition": "Resist unwanted change and keep processes steady."},
+        {"name": "Transmute", "definition": "Change matter, or its properties, into another form."}]},
+    {"name": "Motion & Space", "functions": [
+        {"name": "Anchor", "definition": "Hold fast in place, resisting any force or effect that would shift it."},
+        {"name": "Move", "definition": "Impart, alter, speed up or direct motion."},
+        {"name": "Phase", "definition": "Change how something occupies space, letting it pass partly or wholly through solid matter."},
+        {"name": "Slip", "definition": "Escape grip, friction or restraint, sliding free of whatever would hold it."}]},
+    {"name": "Signal & Perception", "functions": [
+        {"name": "Hide", "definition": "Conceal from perception or detection, whether senses or instruments."},
+        {"name": "Record", "definition": "Keep impressions, states or patterns that can be read back later."},
+        {"name": "Resonate", "definition": "Respond strongly to a particular frequency, pattern or signature."},
+        {"name": "Sense", "definition": "Detect a target phenomenon or condition."}]},
+    {"name": "Process & Response", "functions": [
+        {"name": "Adapt", "definition": "Change in response to conditions, in a useful or self-directed way."},
+        {"name": "Catalyze", "definition": "Start, enable or speed up a process without being used up by it."},
+        {"name": "Filter", "definition": "Let some things through while holding others back."},
+        {"name": "Invert", "definition": "Reverse a property, direction or effect: hot to cold, pull to push, growth to decay."},
+        {"name": "Loop", "definition": "Repeat a process, motion or event in a cycle, returning to where it began."},
+        {"name": "Nullify", "definition": "Cancel or suppress a phenomenon outright, especially an anomalous one."},
+        {"name": "React", "definition": "Produce a defined response to a specific trigger."}]},
+]
+FUNCTION_NAME_RE = re.compile(r"[A-Z][A-Za-z-]{1,30}")
+# How two Functions behave together. A pair can carry more than one kind (Store + Release is a synergy and an
+# instability), but each kind only once. The starting set comes from the design notes' table.
+INTERACTION_KINDS = ("synergy", "opposition", "instability")
+DEFAULT_INTERACTIONS_PATH = APP_DIR / "default_interactions.json"
+# The vocabulary currently in force. The content store sets it when it opens or saves the vocabulary; the
+# cleaning functions below check against it.
+_active_functions: tuple[str, ...] = tuple(fn["name"] for group in DEFAULT_FUNCTION_VOCABULARY for fn in group["functions"])
+
+
+def function_names() -> tuple[str, ...]:
+    return _active_functions
+
+
+def clean_function_vocabulary(data: Any) -> list[dict[str, Any]]:
+    """Groups of uniquely named Functions, each with an optional definition."""
+    if not isinstance(data, list) or not data:
+        raise ManagerError("The vocabulary needs at least one group.")
+    groups, seen_groups, seen = [], set(), set()
+    for group in data:
+        if not isinstance(group, dict):
+            raise ManagerError("Each vocabulary group must be an object.")
+        name = clean_text(group, "name", "A group name")
+        if name.lower() in seen_groups:
+            raise ManagerError(f"Two groups are called “{name}”.")
+        seen_groups.add(name.lower())
+        functions = []
+        for item in group.get("functions") or []:
+            fn = clean_text(item if isinstance(item, dict) else {}, "name", "A Function name")
+            if not FUNCTION_NAME_RE.fullmatch(fn):
+                raise ManagerError(f"“{fn}” is not a valid Function name: one capitalized word, letters and hyphens only.")
+            if fn.lower() in seen:
+                raise ManagerError(f"“{fn}” appears twice in the vocabulary.")
+            seen.add(fn.lower())
+            functions.append({"name": fn, "definition": clean_text(item, "definition")})
+        groups.append({"name": name, "functions": functions})
+    if not seen:
+        raise ManagerError("The vocabulary needs at least one Function.")
+    return groups
+# The broad environmental origin of a Gate, inherited by what comes from it. Managed in the content manager
+# (metadata key domainVocabulary); records store each Domain's key, which never changes once created.
+DEFAULT_DOMAINS = [
+    {"key": "verdant", "name": "Verdant", "colour": "#7cc47a",
+     "description": "Biologically dense places dominated by strange growth: forests, wetlands, fungal systems and other highly active life."},
+    {"key": "volcanic", "name": "Volcanic", "colour": "#e0815c",
+     "description": "Heat, geothermal activity, magma, ash, mineral pressure and intensely energetic geology."},
+    {"key": "abyssal", "name": "Abyssal", "colour": "#6f9fe0",
+     "description": "Deep water: submerged, high-pressure, lightless, oceanic or otherwise deep and hostile places."},
+    {"key": "arid", "name": "Arid", "colour": "#d6b46a",
+     "description": "Dry places: deserts, salt flats, exposed stone, desiccated caverns and mineral wastes."},
+    {"key": "frozen", "name": "Frozen", "colour": "#9fdcec",
+     "description": "Ice, snow, extreme cold, cryogenic conditions and unusual preservation."},
+    {"key": "constructed", "name": "Constructed", "colour": "#b4b4c8",
+     "description": "Places that were clearly built: machine worlds, ancient complexes, artificial ecosystems and megastructures."},
+]
+MAX_DOMAINS = 2
+COLOUR_RE = re.compile(r"#[0-9a-fA-F]{6}")
+_active_domains: tuple[str, ...] = tuple(domain["key"] for domain in DEFAULT_DOMAINS)
+
+
+def domain_keys() -> tuple[str, ...]:
+    return _active_domains
+RESOURCE_SOURCES = ("fauna", "flora", "ground", "constructed", "by-product", "other")
+# sample: research quantities only; limited: a stock that use consumes; available: a dependable supply.
+RESOURCE_AVAILABILITY = ("sample", "limited", "available", "unavailable")
+# Basic manifests one Word; First uses one Word for a defined effect; Second and Third combine two and three.
+FORM_TIERS = {"basic": 1, "first": 1, "second": 2, "third": 3}
+FORM_STATUSES = ("theoretical", "in-development", "known")
+PROJECT_RESULTS = ("item", "facility", "research", "spell", "resource-supply", "recovery", "other")
 
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 DATETIME_RE = re.compile(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?")
@@ -96,6 +207,10 @@ def media_filename(path: Any) -> str | None:
 
 
 # --- Field cleaning ---------------------------------------------------------
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
 
 def clean_text(data: dict[str, Any], key: str, required_label: str | None = None) -> str:
     value = data.get(key)
@@ -299,6 +414,79 @@ def clean_job(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def clean_domain_vocabulary(data: Any, existing: tuple[str, ...]) -> list[dict[str, str]]:
+    """Domains with unique names. A Domain keeps its key for life; new ones get a key from their name."""
+    if not isinstance(data, list) or not data:
+        raise ManagerError("There must be at least one Domain.")
+    domains, names, keys = [], set(), set()
+    for item in data:
+        item = item if isinstance(item, dict) else {}
+        name = clean_text(item, "name", "A Domain name")
+        if name.lower() in names:
+            raise ManagerError(f"Two Domains are called “{name}”.")
+        names.add(name.lower())
+        key = str(item.get("key") or "")
+        if key not in existing:
+            key, suffix = slugify(name) or "domain", 2
+            while key in keys or key in existing:
+                key, suffix = f"{slugify(name) or 'domain'}-{suffix}", suffix + 1
+        if key in keys:
+            raise ManagerError(f"Two Domains share the key “{key}”.")
+        keys.add(key)
+        colour = clean_text(item, "colour")
+        if colour and not COLOUR_RE.fullmatch(colour):
+            raise ManagerError(f"“{colour}” is not a colour like #7cc47a.")
+        domains.append({"key": key, "name": name, "colour": colour, "description": clean_text(item, "description")})
+    return domains
+
+
+def clean_interactions(data: Any, names: tuple[str, ...]) -> list[dict[str, str]]:
+    """Pairs of Functions with a kind, an optional short keyword (Runaway, Cancellation...) and an optional note."""
+    if not isinstance(data, list):
+        raise ManagerError("Interactions must be a list.")
+    cleaned, seen = [], set()
+    for item in data:
+        item = item if isinstance(item, dict) else {}
+        a, b = clean_text(item, "a"), clean_text(item, "b")
+        if not a or not b:
+            continue
+        for name in (a, b):
+            if name not in names:
+                raise ManagerError(f"Interaction: “{name}” is not a Resource Function.")
+        if a == b:
+            raise ManagerError(f"An interaction needs two different Functions ({a}).")
+        kind = clean_choice(item, "kind", INTERACTION_KINDS, "synergy")
+        a, b = sorted((a, b))
+        if (a, b, kind) in seen:
+            raise ManagerError(f"{a} + {b} is listed twice as {kind}.")
+        seen.add((a, b, kind))
+        keyword = clean_text(item, "keyword")
+        if len(keyword) > 40:
+            raise ManagerError(f"Keep the keyword for {a} + {b} short (40 characters at most).")
+        cleaned.append({"a": a, "b": b, "kind": kind, "keyword": keyword, "note": clean_text(item, "note")})
+    return sorted(cleaned, key=lambda entry: (entry["a"], entry["b"], INTERACTION_KINDS.index(entry["kind"])))
+
+
+def clean_functions(data: dict[str, Any], key: str, label: str) -> list[str]:
+    """A list of Resource Functions (Words), each from the current vocabulary, without repeats."""
+    names = clean_list(data, key)
+    unknown = [name for name in names if name not in function_names()]
+    if unknown:
+        raise ManagerError(f"{label}: “{unknown[0]}” is not a Resource Function.")
+    return list(dict.fromkeys(names))
+
+
+def clean_domains(data: dict[str, Any], key: str = "domains") -> list[str]:
+    """One Domain normally; two only when that defines the place."""
+    domains = list(dict.fromkeys(item.lower() for item in clean_list(data, key)))
+    unknown = [item for item in domains if item not in domain_keys()]
+    if unknown:
+        raise ManagerError(f"“{unknown[0]}” is not a Domain.")
+    if len(domains) > MAX_DOMAINS:
+        raise ManagerError(f"At most {MAX_DOMAINS} Domains.")
+    return domains
+
+
 def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
     """Type-specific metadata. Types without extra metadata keep an empty object."""
     details = details if isinstance(details, dict) else {}
@@ -311,6 +499,10 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
             "knownTraits": clean_list(details, "knownTraits"),
             "knownHazards": clean_list(details, "knownHazards"),
             "knownLocations": clean_list(details, "knownLocations"),
+            "domains": clean_domains(details),
+            "knownCreatures": clean_list(details, "knownCreatures"),
+            # The CM's own notes (the Gate Aspect, generator output); removed from the public export.
+            "gmNotes": clean_text(details, "gmNotes"),
         }
     if entry_type == "session-record":
         return {
@@ -507,6 +699,12 @@ def clean_project(data: dict[str, Any]) -> dict[str, Any]:
                           for item in clean_checklist(data, "complications", "Complications") if clean_text(item, "text")],
         "outcome": clean_text(data, "outcome"),
         "progress": {"current": current, "max": maximum},
+        # What the Project needs and leads to, as references rather than prose.
+        "requiredFunctions": clean_functions(data, "requiredFunctions", "Required Functions"),
+        "requiredResourceIds": clean_ids(data, "requiredResourceIds", "Required Resources"),
+        "requiredDomain": clean_choice(data, "requiredDomain", ("", *domain_keys()), ""),
+        "relatedGateId": clean_ref(data, "relatedGateId"),
+        "resultType": clean_choice(data, "resultType", ("", *PROJECT_RESULTS), ""),
     }
 
 
@@ -576,6 +774,48 @@ def split_legacy_outpost(outpost: dict[str, Any]) -> tuple[dict[str, Any], list[
             capabilities.append(capability)
         outpost["capabilities"] = capabilities
     return outpost, facilities, dropped
+
+
+def clean_resource(data: dict[str, Any]) -> dict[str, Any]:
+    """A Gate Resource. Hidden Functions, the harvesting issue and GM notes never reach the public site."""
+    functions = clean_functions(data, "functions", "Known Functions")
+    hidden = clean_functions(data, "hiddenFunctions", "Hidden Functions")
+    overlap = [name for name in hidden if name in functions]
+    if overlap:
+        raise ManagerError(f"{overlap[0]} cannot be both a Known and a Hidden Function.")
+    return {
+        "name": clean_text(data, "name", "A Resource name"),
+        "sourceType": clean_choice(data, "sourceType", RESOURCE_SOURCES, "other"),
+        "description": clean_text(data, "description"),
+        # Empty means the Resource inherits its origin Gate's Domain.
+        "domains": clean_domains(data),
+        "functions": functions,
+        "hiddenFunctions": hidden,
+        "specialProperty": clean_text(data, "specialProperty"),
+        "availability": clean_choice(data, "availability", RESOURCE_AVAILABILITY, "sample"),
+        "supply": clean_text(data, "supply"),
+        "harvestingIssue": clean_text(data, "harvestingIssue"),
+        "gateId": clean_ref(data, "gateId"),
+        "projectId": clean_ref(data, "projectId"),
+        "gmNotes": clean_text(data, "gmNotes"),
+    }
+
+
+def clean_form(data: dict[str, Any]) -> dict[str, Any]:
+    """A spellcasting Form: a learned technique using a fixed number of Words for its tier."""
+    tier = clean_choice(data, "tier", tuple(FORM_TIERS), "first")
+    words = clean_functions(data, "words", "Words")
+    if len(words) != FORM_TIERS[tier]:
+        raise ManagerError(f"A {tier.capitalize()} Form uses exactly {FORM_TIERS[tier]} Word{'s' if FORM_TIERS[tier] > 1 else ''}.")
+    return {
+        "name": clean_text(data, "name", "A Form name"),
+        "tier": tier,
+        "words": words,
+        "effect": clean_text(data, "effect"),
+        "status": clean_choice(data, "status", FORM_STATUSES, "known"),
+        "projectId": clean_ref(data, "projectId"),
+        "gmNotes": clean_text(data, "gmNotes"),
+    }
 
 
 def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
@@ -651,8 +891,11 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "projects": Collection(
         "projects", "Project", ("name",), clean_project, lambda record: str(record.get("name", "")),
-        links=(("characterIds", "project_characters", "project_id", "character_id", "characters"),),
-        public_fields=("id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress"),
+        refs=(("relatedGateId", "related_gate_id", "archive"),),
+        links=(("characterIds", "project_characters", "project_id", "character_id", "characters"),
+               ("requiredResourceIds", "project_resources", "project_id", "resource_id", "resources")),
+        public_fields=("id", "name", "access", "outpost", "characterIds", "summary", "prerequisites", "complications", "outcome", "progress",
+                       "requiredFunctions", "requiredResourceIds", "requiredDomain", "relatedGateId", "resultType"),
         text_fields=("summary", "outcome"),
     ),
     "characters": Collection(
@@ -678,13 +921,28 @@ COLLECTIONS: dict[str, Collection] = {
                        "participantIds", "requirements", "sessionRecordId"),
         text_fields=("summary", "objective", "briefing"),
     ),
+    "resources": Collection(
+        "resources", "Resource", ("name",), clean_resource, lambda record: str(record.get("name", "")),
+        refs=(("gateId", "gate_id", "archive"), ("projectId", "project_id", "projects")),
+        unique=lambda record: ("name", record["name"]),
+        public_fields=("id", "name", "sourceType", "description", "domains", "functions", "specialProperty", "availability",
+                       "supply", "gateId", "projectId"),
+        text_fields=("description", "specialProperty"),
+    ),
+    "forms": Collection(
+        "forms", "Form", ("name",), clean_form, lambda record: str(record.get("name", "")),
+        refs=(("projectId", "project_id", "projects"),),
+        unique=lambda record: ("name", record["name"]),
+        public_fields=("id", "name", "tier", "words", "effect", "status", "projectId"),
+        text_fields=("effect",),
+    ),
     # Announcements and rules share one combined public file, game.json.
     "game": Collection(
         "game_posts", "Game post", ("title",), clean_game_post, lambda record: str(record.get("title", "")),
         image_fields=("image",), text_fields=("summary", "details"),
     ),
 }
-PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs")
+PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs", "resources", "forms")
 GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image")
 
 
@@ -706,6 +964,8 @@ class ContentStore:
         if self._has_legacy_schema():
             self.migration_report = self._migrate_from_v3()
         self._create_schema()
+        self._activate_vocabulary(self.function_vocabulary())
+        self._activate_domains(self.domain_vocabulary())
         self.migration_report += self._migrate_rules_to_game()
         self.migration_report += self._migrate_outpost_facilities()
         self.migration_report += self._migrate_outpost_projects()
@@ -807,6 +1067,23 @@ class ContentStore:
                     data TEXT NOT NULL,
                     PRIMARY KEY (source, id)
                 );
+                CREATE TABLE IF NOT EXISTS resources (
+                    id TEXT PRIMARY KEY,
+                    gate_id TEXT REFERENCES archive_entries(id) ON DELETE RESTRICT,
+                    project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS forms (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS project_resources (
+                    project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                    resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE RESTRICT,
+                    position INTEGER NOT NULL,
+                    PRIMARY KEY (project_id, resource_id)
+                );
                 CREATE INDEX IF NOT EXISTS archive_type ON archive_entries(type);
                 CREATE INDEX IF NOT EXISTS jobs_session_record ON jobs(session_record_id);
                 CREATE INDEX IF NOT EXISTS stash_gear ON character_stash(gear_id);
@@ -816,6 +1093,9 @@ class ContentStore:
                 columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
                 if "project_id" not in columns:
                     connection.execute(f"ALTER TABLE {table} ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT")
+            # Schema v8: a Project can name the Gate it relates to.
+            if "related_gate_id" not in {row["name"] for row in connection.execute("PRAGMA table_info(projects)")}:
+                connection.execute("ALTER TABLE projects ADD COLUMN related_gate_id TEXT REFERENCES archive_entries(id) ON DELETE RESTRICT")
             connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('schemaVersion', ?)", (str(SCHEMA_VERSION),))
 
     # --- Migration from the v3 schema (Island, Gates, Expeditions, Reports) --
@@ -1147,7 +1427,7 @@ class ContentStore:
                     f"SELECT o.id, o.data FROM {table} l JOIN {other.table} o ON o.id = l.{owner} WHERE l.{target_column} = ?",
                     (record_id,),
                 ):
-                    blockers.append(f"{other.label} “{other.display(json.loads(row['data'])) or row['id']}” (participant)")
+                    blockers.append(f"{other.label} “{other.display(json.loads(row['data'])) or row['id']}” ({'participant' if target == 'characters' else field})")
         kind = next((kind for kind, collection in ASSET_TYPES.items() if collection == name), None)
         row = connection.execute("SELECT data FROM outpost_state WHERE id = 1").fetchone() if kind else None
         for capability in (json.loads(row["data"]).get("capabilities") or []) if row else []:
@@ -1219,7 +1499,16 @@ class ContentStore:
             for field, _, _, _, target in spec.links:
                 for target_id in clean.get(field) or []:
                     if not connection.execute(f"SELECT 1 FROM {COLLECTIONS[target].table} WHERE id = ?", (target_id,)).fetchone():
-                        raise ManagerError(f"Unknown participant character: {target_id}")
+                        raise ManagerError(f"Unknown {COLLECTIONS[target].label.lower()}: {target_id}")
+            for field in ("gateId", "relatedGateId"):
+                if clean.get(field) and name in ("resources", "projects"):
+                    row = connection.execute("SELECT type FROM archive_entries WHERE id = ?", (clean[field],)).fetchone()
+                    if row["type"] != "gate-record":
+                        raise ManagerError("A Gate must be an Archive entry of type gate-record.")
+            if name == "archive" and existing and existing.get("type") == "gate-record" and clean["type"] != "gate-record":
+                for table, column in (("resources", "gate_id"), ("projects", "related_gate_id")):
+                    for row in connection.execute(f"SELECT id FROM {table} WHERE {column} = ?", (chosen_id,)):
+                        raise ManagerError(f"“{row['id']}” points at this Gate; detach it before changing the type.")
             if name == "jobs" and clean.get("sessionRecordId"):
                 row = connection.execute("SELECT type FROM archive_entries WHERE id = ?", (clean["sessionRecordId"],)).fetchone()
                 if row["type"] != "session-record":
@@ -1232,6 +1521,7 @@ class ContentStore:
                     raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
 
             clean["sample"] = bool(data["sample"]) if "sample" in data else bool(existing and existing.get("sample"))
+            clean["updatedAt"] = now_iso()
             record = {**clean, "id": chosen_id}
             self._write_record(connection, name, chosen_id, record, insert=existing is None)
             for field in spec.image_fields if existing else ():
@@ -1239,24 +1529,68 @@ class ContentStore:
                     self._prune_media(connection, existing.get(field))
         return {"id": chosen_id}
 
+    # --- Learning paths: Onboarding first, then optional paths that each teach one area -------------
+
+    ONBOARDING = {"key": "onboarding", "title": "Onboarding",
+                  "description": "The essentials every new player reads before their first expedition."}
+
+    def learning_paths(self) -> list[dict[str, Any]]:
+        """The saved paths; before any are saved, one Onboarding path holding the rules that have a reading order."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'learningPaths'").fetchone()
+            if row:
+                return json.loads(row["value"])
+            rules = [post for post in self._records(connection, "game") if post.get("type") != "announcement" and isinstance(post.get("order"), int)]
+        return [{**self.ONBOARDING, "ruleIds": [rule["id"] for rule in sorted(rules, key=lambda rule: rule["order"])]}]
+
+    def save_learning_paths(self, data: Any) -> dict[str, Any]:
+        """Replace the learning paths. The first path is always Onboarding. A rule sits on one path at most; every rule
+        gets a reading order across all paths (Onboarding first), and rules on no path lose theirs."""
+        if not isinstance(data, list) or not data or not all(isinstance(item, dict) for item in data):
+            raise ManagerError("Learning paths must be a list, starting with Onboarding.")
+        with self._connect() as connection:
+            rules = {post["id"]: post for post in self._records(connection, "game") if post.get("type") != "announcement"}
+            paths, keys, titles, placed = [], set(), set(), {}
+            for index, item in enumerate(data):
+                title = clean_text(item, "title", "A path title")
+                if title.lower() in titles:
+                    raise ManagerError(f"Two learning paths are called “{title}”.")
+                titles.add(title.lower())
+                key = "onboarding" if index == 0 else (slugify(str(item.get("key") or "")) or slugify(title) or "path")
+                if index and key == "onboarding":
+                    key = slugify(title) or "path"
+                base, suffix = key, 2
+                while key in keys:
+                    key, suffix = f"{base}-{suffix}", suffix + 1
+                keys.add(key)
+                rule_ids = item.get("ruleIds") or []
+                if not isinstance(rule_ids, list) or not all(isinstance(rule_id, str) for rule_id in rule_ids):
+                    raise ManagerError(f"“{title}” must list rule IDs.")
+                for rule_id in rule_ids:
+                    if rule_id not in rules:
+                        raise ManagerError(f"Not a rule post: {rule_id}")
+                    if rule_id in placed:
+                        raise ManagerError(f"“{rules[rule_id].get('title') or rule_id}” is on both “{placed[rule_id]}” and “{title}”; a rule belongs to one path.")
+                    placed[rule_id] = title
+                paths.append({"key": key, "title": title, "description": clean_text(item, "description"), "ruleIds": list(rule_ids)})
+            order = {rule_id: position for position, rule_id in enumerate((rule_id for path in paths for rule_id in path["ruleIds"]), start=1)}
+            for rule_id, rule in rules.items():
+                if rule.get("order") != order.get(rule_id):
+                    self._write_record(connection, "game", rule_id, {**rule, "order": order.get(rule_id)}, insert=False)
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('learningPaths', ?)", (json.dumps(paths, ensure_ascii=False),))
+        return {"saved": True, "paths": len(paths)}
+
     def save_reading_path(self, rule_ids: Any) -> None:
-        """The new-player reading path: these rules get reading orders 1..n, every other rule loses its order."""
+        """Set the Onboarding path's rules (taking them off any other path)."""
         if not isinstance(rule_ids, list) or not all(isinstance(item, str) for item in rule_ids):
             raise ManagerError("The reading path must be a list of rule IDs.")
         if len(set(rule_ids)) != len(rule_ids):
             raise ManagerError("A rule can appear on the reading path only once.")
-        if len(rule_ids) > 999:
-            raise ManagerError("The reading path can hold at most 999 rules.")
-        with self._connect() as connection:
-            rules = {post["id"]: post for post in self._records(connection, "game") if post.get("type") != "announcement"}
-            unknown = [item for item in rule_ids if item not in rules]
-            if unknown:
-                raise ManagerError(f"Not a rule post: {', '.join(unknown)}")
-            wanted = {rule_id: index for index, rule_id in enumerate(rule_ids, start=1)}
-            for rule_id, rule in rules.items():
-                order = wanted.get(rule_id)
-                if rule.get("order") != order:
-                    self._write_record(connection, "game", rule_id, {**rule, "order": order}, insert=False)
+        paths = self.learning_paths()
+        paths[0] = {**paths[0], "ruleIds": rule_ids}
+        for path in paths[1:]:
+            path["ruleIds"] = [rule_id for rule_id in path["ruleIds"] if rule_id not in rule_ids]
+        self.save_learning_paths(paths)
 
     def delete_record(self, name: str, record_id: str) -> None:
         spec = self._spec(name)
@@ -1345,8 +1679,9 @@ class ContentStore:
             # Gear and characters point at projects, which point back at characters: check references at commit.
             connection.execute("BEGIN")  # the pragma lasts until this transaction ends
             connection.execute("PRAGMA defer_foreign_keys = ON")
-            for table in ("character_stash", "job_participants", "archive_participants", "project_characters", "jobs",
-                          "archive_entries", "facilities", "gear", "projects", "characters", "media", "outpost_state", "game_posts"):
+            for table in ("character_stash", "job_participants", "archive_participants", "project_characters", "project_resources",
+                          "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects", "characters", "media",
+                          "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -1439,7 +1774,156 @@ class ContentStore:
                    for name, items in records.items() for record in items if record.get("sample")]
         result["settings"] = {"includeSamples": include, "sampleCount": len(samples)}
         result["hiddenSamples"] = [] if include else samples
+        result["sync"] = self.sync_status()
+        result["learningPaths"] = self.learning_paths()
+        vocabulary = self.function_vocabulary()
+        result["vocabulary"] = {"functionGroups": {group["name"]: [fn["name"] for fn in group["functions"]] for group in vocabulary},
+                                "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
+                                "domains": domain_keys(), "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
+                                "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
+                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES}
         return result
+
+    # --- The Function vocabulary (Resource Functions / spell Words) ---------------------------------------
+
+    @staticmethod
+    def _activate_vocabulary(groups: list[dict[str, Any]]) -> None:
+        global _active_functions
+        _active_functions = tuple(fn["name"] for group in groups for fn in group["functions"])
+
+    def function_vocabulary(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'functionVocabulary'").fetchone()
+        return json.loads(row["value"]) if row else json.loads(json.dumps(DEFAULT_FUNCTION_VOCABULARY))
+
+    # Where Functions are used: (collection, list fields).
+    FUNCTION_FIELDS = (("resources", ("functions", "hiddenFunctions")), ("forms", ("words",)), ("projects", ("requiredFunctions",)))
+
+    def function_interactions(self) -> list[dict[str, str]]:
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'functionInteractions'").fetchone()
+        if row:
+            return json.loads(row["value"])
+        defaults = json.loads(DEFAULT_INTERACTIONS_PATH.read_text(encoding="utf-8")) if DEFAULT_INTERACTIONS_PATH.exists() else []
+        # The defaults only mention Functions that are in the vocabulary.
+        names = set(function_names())
+        return [entry for entry in defaults if entry["a"] in names and entry["b"] in names]
+
+    def save_function_interactions(self, data: Any) -> dict[str, Any]:
+        interactions = clean_interactions(data, function_names())
+        with self._connect() as connection:
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('functionInteractions', ?)",
+                               (json.dumps(interactions, ensure_ascii=False),))
+        return {"saved": True, "count": len(interactions)}
+
+    def save_function_vocabulary(self, data: Any, renames: Any = None) -> dict[str, Any]:
+        """Replace the vocabulary. `renames` ({old: new}) carries renamed Functions through every record that uses
+        them; a Function that is removed while still in use is refused. Rules text is not rewritten, so mentions of
+        renamed or removed Functions in Game posts are reported back."""
+        groups = clean_function_vocabulary(data)
+        renames = renames if isinstance(renames, dict) else {}
+        old_names = set(function_names())
+        new_names = {fn["name"] for group in groups for fn in group["functions"]}
+        renames = {str(old): str(new) for old, new in renames.items() if old in old_names and new in new_names and old != new}
+        removed = old_names - new_names - set(renames)
+        interactions = [{**entry, "a": renames.get(entry["a"], entry["a"]), "b": renames.get(entry["b"], entry["b"])}
+                        for entry in self.function_interactions()]
+        kept = [entry for entry in interactions if entry["a"] in new_names and entry["b"] in new_names]
+        with self._connect() as connection:
+            records = {name: self._records(connection, name) for name, _ in self.FUNCTION_FIELDS}
+            in_use = []
+            for name, fields in self.FUNCTION_FIELDS:
+                for record in records[name]:
+                    used = {fn for field in fields for fn in record.get(field) or []} & removed
+                    in_use += [f"{fn} ({COLLECTIONS[name].label} “{COLLECTIONS[name].display(record) or record['id']}”)" for fn in sorted(used)]
+            if in_use:
+                raise ManagerError(f"Still in use, so it cannot be removed: {'; '.join(in_use)}. Rename it instead, or change those records first.")
+            changed = 0
+            for name, fields in self.FUNCTION_FIELDS:
+                for record in records[name]:
+                    updated = {field: list(dict.fromkeys(renames.get(fn, fn) for fn in record.get(field) or [])) for field in fields}
+                    if any(updated[field] != (record.get(field) or []) for field in fields):
+                        self._write_record(connection, name, record["id"], {**record, **updated}, insert=False)
+                        changed += 1
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('functionVocabulary', ?)",
+                               (json.dumps(groups, ensure_ascii=False),))
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('functionInteractions', ?)",
+                               (json.dumps(clean_interactions(kept, tuple(new_names)), ensure_ascii=False),))
+            mentions = sorted({f"{fn} ({post.get('title') or post['id']})" for post in self._records(connection, "game")
+                               for fn in [*renames, *removed] if f"`{fn}`" in f"{post.get('summary') or ''}{post.get('details') or ''}"})
+        self._activate_vocabulary(groups)
+        return {"saved": True, "recordsUpdated": changed, "ruleMentions": mentions, "interactionsRemoved": len(interactions) - len(kept)}
+
+    # --- Domains -------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _activate_domains(domains: list[dict[str, Any]]) -> None:
+        global _active_domains
+        _active_domains = tuple(domain["key"] for domain in domains)
+
+    def domain_vocabulary(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            row = connection.execute("SELECT value FROM metadata WHERE key = 'domainVocabulary'").fetchone()
+        return json.loads(row["value"]) if row else json.loads(json.dumps(DEFAULT_DOMAINS))
+
+    def save_domain_vocabulary(self, data: Any) -> dict[str, Any]:
+        """Replace the Domains. Renaming keeps every record pointing at the same Domain (they store its key);
+        removing a Domain that a Gate, Resource or Project still uses is refused."""
+        domains = clean_domain_vocabulary(data, domain_keys())
+        removed = set(domain_keys()) - {domain["key"] for domain in domains}
+        with self._connect() as connection:
+            in_use = []
+            for entry in self._records(connection, "archive"):
+                for key in sorted(set((entry.get("details") or {}).get("domains") or []) & removed):
+                    in_use.append(f"{key} (Gate “{entry.get('title') or entry['id']}”)")
+            for resource in self._records(connection, "resources"):
+                in_use += [f"{key} (Resource “{resource.get('name')}”)" for key in sorted(set(resource.get("domains") or []) & removed)]
+            for project in self._records(connection, "projects"):
+                if project.get("requiredDomain") in removed:
+                    in_use.append(f"{project['requiredDomain']} (Project “{project.get('name')}”)")
+            if in_use:
+                raise ManagerError(f"Still in use, so it cannot be removed: {'; '.join(in_use)}.")
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('domainVocabulary', ?)",
+                               (json.dumps(domains, ensure_ascii=False),))
+        self._activate_domains(domains)
+        return {"saved": True}
+
+    # --- Sync status and bulk actions ---------------------------------------------------------------
+
+    def mark(self, key: str) -> None:
+        """Record when content last changed (lastChangeAt) or was last written to the site (lastSyncAt)."""
+        with self._connect() as connection:
+            connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)", (key, now_iso()))
+
+    def sync_status(self) -> dict[str, Any]:
+        with self._connect() as connection:
+            values = {row["key"]: row["value"] for row in connection.execute(
+                "SELECT key, value FROM metadata WHERE key IN ('lastChangeAt', 'lastSyncAt')")}
+        changed, synced = values.get("lastChangeAt"), values.get("lastSyncAt")
+        return {"lastChangeAt": changed, "lastSyncAt": synced, "pending": bool(changed and (not synced or changed > synced))}
+
+    BULK_ACTIONS = {"publish": ("published", True), "unpublish": ("published", False), "sample": ("sample", True), "unsample": ("sample", False)}
+
+    def bulk_update(self, name: str, ids: Any, action: Any) -> dict[str, int]:
+        """Publish, unpublish, or mark several records as samples (or not) at once."""
+        spec = self._spec(name)
+        if action not in self.BULK_ACTIONS:
+            raise ManagerError("Unknown bulk action.")
+        if not isinstance(ids, list) or not ids or not all(isinstance(item, str) for item in ids):
+            raise ManagerError("Choose at least one record.")
+        field, value = self.BULK_ACTIONS[action]
+        changed = 0
+        with self._connect() as connection:
+            records = {record["id"]: record for record in self._records(connection, name)}
+            missing = [item for item in ids if item not in records]
+            if missing:
+                raise ManagerError(f"That {spec.label.lower()} no longer exists: {missing[0]}")
+            for record_id in ids:
+                record = records[record_id]
+                if bool(record.get(field)) != value:
+                    self._write_record(connection, name, record_id, {**record, field: value, "updatedAt": now_iso()}, insert=False)
+                    changed += 1
+        return {"changed": changed}
 
     def site_settings(self) -> dict[str, Any]:
         with self._connect() as connection:
@@ -1517,11 +2001,26 @@ class ContentStore:
         public_project = lambda project_id: project_id if project_id in published["projects"] else None
         exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId"))}
                             for gear in published["gear"].values()]
+        public_gate = lambda gate_id: gate_id if gate_id in public_archive and published["archive"][gate_id].get("type") == "gate-record" else None
         exported["projects"] = [
             {**public_record("projects", project),
-             "characterIds": [item for item in project.get("characterIds", []) if item in published["characters"]]}
+             "characterIds": [item for item in project.get("characterIds", []) if item in published["characters"]],
+             "requiredResourceIds": [item for item in project.get("requiredResourceIds", []) if item in published["resources"]],
+             "relatedGateId": public_gate(project.get("relatedGateId"))}
             for project in published["projects"].values()
         ]
+        # Resources inherit their origin Gate's Domains unless they name their own. Hidden Functions are never exported.
+        for resource in published["resources"].values():
+            gate = published["archive"].get(resource.get("gateId") or "")
+            resource = public_record("resources", resource)
+            exported["resources"].append({
+                **resource,
+                "domains": resource.get("domains") or ((gate or {}).get("details") or {}).get("domains") or [],
+                "gateId": public_gate(resource.get("gateId")),
+                "projectId": public_project(resource.get("projectId")),
+            })
+        exported["forms"] = [{**public_record("forms", form), "projectId": public_project(form.get("projectId"))}
+                             for form in published["forms"].values()]
 
         for character in published["characters"].values():
             character = public_record("characters", character)
@@ -1532,6 +2031,7 @@ class ContentStore:
 
         for entry in published["archive"].values():
             entry = public_record("archive", entry)
+            entry["details"] = {key: value for key, value in (entry.get("details") or {}).items() if key != "gmNotes"}
             entry["participantIds"] = [item for item in entry.get("participantIds", []) if item in published["characters"]]
             exported["archive"].append(entry)
 
@@ -1594,6 +2094,11 @@ class ContentStore:
                 credit["logo"] = None
         output["site.json"] = json_bytes(site)
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
+        public_rules = {post["id"] for post in game if post.get("type") != "announcement"}
+        output["learning-paths.json"] = json_bytes([{**path, "ruleIds": [rule_id for rule_id in path["ruleIds"] if rule_id in public_rules]}
+                                                    for path in self.learning_paths()])
+        output["vocabulary.json"] = json_bytes({"functionGroups": self.function_vocabulary(), "interactions": self.function_interactions(),
+                                                 "domains": self.domain_vocabulary()})
         counts = {name: len(exported[name]) for name in PAGE_COLLECTIONS}
         counts["game"] = len(game)
         counts["facilities"] = len(outpost["facilities"])
@@ -1844,6 +2349,18 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                 elif method == "POST" and path == "/api/outpost":
                     store.save_outpost(self._read_body().get("data"))
                     self._send_json(200, {"saved": True})
+                elif method == "POST" and path == "/api/bulk":
+                    body = self._read_body()
+                    self._send_json(200, store.bulk_update(str(body.get("collection") or ""), body.get("ids"), body.get("action")))
+                elif method == "POST" and path == "/api/interactions":
+                    self._send_json(200, store.save_function_interactions(self._read_body().get("data")))
+                elif method == "POST" and path == "/api/domains":
+                    self._send_json(200, store.save_domain_vocabulary(self._read_body().get("data")))
+                elif method == "POST" and path == "/api/vocabulary":
+                    body = self._read_body()
+                    self._send_json(200, store.save_function_vocabulary(body.get("data"), body.get("renames")))
+                elif method == "POST" and path == "/api/learning-paths":
+                    self._send_json(200, store.save_learning_paths(self._read_body().get("data")))
                 elif method == "POST" and path == "/api/reading-path":
                     store.save_reading_path(self._read_body().get("ruleIds"))
                     self._send_json(200, {"saved": True})
@@ -1863,6 +2380,10 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     self._send_json(200, {"deleted": True})
                 else:
                     return False
+                if method == "POST" and path in ("/api/sync", "/api/export", "/api/import"):
+                    store.mark("lastSyncAt")
+                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media"):
+                    store.mark("lastChangeAt")
             except ManagerError as error:
                 self._send_json(400, {"error": str(error)})
             except sqlite3.IntegrityError as error:
