@@ -318,89 +318,6 @@ const visibleAnnouncements = (posts) => posts
   .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned))
     || String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")));
 
-/* ---------- Random Resource: draws Resource Functions from the Function table in the same post ---------- */
-
-// {{function-picker}} in a post becomes this widget. It reads the Functions, what they do and how they interact
-// from the post's own table (the one whose first column is "Function"), so editing the table updates the picker.
-const readFunctionTable = (scope) => {
-  const table = [...scope.querySelectorAll("table")].find((candidate) => candidate.querySelector("th")?.textContent.trim() === "Function");
-  if (!table) return [];
-  return [...table.querySelectorAll("tbody tr")].map((row) => {
-    const cells = [...row.cells].map((cell) => cell.textContent.trim());
-    const names = (text) => (text || "").split(",").map((part) => part.replace(/\[.*?\]/g, "").trim()).filter((part) => part && part !== "—");
-    // "Release [Runaway], Amplify [Overload]": each difficult pairing with the problem it names.
-    const hard = [...(cells[4] || "").matchAll(/([A-Za-z]+)\s*\[([^\]]+)\]/g)].map(([, name, label]) => ({ name, label }));
-    return { name: cells[0], does: cells[1] || "", synergy: names(cells[3]), hard };
-  }).filter((entry) => entry.name);
-};
-
-// Usually two Functions, sometimes one or three, rarely four (the guideline in the Resource Functions rule).
-const FUNCTION_COUNT_WEIGHTS = [[1, 30], [2, 45], [3, 20], [4, 5]];
-const weightedCount = () => {
-  let roll = Math.random() * FUNCTION_COUNT_WEIGHTS.reduce((total, [, weight]) => total + weight, 0);
-  for (const [count, weight] of FUNCTION_COUNT_WEIGHTS) {
-    if ((roll -= weight) < 0) return count;
-  }
-  return 2;
-};
-
-// Labels that name a danger mark an Instability; the rest (Cancellation, Strain, Detuning...) an Opposition.
-const DANGER_LABEL = /runaway|overload|rupture|instab|hazard|discharge|pressure|feedback|fracture|failure|corruption/i;
-
-const setupFunctionPickers = (root) => {
-  root.querySelectorAll("[data-function-picker]:not([data-ready])").forEach((picker) => {
-    picker.dataset.ready = "true";
-    const functions = readFunctionTable(picker.closest(".rich-text") || root);
-    if (functions.length < 2) {
-      picker.innerHTML = '<p class="muted">The Function table could not be read.</p>';
-      return;
-    }
-    picker.innerHTML = `
-      <div class="picker-controls">
-        <label>Functions
-          <select data-picker-count>
-            <option value="random">Random (usually 2)</option>
-            ${[1, 2, 3, 4].map((count) => `<option value="${count}">${count}</option>`).join("")}
-          </select>
-        </label>
-        <label class="picker-check"><input type="checkbox" data-picker-hidden /> Make one Hidden</label>
-        <button type="button" class="picker-draw" data-picker-draw>Draw a Resource</button>
-      </div>
-      <div class="picker-result" aria-live="polite"><p class="muted">Press <strong>Draw a Resource</strong> to roll some Functions.</p></div>`;
-    const result = picker.querySelector(".picker-result");
-    picker.querySelector("[data-picker-draw]").addEventListener("click", () => {
-      const choice = picker.querySelector("[data-picker-count]").value;
-      const count = Math.min(functions.length, choice === "random" ? weightedCount() : Number(choice));
-      const pool = [...functions];
-      const drawn = Array.from({ length: count }, () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-      const hiddenIndex = picker.querySelector("[data-picker-hidden]").checked && count > 1 ? Math.floor(Math.random() * count) : -1;
-      // The table is written row by row, so a pair is looked up from both sides; it can be a synergy and a risk at once.
-      const pairs = [];
-      drawn.forEach((left, index) => drawn.slice(index + 1).forEach((right) => {
-        const notes = [];
-        if (left.synergy.includes(right.name) || right.synergy.includes(left.name)) notes.push({ kind: "synergy", label: "Synergy" });
-        [...left.hard.filter((item) => item.name === right.name), ...right.hard.filter((item) => item.name === left.name)]
-          .forEach(({ label }) => {
-            if (!notes.some((note) => note.label === label)) notes.push({ kind: DANGER_LABEL.test(label) ? "unstable" : "opposes", label });
-          });
-        if (notes.length) pairs.push({ left: left.name, right: right.name, notes });
-      }));
-      result.innerHTML = `
-        <ul class="picker-functions">${drawn.map((entry, index) => `
-          <li${index === hiddenIndex ? ' class="is-hidden"' : ""}>
-            <code>${escapeHtml(entry.name)}</code>${index === hiddenIndex ? '<span class="picker-hidden-label">Hidden</span>' : ""}
-            <span>${escapeHtml(entry.does)}</span>
-          </li>`).join("")}</ul>
-        ${count > 1 ? `<p class="picker-interactions-title">Interactions</p>
-          ${pairs.length ? `<ul class="picker-interactions">${pairs.map((pair) => `
-            <li><code>${escapeHtml(pair.left)}</code> + <code>${escapeHtml(pair.right)}</code>
-              ${pair.notes.map((note) => `<span class="is-${note.kind}">${escapeHtml(note.label)}</span>`).join("")}</li>`).join("")}</ul>`
-            : '<p class="muted">No known interactions between these Functions.</p>'}` : ""}
-        <p class="muted picker-next">Now give it a name, a description and, if it needs one, a Special Property.</p>`;
-    });
-  });
-};
-
 const renderGame = async () => {
   const announcementRoot = document.getElementById("announcement-list");
   const rulesRoot = document.getElementById("rules-list");
@@ -410,8 +327,11 @@ const renderGame = async () => {
 
   let posts;
   let campaign;
+  let vocabulary;
+  let pathsData;
   try {
-    [posts, campaign] = await Promise.all([fetchGame(), loadCampaign()]);
+    [posts, campaign, vocabulary, pathsData] = await Promise.all([fetchGame(), loadCampaign(), fetchJson("data/vocabulary.json").catch(() => null),
+      fetchJson("data/learning-paths.json").catch(() => null)]);
   } catch (error) {
     announcementRoot.innerHTML = '<p class="empty-state">Announcements could not be loaded.</p>';
     rulesRoot.innerHTML = '<p class="empty-state">Campaign rules could not be loaded.</p>';
@@ -438,31 +358,94 @@ const renderGame = async () => {
   const rules = posts.filter((post) => post.type !== "announcement")
     .sort((left, right) => (readingOrder(left) - readingOrder(right) || 0)
       || String(left.title || "").localeCompare(String(right.title || "")));
-  const path = rules.filter((rule) => Number.isInteger(rule.order));
+  // Learning paths: Onboarding first (the essentials), then optional paths that each teach one area.
+  // A rule is on one path at most. Without the paths file, the rules with a reading order make up Onboarding.
+  const rulesById = new Map(rules.map((rule) => [rule.id, rule]));
+  const learningPaths = (Array.isArray(pathsData) && pathsData.length ? pathsData
+    : [{ key: "onboarding", title: "Onboarding", description: "", ruleIds: rules.filter((rule) => Number.isInteger(rule.order)).map((rule) => rule.id) }])
+    .map((item) => ({ ...item, rules: (item.ruleIds || []).map((id) => rulesById.get(id)).filter(Boolean) }))
+    .filter((item, index) => index === 0 || item.rules.length);
+  const onboarding = learningPaths[0];
+  const path = onboarding.rules;
+  const placeOf = (rule) => {
+    for (const item of learningPaths) {
+      const index = item.rules.indexOf(rule);
+      if (index >= 0) return { path: item, index };
+    }
+    return null;
+  };
+  const pathTopic = (item) => item === onboarding ? "onboarding" : `path-${item.key}`;
   const ruleLink = (rule) => `#post-${encodeURIComponent(rule.id)}`;
 
-  // {{reading-path}} on its own line in a post's Details becomes the numbered path, grouped by category.
+  // {{reading-path}} on its own line in a post's Details: Onboarding to read first, then the learning paths to pick from.
   const readingPathList = () => {
-    if (!path.length) return "";
-    const groups = [];
-    path.forEach((rule) => {
-      const category = rule.category || "Campaign";
-      if (groups.at(-1)?.category !== category) groups.push({ category, rules: [] });
-      groups.at(-1).rules.push(rule);
-    });
+    if (!onboarding.rules.length) return "";
+    const others = learningPaths.slice(1);
     return `
-      <nav class="reading-path" aria-label="Reading path">
-        ${groups.map((group) => `
-          <div class="reading-path-group">
-            <h3>${escapeHtml(group.category)}</h3>
-            <ol>${group.rules.map((rule) => `<li value="${path.indexOf(rule) + 1}"><a href="${ruleLink(rule)}">${escapeHtml(rule.title)}</a></li>`).join("")}</ol>
-          </div>`).join("")}
+      <nav class="reading-path learning-paths" aria-label="Learning paths">
+        <div class="reading-path-group">
+          <h3>Start here · ${escapeHtml(onboarding.title)}</h3>
+          <ol>${onboarding.rules.map((rule) => `<li><a href="${ruleLink(rule)}">${escapeHtml(rule.title)}</a></li>`).join("")}</ol>
+        </div>
+        ${others.length ? `<div class="reading-path-group">
+          <h3>Learning paths · when you need them</h3>
+          <ul class="learning-path-list">${others.map((item) => `<li><a href="#${pathTopic(item)}">${escapeHtml(item.title)}</a>
+            <span class="muted">${item.rules.length} rule${item.rules.length === 1 ? "" : "s"}</span>
+            ${item.description ? `<span class="learning-path-description">${escapeHtml(item.description)}</span>` : ""}</li>`).join("")}</ul>
+        </div>` : ""}
       </nav>`;
+  };
+  // {{resource-catalogue}}: every catalogued Resource, grouped by Domain.
+  const resourceCatalogue = () => {
+    if (!campaign.resources.length) return '<p class="muted">No Resources have been catalogued yet.</p>';
+    const groups = new Map();
+    [...campaign.resources].sort((left, right) => String(left.name).localeCompare(String(right.name))).forEach((resource) => {
+      const key = resource.domains?.length ? resource.domains.map((domain) => DOMAIN_INFO.get(domain)?.name || humanize(domain)).join(" + ") : "Unclassified";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(resource);
+    });
+    return [...groups].map(([domain, resources]) => `<h4 class="catalogue-heading">${escapeHtml(domain)}</h4>
+      <div class="resource-grid">${resources.map((resource) => resourceCard(resource, campaign)).join("")}</div>`).join("");
+  };
+  // {{function-vocabulary}}: the current Resource Function vocabulary (managed in the content manager), by group.
+  const functionVocabulary = () => {
+    const groups = vocabulary?.functionGroups || [];
+    if (!groups.length) return '<p class="muted">The vocabulary is not available.</p>';
+    return `<div class="vocabulary-groups">${groups.map((group) => `
+      <div class="vocabulary-group">
+        <h4 class="catalogue-heading">${escapeHtml(group.name)}</h4>
+        <dl>${group.functions.map((fn) => `<div><dt>${functionChips([fn.name])}</dt><dd>${escapeHtml(fn.definition || "")}</dd></div>`).join("")}</dl>
+      </div>`).join("")}</div>`;
+  };
+  // {{domain-list}}: the Domains the GM manages, with what each covers.
+  const domainList = () => {
+    const domains = [...DOMAIN_INFO.values()];
+    if (!domains.length) return '<p class="muted">The Domains are not available.</p>';
+    return `<div class="rich-table"><table><thead><tr><th>Domain</th><th>What it covers</th></tr></thead><tbody>
+      ${domains.map((domain) => `<tr><td>${domainPills([domain.key])}</td><td>${escapeHtml(domain.description || "")}</td></tr>`).join("")}
+    </tbody></table></div>`;
+  };
+  // {{form-list}}: the Spell Forms Endros knows of, by tier.
+  const FORM_TIERS = [["basic", "Basic Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
+  const formList = () => {
+    if (!campaign.forms.length) return '<p class="muted">No Forms have been recorded yet.</p>';
+    return FORM_TIERS.map(([tier, title]) => {
+      const forms = campaign.forms.filter((form) => form.tier === tier).sort((left, right) => String(left.name).localeCompare(String(right.name)));
+      return forms.length ? `<h4 class="catalogue-heading">${title}</h4><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Effect</th></tr></thead><tbody>
+        ${forms.map((form) => `<tr><td><strong>${escapeHtml(form.name)}</strong>${form.status && form.status !== "known" ? ` <span class="form-status">${escapeHtml(humanize(form.status))}</span>` : ""}</td>
+          <td>${functionChips(form.words)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
+      </tbody></table></div>` : "";
+    }).join("");
   };
   // Markers on their own line in a post: {{reading-path}} (the Onboarding list) and {{function-picker}} (Random Resource).
   const postText = (text) => richText(text, campaign)
     .replace(/<p>\s*\{\{\s*reading-path\s*\}\}\s*<\/p>/g, readingPathList)
-    .replace(/<p>\s*\{\{\s*function-picker\s*\}\}\s*<\/p>/g, '<div class="function-picker" data-function-picker></div>');
+    .replace(/<p>\s*\{\{\s*function-picker\s*\}\}\s*<\/p>/g, '<p><a class="discovery-button" href="discoveries.html#functions">Try the Functions explorer →</a></p>')
+    .replace(/<p>\s*\{\{\s*resource-catalogue\s*\}\}\s*<\/p>/g, resourceCatalogue)
+    .replace(/<p>\s*\{\{\s*form-list\s*\}\}\s*<\/p>/g, formList)
+    .replace(/<p>\s*\{\{\s*function-vocabulary\s*\}\}\s*<\/p>/g, functionVocabulary)
+    .replace(/<p>\s*\{\{\s*domain-list\s*\}\}\s*<\/p>/g, domainList)
+    .replace(/<code>([A-Z][A-Za-z-]+)<\/code>/g, (match, word) => VOCABULARY_WORDS.has(word) ? functionChips([word]) : match);
 
   const announcements = visibleAnnouncements(posts);
   announcementRoot.innerHTML = announcements.length ? announcements.map((post) => `
@@ -479,41 +462,45 @@ const renderGame = async () => {
         ${tagList(post.tags, "Tags")}
       </div>
     </article>`).join("") : '<p class="empty-state">No announcements right now.</p>';
-  setupFunctionPickers(announcementRoot);
 
-  // Previous / Next along the reading path, at the end of each rule on it.
+  // Previous / Next along the rule's learning path; the last rule points to the next path.
   const pathNav = (rule) => {
-    const index = path.indexOf(rule);
-    if (index < 0) return "";
-    const previous = path[index - 1];
-    const next = path[index + 1];
+    const place = placeOf(rule);
+    if (!place) return "";
+    const { index } = place;
+    const steps = place.path.rules;
+    const previous = steps[index - 1];
+    const next = steps[index + 1];
+    const nextPath = learningPaths[learningPaths.indexOf(place.path) + 1];
     return `
       <nav class="rule-pager" aria-label="Reading path">
         ${previous ? `<a class="rule-pager-link is-previous" href="${ruleLink(previous)}"><span>← Previous</span><strong>${escapeHtml(previous.title)}</strong></a>` : "<span></span>"}
         ${next ? `<a class="rule-pager-link is-next" href="${ruleLink(next)}"><span>Next →</span><strong>${escapeHtml(next.title)}</strong></a>`
-          : '<a class="rule-pager-link is-next" href="#onboarding"><span>Finished</span><strong>Back to Onboarding</strong></a>'}
+          : nextPath ? `<a class="rule-pager-link is-next" href="#${pathTopic(nextPath)}"><span>${place.path === onboarding ? "Done! Next, if you like" : "Next learning path"}</span><strong>${escapeHtml(nextPath.title)}</strong></a>`
+          : '<a class="rule-pager-link is-next" href="#rules"><span>Finished</span><strong>Browse all rules</strong></a>'}
       </nav>`;
   };
 
-  // Topics: Onboarding (the reading path, in order), All, then each rule category.
+  // Topics: Onboarding, then each learning path, then all rules.
   const topicsRoot = document.getElementById("rules-topics");
-  const categories = [...new Set(rules.map((rule) => rule.category || "Campaign"))];
   const topics = [
-    ...(path.length ? [["onboarding", "Onboarding", path.length]] : []),
-    ["all", "All", rules.length],
-    ...categories.map((category) => [`topic-${slugify(category)}`, category, rules.filter((rule) => (rule.category || "Campaign") === category).length])
+    ...learningPaths.filter((item) => item.rules.length).map((item) => [pathTopic(item), item.title, item.rules.length]),
+    ["all", "All rules", rules.length],
   ];
   let topic = "all";
   const topicHash = () => topic === "all" ? "#rules" : `#${topic}`;
-  const inTopic = (rule) => topic === "all" || (topic === "onboarding" ? Number.isInteger(rule.order) : `topic-${slugify(rule.category || "Campaign")}` === topic);
+  const inTopic = (rule) => topic === "all" || (placeOf(rule) && pathTopic(placeOf(rule).path) === topic);
   const matchesSearch = (rule) => [rule.category, rule.title, rule.summary, rule.details, ...(Array.isArray(rule.tags) ? rule.tags : [])]
     .filter(Boolean).join(" ").toLowerCase().includes(search.value.trim().toLowerCase());
   // A dropdown keeps the sidebar short however many topics there are.
   const topicSelect = topicsRoot?.querySelector("select");
   const renderTopics = () => {
     if (!topicSelect) return;
-    topicSelect.innerHTML = topics.map(([key, label, total]) =>
-      `<option value="${key}"${key === topic ? " selected" : ""}>${escapeHtml(label)} (${total})</option>`).join("");
+    const option = ([key, label, total]) => `<option value="${key}"${key === topic ? " selected" : ""}>${escapeHtml(label)} (${total})</option>`;
+    const [first, ...rest] = topics.filter(([key]) => key !== "all");
+    topicSelect.innerHTML = `${first ? option([first[0], `Start here: ${first[1]}`, first[2]]) : ""}
+      ${rest.length ? `<optgroup label="Learning paths">${rest.map(option).join("")}</optgroup>` : ""}
+      ${option(topics.find(([key]) => key === "all"))}`;
     topicSelect.classList.toggle("is-onboarding", topic === "onboarding");
     topicsRoot.hidden = false;
   };
@@ -529,10 +516,12 @@ const renderGame = async () => {
   const renderRuleList = () => {
     visibleRules = rules.filter((rule) => inTopic(rule) && matchesSearch(rule));
     count.textContent = visibleRules.length === rules.length ? `${rules.length} rules` : `Showing ${visibleRules.length} of ${rules.length} rules`;
-    const intro = topic === "onboarding" ? '<li class="rules-nav-intro">New players: read these in order. Each rule ends with a link to the next.</li>' : "";
+    const current = learningPaths.find((item) => pathTopic(item) === topic);
+    const intro = current ? `<li class="rules-nav-intro">${escapeHtml(current.description
+      || (current === onboarding ? "The essentials every new player reads first." : "An optional path through one area of the rules."))} Read in order: each rule ends with a link to the next.</li>` : "";
     rulesRoot.innerHTML = intro + (visibleRules.length ? visibleRules.map((rule) => `
       <li><a class="rules-nav-item${rule === selectedRule ? " is-active" : ""}" href="${ruleLink(rule)}"${rule === selectedRule ? ' aria-current="true"' : ""}>
-        <span class="rules-nav-meta"><span>${escapeHtml(rule.category || "Campaign")}</span>${Number.isInteger(rule.order) ? `<span>${path.indexOf(rule) + 1} / ${path.length}</span>` : ""}</span>
+        <span class="rules-nav-meta"><span>${escapeHtml(placeOf(rule)?.path.title || rule.category || "Campaign")}</span>${placeOf(rule) ? `<span>${placeOf(rule).index + 1} / ${placeOf(rule).path.rules.length}</span>` : ""}</span>
         <strong>${escapeHtml(rule.title || "Untitled rule")}</strong>
         ${rule.summary ? `<span class="rules-nav-summary">${escapeHtml(plainText(richInline(rule.summary, campaign)))}</span>` : ""}
       </a></li>`).join("") : '<li class="empty-state">No rules match this search.</li>');
@@ -546,14 +535,14 @@ const renderGame = async () => {
       ruleView.innerHTML = '<p class="empty-state">Choose a rule from the list.</p>';
       return;
     }
-    const step = path.indexOf(rule);
+    const place = placeOf(rule);
     ruleView.innerHTML = `
       ${postArt(rule)}
       <a class="rule-back" href="${topicHash()}">← All rules</a>
       <header class="rule-view-head">
         <div class="rule-view-meta">
           <span class="rule-category">${escapeHtml(rule.category || "Campaign")}</span>
-          ${step >= 0 ? `<span class="rule-step">Onboarding · ${step + 1} of ${path.length}</span>` : ""}
+          ${place ? `<a class="rule-step" href="#${pathTopic(place.path)}">${escapeHtml(place.path.title)} · ${place.index + 1} of ${place.path.rules.length}</a>` : ""}
         </div>
         <h2 id="rule-view-title">${escapeHtml(rule.title || "Untitled rule")}</h2>
         ${rule.summary ? `<p class="rule-lead">${richInline(rule.summary, campaign)}</p>` : ""}
@@ -561,7 +550,6 @@ const renderGame = async () => {
       ${rule.details ? `<div class="rule-content">${postText(rule.details)}</div>` : ""}
       ${pathNav(rule)}
       ${tagList(rule.tags, "Related topics")}`;
-    setupFunctionPickers(ruleView);
   };
 
   // Brings the reader to the top of the open rule, and keeps its entry in view in the sidebar.
@@ -622,7 +610,7 @@ const renderGame = async () => {
     } else if (post) {
       select("rules", { updateHash: false });
       showRule(post);
-    } else if (hash === "onboarding" || hash.startsWith("topic-")) {
+    } else if (hash === "onboarding" || hash.startsWith("path-") || hash.startsWith("topic-")) {
       select("rules", { updateHash: false });
       search.value = "";
       setTopic(hash);
@@ -823,14 +811,21 @@ let campaignPromise = null;
 
 const loadCampaign = () => {
   if (!campaignPromise) {
-    campaignPromise = Promise.all(["characters", "jobs", "archive", "gear", "projects"].map(fetchCollection))
-      .then(([characters, jobs, archive, gear, projects]) => {
+    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms"].map(fetchCollection),
+      fetchJson("data/vocabulary.json").catch(() => null)])
+      .then(([characters, jobs, archive, gear, projects, resources, forms, vocabulary]) => {
+        DOMAIN_INFO = new Map((vocabulary?.domains || []).map((domain) => [domain.key, domain]));
+        VOCABULARY_WORDS = new Set((vocabulary?.functionGroups || []).flatMap((group) => group.functions.map((fn) => fn.name)));
         const byId = (items) => new Map(items.map((item) => [item.id, item]));
         const mentions = (item, id) => [item.summary, item.content, item.objective, item.briefing]
           .some((text) => String(text || "").includes(`[[${id}]]`) || String(text || "").includes(`[[${id}|`));
         return {
-          characters, jobs, archive, gear, projects,
+          characters, jobs, archive, gear, projects, resources, forms,
+          vocabulary: { functionGroups: vocabulary?.functionGroups || [], interactions: vocabulary?.interactions || [], domains: vocabulary?.domains || [] },
           characterById: byId(characters),
+          resourceById: byId(resources),
+          resourcesForGate: (gateId) => resources.filter((resource) => resource.gateId === gateId)
+            .sort((left, right) => String(left.name).localeCompare(String(right.name))),
           projectById: byId(projects),
           projectsForCharacter: (characterId) => projects.filter((project) => (project.characterIds || []).includes(characterId)),
           jobById: byId(jobs),
@@ -984,6 +979,56 @@ const fromProject = (projectId, campaign) => {
   return `<p class="from-project">Brought into the game by ${href ? `<a class="inline-link" href="${href}">${name}</a>` : `<strong>${name}</strong>`}</p>`;
 };
 
+/* ---------- Domains, Functions and Resources ---------- */
+
+// Domain names and colours come from the vocabulary the GM manages (data/vocabulary.json), loaded with the campaign.
+let DOMAIN_INFO = new Map();
+let VOCABULARY_WORDS = new Set();
+const domainPills = (domains) => (domains || []).map((key) => {
+  const domain = DOMAIN_INFO.get(key);
+  const colour = /^#[0-9a-fA-F]{6}$/.test(domain?.colour || "") ? ` style="--domain-colour: ${domain.colour}"` : "";
+  return `<a class="domain-pill"${colour} href="discoveries.html#domain-${encodeURIComponent(key)}">${escapeHtml(domain?.name || humanize(key))}</a>`;
+}).join("");
+// Each Word opens in the Functions explorer.
+const functionChips = (names) => (names || []).map((name) => `<a class="function-chip" href="discoveries.html#function-${encodeURIComponent(name)}">${escapeHtml(name)}</a>`).join(" ");
+const SOURCE_LABELS = { fauna: "Fauna-derived", flora: "Flora-derived", ground: "Ground / ore / stone", constructed: "Constructed / machine-derived",
+  "by-product": "Environmental by-product", other: "Other origin" };
+// "G-12 · The Ash Steps", or just the title when it already names the Gate.
+const gateName = (gate) => {
+  const designation = gate.details?.designation || "";
+  return designation && !String(gate.title || "").includes(designation) ? [designation, gate.title].filter(Boolean).join(" · ") : gate.title || designation;
+};
+
+// One Resource as the Outpost knows it. Hidden Functions never reach the site.
+const resourceCard = (resource, campaign, { showGate = true } = {}) => {
+  const gate = resource.gateId ? campaign.archiveById.get(resource.gateId) : null;
+  return `
+    <article class="resource-card" id="resource-${escapeHtml(resource.id)}">
+      <div class="resource-head">
+        <h4><a href="discoveries.html#resource-${encodeURIComponent(resource.id)}">${escapeHtml(resource.name)}</a></h4>
+        <span class="resource-pills">${domainPills(resource.domains)}<span class="pill pill-small availability-${escapeHtml(resource.availability || "sample")}">${escapeHtml(humanize(resource.availability || "sample"))}</span></span>
+      </div>
+      <p class="resource-meta">${escapeHtml(SOURCE_LABELS[resource.sourceType] || humanize(resource.sourceType || "other"))}${showGate && gate
+        ? ` · from <a class="inline-link" href="archive.html#${encodeURIComponent(gate.id)}">${escapeHtml(gateName(gate))}</a>` : ""}</p>
+      ${resource.description ? `<p>${richInline(resource.description, campaign)}</p>` : ""}
+      <p class="resource-functions"><span class="resource-label">Functions</span> ${resource.functions?.length ? functionChips(resource.functions) : '<span class="muted">NONE IDENTIFIED</span>'}</p>
+      ${resource.specialProperty ? `<p><span class="resource-label">Special Property</span> ${richInline(resource.specialProperty, campaign)}</p>` : ""}
+      ${resource.supply ? `<p><span class="resource-label">Supply</span> ${escapeHtml(resource.supply)}</p>` : ""}
+    </article>`;
+};
+
+const projectNeeds = (project, campaign) => {
+  const resources = (project.requiredResourceIds || []).map((id) => campaign.resourceById.get(id)).filter(Boolean);
+  const gate = project.relatedGateId ? campaign.archiveById.get(project.relatedGateId) : null;
+  const rows = [
+    project.requiredFunctions?.length ? `<li><span class="resource-label">Functions</span> ${functionChips(project.requiredFunctions)}</li>` : "",
+    resources.length ? `<li><span class="resource-label">Resources</span> ${resources.map((resource) => `<a class="inline-link" href="discoveries.html#resource-${encodeURIComponent(resource.id)}">${escapeHtml(resource.name)}</a>`).join(", ")}</li>` : "",
+    project.requiredDomain ? `<li><span class="resource-label">Domain</span> ${domainPills([project.requiredDomain])}</li>` : "",
+    gate ? `<li><span class="resource-label">Gate</span> <a class="inline-link" href="archive.html#${encodeURIComponent(gate.id)}">${escapeHtml(gateName(gate))}</a></li>` : "",
+  ].filter(Boolean);
+  return rows.length ? `<div class="project-field"><strong>Needs</strong><ul class="project-needs">${rows.join("")}</ul></div>` : "";
+};
+
 const projectCard = (project, campaign) => {
   const prerequisites = (project.prerequisites || []).map((item) => typeof item === "string" ? { text: item, met: false } : item);
   const met = prerequisites.filter((item) => item.met).length;
@@ -1010,6 +1055,7 @@ const projectCard = (project, campaign) => {
       </div>
       ${prerequisites.length ? `<div class="project-field"><strong>Prerequisites <span class="chip-count">${met}/${prerequisites.length} met</span></strong>
         <ul class="prerequisite-list">${prerequisites.map((item) => `<li class="${item.met ? "is-met" : ""}"><span class="prerequisite-mark" aria-hidden="true">${item.met ? "✓" : ""}</span><span>${escapeHtml(item.text)}<span class="sr-only">${item.met ? " (met)" : " (not met yet)"}</span></span></li>`).join("")}</ul></div>` : ""}
+      ${projectNeeds(project, campaign)}
       ${project.outcome ? `<div class="project-field"><strong>${complete ? "Outcome" : "Expected outcome"}</strong>${richText(project.outcome, campaign)}</div>` : ""}
       ${characters.length ? `<div class="project-field"><strong>Characters</strong>${crewList(characters, "")}</div>` : ""}
       ${resolved.length ? `<details class="complication-history"><summary>Complication history (${resolved.length})</summary>
@@ -1430,12 +1476,21 @@ const renderArchive = async () => {
       const details = entry.details || {};
       return `
         <div class="detail-block"><h3>Overview</h3>${richText(entry.content, campaign)}</div>
+        <div class="detail-block"><h3>Domain</h3>${details.domains?.length ? `<p class="domain-row">${domainPills(details.domains)}</p>` : '<p class="muted">UNCLASSIFIED</p>'}</div>
         <div class="detail-block"><h3>Environment</h3>${paragraphs(details.environment, "NOT YET SURVEYED")}</div>
         <div class="detail-grid">
           <div class="detail-block"><h3>Known Traits</h3>${itemList(details.knownTraits)}</div>
           <div class="detail-block"><h3>Known Hazards</h3>${itemList(details.knownHazards)}</div>
         </div>
-        <div class="detail-block"><h3>Known Locations</h3>${itemList(details.knownLocations)}</div>`;
+        <div class="detail-grid">
+          <div class="detail-block"><h3>Known Locations</h3>${itemList(details.knownLocations)}</div>
+          <div class="detail-block"><h3>Known Creatures</h3>${itemList(details.knownCreatures, "NOT YET SURVEYED")}</div>
+        </div>
+        <div class="detail-block"><h3>Resources</h3>${(() => {
+          const resources = campaign.resourcesForGate(entry.id);
+          return resources.length ? `<div class="resource-grid">${resources.map((resource) => resourceCard(resource, campaign, { showGate: false })).join("")}</div>`
+            : '<p class="muted">NO RESOURCES CATALOGUED</p>';
+        })()}</div>`;
     };
 
     const sessionFacts = (entry) => {
@@ -2074,11 +2129,413 @@ const setupMobileNav = () => {
   });
 };
 
-const PAGE_RENDERERS ={ game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster };
+/* ---------- Discoveries: Resources, Functions, Domains and spell Forms ---------- */
+
+const INTERACTION_NAMES = { synergy: "Synergy", opposition: "Opposition", instability: "Instability" };
+const KIND_ORDER = ["instability", "opposition", "synergy"];
+const pairKey = (left, right) => [left, right].sort().join("|");
+// All interactions of a pair, strongest warning first.
+const interactionsOf = (vocabulary, left, right) => (vocabulary.interactions || [])
+  .filter((entry) => pairKey(entry.a, entry.b) === pairKey(left, right))
+  .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+const interactionBadge = (entry) => `<span class="interaction-badge is-${entry.kind}">${INTERACTION_NAMES[entry.kind]}${entry.keyword ? ` · ${escapeHtml(entry.keyword)}` : ""}</span>`;
+const vocabularyWords = (vocabulary) => (vocabulary.functionGroups || []).flatMap((group) => group.functions.map((fn) => ({ ...fn, group: group.name })));
+
+const renderDiscoveries = async () => {
+  const panels = Object.fromEntries(["resources", "functions", "domains", "forms"].map((key) => [key, document.getElementById(`panel-${key}`)]));
+  if (!panels.resources) return;
+  let campaign;
+  try {
+    campaign = await loadCampaign();
+  } catch (error) {
+    panels.resources.innerHTML = '<p class="empty-state">Discoveries could not be loaded.</p>';
+    console.error(error);
+    return;
+  }
+  const vocabulary = campaign.vocabulary;
+  const words = vocabularyWords(vocabulary);
+  const wordNames = words.map((word) => word.name);
+  const resources = [...campaign.resources].sort((left, right) => String(left.name).localeCompare(String(right.name)));
+  const forms = campaign.forms;
+  const gates = campaign.archive.filter((entry) => entry.type === "gate-record");
+
+  /* Resources: the catalogue, filtered by Domain, Function and availability. */
+  const resourceFilters = { query: "", domain: "", fn: "", availability: "" };
+  panels.resources.innerHTML = `
+    <div class="discovery-filters">
+      <input type="search" class="search-input" data-resource-filter="query" placeholder="Search Resources" aria-label="Search Resources" />
+      <select class="search-input" data-resource-filter="domain" aria-label="Domain"><option value="">Any Domain</option>${[...DOMAIN_INFO.values()].map((domain) => `<option value="${escapeHtml(domain.key)}">${escapeHtml(domain.name)}</option>`).join("")}</select>
+      <select class="search-input" data-resource-filter="fn" aria-label="Function"><option value="">Any Function</option>${wordNames.map((name) => `<option>${escapeHtml(name)}</option>`).join("")}</select>
+      <select class="search-input" data-resource-filter="availability" aria-label="Availability"><option value="">Any availability</option>${["sample", "limited", "available", "unavailable"].map((value) => `<option value="${value}">${humanize(value)}</option>`).join("")}</select>
+    </div>
+    <p class="muted discovery-count" id="resource-count"></p>
+    <div class="resource-grid" id="resource-results"></div>`;
+  const renderResources = () => {
+    const query = resourceFilters.query.trim().toLowerCase();
+    const shown = resources.filter((resource) => (!resourceFilters.domain || (resource.domains || []).includes(resourceFilters.domain))
+      && (!resourceFilters.fn || (resource.functions || []).includes(resourceFilters.fn))
+      && (!resourceFilters.availability || resource.availability === resourceFilters.availability)
+      && (!query || [resource.name, resource.description, resource.specialProperty, ...(resource.functions || [])].join(" ").toLowerCase().includes(query)));
+    document.getElementById("resource-count").textContent = shown.length === resources.length ? `${resources.length} Resources catalogued` : `Showing ${shown.length} of ${resources.length} Resources`;
+    document.getElementById("resource-results").innerHTML = shown.length ? shown.map((resource) => resourceCard(resource, campaign)).join("")
+      : `<p class="empty-state">${resources.length ? "No Resources match." : "No Resources have been catalogued yet."}</p>`;
+  };
+  panels.resources.addEventListener("input", (event) => {
+    const key = event.target.dataset.resourceFilter;
+    if (!key) return;
+    resourceFilters[key] = event.target.value;
+    renderResources();
+  });
+  renderResources();
+
+  /* Functions: look up a Word, combine Words, draw a random Resource, or scan the interaction grid. */
+  let selectedWord = wordNames[0] || "";
+  let combo = [];
+  let functionTool = "word";
+  const wordLink = (name) => `<a class="function-chip" href="#function-${encodeURIComponent(name)}">${escapeHtml(name)}</a>`;
+  const resourcesWith = (names) => resources.filter((resource) => names.every((name) => (resource.functions || []).includes(name)));
+  const formsWith = (names) => forms.filter((form) => names.every((name) => (form.words || []).includes(name)));
+  const recordLinks = (items, href, empty) => items.length
+    ? `<ul class="discovery-links">${items.map((item) => `<li><a class="inline-link" href="${href(item)}">${escapeHtml(item.name)}</a></li>`).join("")}</ul>` : `<p class="muted">${empty}</p>`;
+  const pairRows = (names) => {
+    const rows = [];
+    names.forEach((left, index) => names.slice(index + 1).forEach((right) => {
+      const found = interactionsOf(vocabulary, left, right);
+      rows.push(`<li><span class="pair-names">${wordLink(left)} + ${wordLink(right)}</span>
+        ${found.length ? found.map((entry) => `${interactionBadge(entry)}${entry.note ? `<span class="interaction-note">${escapeHtml(entry.note)}</span>` : ""}`).join("")
+          : '<span class="muted">No recorded interaction</span>'}</li>`);
+    }));
+    return rows.length ? `<ul class="pair-list">${rows.join("")}</ul>` : "";
+  };
+
+  const wordPanel = () => {
+    const word = words.find((item) => item.name === selectedWord);
+    if (!word) return '<p class="empty-state">Choose a Word.</p>';
+    const related = (vocabulary.interactions || []).filter((entry) => entry.a === word.name || entry.b === word.name);
+    const byKind = (kind) => related.filter((entry) => entry.kind === kind).map((entry) => {
+      const other = entry.a === word.name ? entry.b : entry.a;
+      return `<li>${wordLink(other)}${entry.keyword ? ` <span class="interaction-keyword">${escapeHtml(entry.keyword)}</span>` : ""}${entry.note ? `<span class="interaction-note">${escapeHtml(entry.note)}</span>` : ""}</li>`;
+    }).join("");
+    return `
+      <div class="word-head"><span class="kicker">${escapeHtml(word.group)}</span><h2>${escapeHtml(word.name)}</h2>
+        <p class="word-definition">${escapeHtml(word.definition || "No definition recorded.")}</p>
+        <button type="button" class="discovery-button" data-combine-with="${escapeHtml(word.name)}">Combine with another Word →</button></div>
+      <div class="word-relations">${KIND_ORDER.slice().reverse().map((kind) => `
+        <section class="word-relation is-${kind}"><h3>${INTERACTION_NAMES[kind]}</h3>${byKind(kind) ? `<ul>${byKind(kind)}</ul>` : '<p class="muted">None recorded.</p>'}</section>`).join("")}</div>
+      <div class="detail-grid">
+        <div class="detail-block"><h3>Resources with ${escapeHtml(word.name)}</h3>${recordLinks(resourcesWith([word.name]), (item) => `#resource-${encodeURIComponent(item.id)}`, "None catalogued yet.")}</div>
+        <div class="detail-block"><h3>Forms using ${escapeHtml(word.name)}</h3>${recordLinks(formsWith([word.name]), (item) => `#form-${encodeURIComponent(item.id)}`, "None recorded yet.")}</div>
+      </div>`;
+  };
+
+  const comboPanel = () => {
+    const select = (index) => `<select class="search-input" data-combo="${index}" aria-label="Word ${index + 1}">
+      <option value="">${index < 2 ? "Choose a Word" : "Optional third Word"}</option>${wordNames.map((name) => `<option ${combo[index] === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("")}</select>`;
+    const chosen = [...new Set(combo.filter(Boolean))];
+    return `
+      <h2>Combine Words</h2>
+      <p class="muted">Pick two or three Words to see how they behave together, which known Resources already combine them, and which Forms use them.</p>
+      <div class="combo-selects">${select(0)}<span aria-hidden="true">+</span>${select(1)}<span aria-hidden="true">+</span>${select(2)}</div>
+      ${chosen.length >= 2 ? `
+        <h3>Interactions</h3>${pairRows(chosen)}
+        <div class="detail-grid">
+          <div class="detail-block"><h3>Resources with all of them</h3>${recordLinks(resourcesWith(chosen), (item) => `#resource-${encodeURIComponent(item.id)}`, "No known Resource combines them yet.")}</div>
+          <div class="detail-block"><h3>Forms using all of them</h3>${recordLinks(formsWith(chosen), (item) => `#form-${encodeURIComponent(item.id)}`, "No Form uses them together yet.")}</div>
+        </div>
+        <p class="muted">Interactions are guidance, not a chemistry table: the GM decides how a particular combination behaves.</p>` : ""}`;
+  };
+
+  const randomState = { count: "random", hidden: false, drawn: null, hiddenIndex: -1 };
+  const randomPanel = () => {
+    const drawn = randomState.drawn;
+    return `
+      <h2>Random Resource</h2>
+      <p class="muted">Draw Functions at random for a Gate, an experiment or inspiration. Usually two, sometimes one or three, rarely four.</p>
+      <div class="picker-controls">
+        <label>Functions <select data-random-count>${["random", 1, 2, 3, 4].map((value) => `<option value="${value}" ${String(value) === String(randomState.count) ? "selected" : ""}>${value === "random" ? "Random" : value}</option>`).join("")}</select></label>
+        <label class="picker-check"><input type="checkbox" data-random-hidden ${randomState.hidden ? "checked" : ""} /> Make one Hidden</label>
+        <button type="button" class="picker-draw" data-random-draw>Draw a Resource</button>
+      </div>
+      ${drawn ? `<ul class="picker-functions">${drawn.map((word, index) => `<li${index === randomState.hiddenIndex ? ' class="is-hidden"' : ""}>${wordLink(word.name)}${index === randomState.hiddenIndex ? '<span class="picker-hidden-label">Hidden</span>' : ""}<span>${escapeHtml(word.definition || "")}</span></li>`).join("")}</ul>
+        ${drawn.length > 1 ? `<h3>Interactions</h3>${pairRows(drawn.map((word) => word.name))}` : ""}
+        <button type="button" class="discovery-button" data-open-combo="${escapeHtml(drawn.map((word) => word.name).join("+"))}">Open in Combine →</button>
+        <p class="muted">Now give it a name, a description and, if it needs one, a Special Property.</p>` : ""}`;
+  };
+  const drawRandom = () => {
+    const weights = [[1, 30], [2, 45], [3, 20], [4, 5]];
+    let count = Number(randomState.count);
+    if (!count) {
+      let roll = Math.random() * 100;
+      count = (weights.find(([, weight]) => (roll -= weight) < 0) || [2])[0];
+    }
+    const pool = [...words];
+    randomState.drawn = Array.from({ length: Math.min(count, pool.length) }, () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    randomState.hiddenIndex = randomState.hidden && count > 1 ? Math.floor(Math.random() * count) : -1;
+  };
+
+  const gridPanel = () => {
+    const strongest = (left, right) => interactionsOf(vocabulary, left, right);
+    return `
+      <h2>Interaction grid</h2>
+      <p class="muted">Every Word against every other. Click a square to open that pair in Combine.</p>
+      <p class="grid-legend"><span class="grid-cell is-synergy"></span> Synergy <span class="grid-cell is-opposition"></span> Opposition <span class="grid-cell is-instability"></span> Instability <span class="grid-cell is-mixed"></span> Synergy and a risk</p>
+      <div class="grid-scroll"><table class="interaction-grid"><thead><tr><th></th>${wordNames.map((name) => `<th scope="col"><span>${escapeHtml(name)}</span></th>`).join("")}</tr></thead>
+        <tbody>${wordNames.map((row) => `<tr><th scope="row">${escapeHtml(row)}</th>${wordNames.map((column) => {
+          if (row === column) return '<td class="grid-self"></td>';
+          const found = strongest(row, column);
+          if (!found.length) return `<td><button type="button" class="grid-cell" data-grid-pair="${escapeHtml(row)}+${escapeHtml(column)}" aria-label="${escapeHtml(row)} and ${escapeHtml(column)}: no recorded interaction"></button></td>`;
+          const kinds = found.map((entry) => entry.kind);
+          const kind = kinds.includes("synergy") && kinds.length > 1 ? "mixed" : found[0].kind;
+          const label = found.map((entry) => `${INTERACTION_NAMES[entry.kind]}${entry.keyword ? ` (${entry.keyword})` : ""}`).join("; ");
+          return `<td><button type="button" class="grid-cell is-${kind}" data-grid-pair="${escapeHtml(row)}+${escapeHtml(column)}" title="${escapeHtml(`${row} + ${column}: ${label}`)}" aria-label="${escapeHtml(`${row} and ${column}: ${label}`)}"></button></td>`;
+        }).join("")}</tr>`).join("")}</tbody></table></div>`;
+  };
+
+  const renderFunctions = () => {
+    const toolButton = (key, label) => `<button type="button" class="filter-chip" data-function-tool="${key}" aria-pressed="${functionTool === key}">${label}</button>`;
+    const panel = { word: wordPanel, combine: comboPanel, random: randomPanel, grid: gridPanel }[functionTool]();
+    panels.functions.innerHTML = `
+      <div class="filter-bar function-tools">${toolButton("word", "Look up a Word")}${toolButton("combine", "Combine Words")}${toolButton("random", "Random Resource")}${toolButton("grid", "Interaction grid")}</div>
+      <div class="functions-layout${functionTool === "grid" ? " is-wide" : ""}">
+        ${functionTool === "grid" ? "" : `<aside class="word-index" aria-label="Function vocabulary">${(vocabulary.functionGroups || []).map((group) => `
+          <h3>${escapeHtml(group.name)}</h3>
+          <ul>${group.functions.map((fn) => `<li><a class="word-index-link${functionTool === "word" && fn.name === selectedWord ? " is-active" : ""}" href="#function-${encodeURIComponent(fn.name)}">${escapeHtml(fn.name)}</a></li>`).join("")}</ul>`).join("")}</aside>`}
+        <div class="function-panel">${panel}</div>
+      </div>`;
+  };
+  panels.functions.addEventListener("click", (event) => {
+    const tool = event.target.closest("[data-function-tool]");
+    if (tool) { functionTool = tool.dataset.functionTool; return renderFunctions(); }
+    const combineWith = event.target.closest("[data-combine-with]");
+    if (combineWith) { combo = [combineWith.dataset.combineWith]; functionTool = "combine"; return renderFunctions(); }
+    const openCombo = event.target.closest("[data-open-combo]");
+    if (openCombo) { combo = openCombo.dataset.openCombo.split("+").slice(0, 3); functionTool = "combine"; return renderFunctions(); }
+    const gridPair = event.target.closest("[data-grid-pair]");
+    if (gridPair) { combo = gridPair.dataset.gridPair.split("+"); functionTool = "combine"; return renderFunctions(); }
+    if (event.target.closest("[data-random-draw]")) { drawRandom(); return renderFunctions(); }
+  });
+  panels.functions.addEventListener("change", (event) => {
+    if (event.target.dataset.combo !== undefined) { combo[Number(event.target.dataset.combo)] = event.target.value; renderFunctions(); }
+    if (event.target.matches("[data-random-count]")) randomState.count = event.target.value;
+    if (event.target.matches("[data-random-hidden]")) randomState.hidden = event.target.checked;
+  });
+
+  /* Domains: each with what it covers, its Gates and its Resources. */
+  panels.domains.innerHTML = [...DOMAIN_INFO.values()].map((domain) => {
+    const domainGates = gates.filter((gate) => (gate.details?.domains || []).includes(domain.key));
+    const domainResources = resources.filter((resource) => (resource.domains || []).includes(domain.key));
+    return `<article class="domain-card" id="domain-${escapeHtml(domain.key)}" style="--domain-colour: ${/^#[0-9a-fA-F]{6}$/.test(domain.colour || "") ? domain.colour : "var(--line-strong)"}">
+      <h2>${escapeHtml(domain.name)}</h2>
+      <p>${escapeHtml(domain.description || "")}</p>
+      <div class="detail-grid">
+        <div class="detail-block"><h3>Gates</h3>${domainGates.length ? `<ul class="discovery-links">${domainGates.map((gate) => `<li><a class="inline-link" href="archive.html#${encodeURIComponent(gate.id)}">${escapeHtml(gateName(gate))}</a></li>`).join("")}</ul>` : '<p class="muted">None recorded yet.</p>'}</div>
+        <div class="detail-block"><h3>Resources</h3>${recordLinks(domainResources, (item) => `#resource-${encodeURIComponent(item.id)}`, "None catalogued yet.")}</div>
+      </div>
+    </article>`;
+  }).join("") || '<p class="empty-state">No Domains recorded.</p>';
+  panels.domains.insertAdjacentHTML("afterbegin", '<p class="muted discovery-count">Every Gate has a Domain, and what comes from it shares that Domain. See the <a class="inline-link" href="game.html#post-domains">Domains rule</a>.</p>');
+
+  /* Spell Forms, by tier. */
+  const tiers = [["basic", "Basic Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
+  panels.forms.innerHTML = '<p class="muted discovery-count">The Forms Endros has recorded. How to cast them is in the <a class="inline-link" href="game.html#post-spellcasting">Spellcasting rule</a>.</p>'
+    + (forms.length ? tiers.map(([tier, title]) => {
+      const tierForms = forms.filter((form) => form.tier === tier).sort((left, right) => String(left.name).localeCompare(String(right.name)));
+      return tierForms.length ? `<h2 class="catalogue-heading">${title}</h2><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Effect</th></tr></thead><tbody>
+        ${tierForms.map((form) => `<tr id="form-${escapeHtml(form.id)}"><td><strong>${escapeHtml(form.name)}</strong>${form.status && form.status !== "known" ? ` <span class="form-status">${escapeHtml(humanize(form.status))}</span>` : ""}</td>
+          <td>${functionChips(form.words)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
+      </tbody></table></div>` : "";
+    }).join("") : '<p class="empty-state">No Forms have been recorded yet.</p>');
+
+  /* Tabs follow the hash: #resources, #functions, #domains, #forms, and deep links into each. */
+  const tabs = [...document.querySelectorAll("[data-discovery-tab]")];
+  const select = (name) => tabs.forEach((tab) => {
+    const active = tab.dataset.discoveryTab === name;
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    panels[tab.dataset.discoveryTab].hidden = !active;
+  });
+  const highlight = (id) => {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.scrollIntoView({ block: "center" });
+    element.classList.add("is-highlighted");
+    setTimeout(() => element.classList.remove("is-highlighted"), 1800);
+  };
+  const route = () => {
+    const hash = decodeURIComponent(window.location.hash.slice(1));
+    if (hash.startsWith("function-")) {
+      selectedWord = wordNames.includes(hash.slice(9)) ? hash.slice(9) : selectedWord;
+      functionTool = "word";
+      select("functions");
+      renderFunctions();
+      panels.functions.scrollIntoView({ block: "start" });
+    } else if (hash.startsWith("resource-")) {
+      Object.assign(resourceFilters, { query: "", domain: "", fn: "", availability: "" });
+      panels.resources.querySelectorAll("[data-resource-filter]").forEach((control) => { control.value = ""; });
+      renderResources();
+      select("resources");
+      highlight(hash);
+    } else if (hash.startsWith("domain-")) {
+      select("domains");
+      highlight(hash);
+    } else if (hash.startsWith("form-")) {
+      select("forms");
+      highlight(hash);
+    } else if (["resources", "functions", "domains", "forms"].includes(hash)) {
+      select(hash);
+      if (hash === "functions") renderFunctions();
+    } else {
+      select("resources");
+    }
+  };
+  tabs.forEach((tab) => tab.addEventListener("click", () => {
+    window.history.replaceState(null, "", `#${tab.dataset.discoveryTab}`);
+    select(tab.dataset.discoveryTab);
+    if (tab.dataset.discoveryTab === "functions") renderFunctions();
+  }));
+  window.addEventListener("hashchange", route);
+  renderFunctions();
+  route();
+};
+
+/* ---------- Site-wide search ---------- */
+
+const PAGE_ENTRIES = [
+  ["Overview", "index.html", "Start here, the launch timeline and every section"], ["Outpost Sheet", "outpost.html", "Capabilities, facilities, projects and consequences"],
+  ["Job Board", "jobs.html", "Expeditions and work looking for crew"], ["Archive", "archive.html", "Gate records, sessions, newspapers, history, folklore"],
+  ["Discoveries", "discoveries.html", "Resources, Functions, Domains and spell Forms"], ["Marketplace", "marketplace.html", "Equipment for sale"],
+  ["Characters", "characters.html", "Expeditioners and known figures"], ["Rules & News", "game.html", "Announcements and rules"],
+  ["Onboarding", "game.html#onboarding", "start here the essential rules new players read first reading path"], ["Create a character", "sheet.html?new", "make build start a new character Expeditioner on a blank sheet"],
+];
+let searchIndexPromise = null;
+const buildSearchIndex = () => searchIndexPromise ||= Promise.all([loadCampaign(), fetchGame().catch(() => []), fetchJson("data/learning-paths.json").catch(() => [])])
+  .then(([campaign, posts, paths]) => [
+  ...(Array.isArray(paths) ? paths : []).filter((item, index) => index > 0 && item.ruleIds.length).map((item) => ({ label: item.title,
+    href: `game.html#path-${encodeURIComponent(item.key)}`, kind: "Learning path", text: `${item.description || ""} learning path` })),
+  ...PAGE_ENTRIES.map(([label, href, text]) => ({ label, href, kind: "Page", text })),
+  ...posts.map((post) => ({ label: post.title, href: `game.html#post-${encodeURIComponent(post.id)}`, kind: post.type === "announcement" ? "Announcement" : "Rule",
+    text: [post.summary, ...(post.tags || []), post.category].join(" "), body: post.details || "" })),
+  ...campaign.archive.map((entry) => ({ label: entry.type === "gate-record" ? gateName(entry) : entry.title, href: `archive.html#${encodeURIComponent(entry.id)}`,
+    kind: entry.type === "gate-record" ? "Gate" : archiveTypeLabel(entry.type), text: [entry.summary, ...(entry.tags || [])].join(" "), body: entry.content || "" })),
+  ...campaign.resources.map((resource) => ({ label: resource.name, href: `discoveries.html#resource-${encodeURIComponent(resource.id)}`, kind: "Resource",
+    text: [resource.description, ...(resource.functions || [])].join(" ") })),
+  ...campaign.forms.map((form) => ({ label: form.name, href: `discoveries.html#form-${encodeURIComponent(form.id)}`, kind: "Spell Form", text: [form.effect, ...(form.words || [])].join(" ") })),
+  ...vocabularyWords(campaign.vocabulary).map((word) => ({ label: word.name, href: `discoveries.html#function-${encodeURIComponent(word.name)}`, kind: "Function", text: word.definition || "" })),
+  ...[...DOMAIN_INFO.values()].map((domain) => ({ label: domain.name, href: `discoveries.html#domain-${encodeURIComponent(domain.key)}`, kind: "Domain", text: domain.description || "" })),
+  ...campaign.characters.map((character) => ({ label: character.name, href: `characters.html#${encodeURIComponent(character.id)}`, kind: "Character", text: character.summary || "" })),
+  ...campaign.jobs.map((job) => ({ label: jobLabel(job), href: `jobs.html#${encodeURIComponent(job.id)}`, kind: "Job", text: [job.summary, job.objective].join(" ") })),
+  ...campaign.gear.map((gear) => ({ label: gear.name, href: `marketplace.html#gear-${encodeURIComponent(gear.id)}`, kind: "Gear", text: gear.description || "" })),
+]);
+
+const siteSearch = { index: PAGE_ENTRIES.map(([label, href, text]) => ({ label, href, kind: "Page", text })), results: [], active: 0 };
+// Words that say nothing about what is being looked for ("how do I make a character").
+const SEARCH_STOP_WORDS = new Set(["a", "an", "the", "how", "do", "does", "i", "to", "of", "in", "on", "for", "is", "are", "what", "where", "my", "can", "with", "and", "or"]);
+// Titles count most, then summaries and tags, then body text.
+const searchScore = (item, words) => words.reduce((score, word) => {
+  if (score < 0) return score;
+  const label = String(item.label || "").toLowerCase();
+  if (label.startsWith(word)) return score + 6;
+  if (label.includes(word)) return score + 4;
+  if (String(item.text || "").toLowerCase().includes(word)) return score + 2;
+  if (String(item.body || "").toLowerCase().includes(word)) return score + 1;
+  return -1;
+}, 0);
+
+async function openSiteSearch() {
+  let dialog = document.getElementById("site-search");
+  if (!dialog) {
+    dialog = document.createElement("div");
+    dialog.id = "site-search";
+    dialog.className = "site-search";
+    dialog.innerHTML = `<div class="site-search-panel" role="dialog" aria-label="Search the site">
+      <input type="search" class="search-input" id="site-search-input" placeholder="Search rules, Gates, Resources, characters…" autocomplete="off" aria-label="Search the site" />
+      <ul class="site-search-results" id="site-search-results" role="listbox"></ul>
+      <p class="muted site-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></div>`;
+    document.body.append(dialog);
+    const input = dialog.querySelector("input");
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) closeSiteSearch(); });
+    input.addEventListener("input", () => { siteSearch.active = 0; renderSiteSearch(input.value); });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") { event.preventDefault(); siteSearch.active = Math.min(siteSearch.results.length - 1, siteSearch.active + 1); renderSiteSearch(); }
+      else if (event.key === "ArrowUp") { event.preventDefault(); siteSearch.active = Math.max(0, siteSearch.active - 1); renderSiteSearch(); }
+      else if (event.key === "Enter") { event.preventDefault(); const item = siteSearch.results[siteSearch.active]; if (item) { closeSiteSearch(); window.location.href = item.href; } }
+      else if (event.key === "Escape") closeSiteSearch();
+    });
+    dialog.querySelector(".site-search-results").addEventListener("click", (event) => { if (event.target.closest("a")) closeSiteSearch(); });
+  }
+  dialog.hidden = false;
+  document.body.classList.add("search-open");
+  const input = dialog.querySelector("input");
+  input.value = "";
+  input.focus();
+  renderSiteSearch("");
+  try { siteSearch.index = await buildSearchIndex(); } catch { siteSearch.index = PAGE_ENTRIES.map(([label, href, text]) => ({ label, href, kind: "Page", text })); }
+  // Whatever was typed while the index loaded is searched now.
+  renderSiteSearch(input.value);
+}
+
+function renderSiteSearch(query) {
+  if (query !== undefined) {
+    const words = query.toLowerCase().split(/\s+/).filter((word) => word && !SEARCH_STOP_WORDS.has(word));
+    siteSearch.results = words.length
+      ? siteSearch.index.map((item) => ({ item, score: searchScore(item, words) })).filter(({ score }) => score > 0)
+        .sort((left, right) => right.score - left.score).slice(0, 14).map(({ item }) => item)
+      : siteSearch.index.filter((item) => item.kind === "Page");
+  }
+  document.getElementById("site-search-results").innerHTML = siteSearch.results.length ? siteSearch.results.map((item, index) => `
+    <li role="option" aria-selected="${index === siteSearch.active}"><a class="${index === siteSearch.active ? "is-active" : ""}" href="${escapeHtml(item.href)}">
+      <span>${escapeHtml(item.label)}</span><span class="site-search-kind">${escapeHtml(item.kind)}</span></a></li>`).join("")
+    : '<li class="site-search-empty">Nothing matches.</li>';
+}
+
+function closeSiteSearch() {
+  const dialog = document.getElementById("site-search");
+  if (dialog) dialog.hidden = true;
+  document.body.classList.remove("search-open");
+}
+
+const setupSiteSearch = () => {
+  const topbar = document.querySelector(".site-header .topbar");
+  if (!topbar) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "search-toggle";
+  button.title = "Search the site (Ctrl+K)";
+  button.innerHTML = '<span aria-hidden="true">⌕</span><span class="search-toggle-label">Search</span>';
+  button.addEventListener("click", openSiteSearch);
+  // Start loading the index as soon as someone reaches for the button.
+  ["pointerenter", "focus"].forEach((type) => button.addEventListener(type, () => buildSearchIndex().catch(() => null), { once: true }));
+  topbar.append(button); // CSS order puts it after the links on wide screens and beside the Menu button when folded
+  document.addEventListener("keydown", (event) => {
+    const typing = /input|textarea|select/i.test(document.activeElement?.tagName || "");
+    if (((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") || (event.key === "/" && !typing)) {
+      event.preventDefault();
+      openSiteSearch();
+    }
+  });
+};
+
+/* ---------- Footer site map ---------- */
+
+const renderFooterMap = () => {
+  const footer = document.querySelector(".footer");
+  if (!footer || footer.querySelector(".footer-map")) return;
+  const column = (title, links) => `<div><h2>${title}</h2><ul>${links.map(([label, href]) => `<li><a href="${href}">${label}</a></li>`).join("")}</ul></div>`;
+  footer.insertAdjacentHTML("afterbegin", `<nav class="footer-map wrapper" aria-label="Site map">
+    ${column("The world", [["Outpost", "outpost.html"], ["Archive", "archive.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
+    ${column("Expeditions", [["Job Board", "jobs.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"]])}
+    ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
+    ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
+  </nav>`);
+};
+
+const PAGE_RENDERERS ={ game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
   setupMobileNav();
+  setupSiteSearch();
+  renderFooterMap();
   initializeDestinationCarousel();
   const page = document.body.dataset.page;
   await Promise.all([renderOutpost(), renderAnnouncementBanner(), renderLaunchPanel(), renderFooterCommunity(), renderSiteVersion(), PAGE_RENDERERS[page]?.()]);

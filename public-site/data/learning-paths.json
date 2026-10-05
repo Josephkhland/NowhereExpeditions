@@ -1,0 +1,74 @@
+[
+  {
+    "key": "onboarding",
+    "title": "Onboarding",
+    "description": "The essentials every new player reads before their first expedition.",
+    "ruleIds": [
+      "nowhere-expeditions",
+      "creating-an-expeditioner",
+      "expeditions",
+      "downtime",
+      "coins-marketplace-and-personal-stash",
+      "whats-next"
+    ]
+  },
+  {
+    "key": "recruitment-factions",
+    "title": "Recruitment Factions",
+    "description": "Who brought your character to Endros. Read them while creating a character, then pick one.",
+    "ruleIds": [
+      "faction-nowhere-expeditions",
+      "faction-university-of-verna",
+      "faction-independent"
+    ]
+  },
+  {
+    "key": "between-expeditions",
+    "title": "Between Expeditions",
+    "description": "Projects, Research and recovery: for when you start spending Downtime.",
+    "ruleIds": [
+      "projects",
+      "project-requirements-and-complications",
+      "research",
+      "consequences-and-recovery"
+    ]
+  },
+  {
+    "key": "gates-discoveries",
+    "title": "Gates & Discoveries",
+    "description": "Domains, Resources and their Functions: what expeditions bring back, and why it matters.",
+    "ruleIds": [
+      "domains",
+      "resources",
+      "resource-functions"
+    ]
+  },
+  {
+    "key": "crafting-artificery",
+    "title": "Crafting & Artificery",
+    "description": "Inventing materials and making your own items. Read Gates & Discoveries first.",
+    "ruleIds": [
+      "material-engineering",
+      "personal-stash-and-crafting"
+    ]
+  },
+  {
+    "key": "spellcasting",
+    "title": "Spellcasting",
+    "description": "Words, Forms, and how new spells are invented. Read Resource Functions first.",
+    "ruleIds": [
+      "spellcasting",
+      "spell-innovation"
+    ]
+  },
+  {
+    "key": "building-endros",
+    "title": "Building Endros",
+    "description": "Capabilities, Facilities and the Marketplace: how the settlement grows.",
+    "ruleIds": [
+      "outpost-capabilities",
+      "facilities-and-outpost-development",
+      "marketplace-development"
+    ]
+  }
+]

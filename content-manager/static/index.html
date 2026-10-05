@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#193a34" />
   <title>Campaign Content Manager</title>
   <link rel="stylesheet" href="/static/manager.css" />
+  <script src="/static/generators.js" defer></script>
   <script src="/static/manager.js" defer></script>
 </head>
 <body>
@@ -15,18 +16,54 @@
         <span class="brand-mark" aria-hidden="true">N</span>
         <span><strong>Nowhere</strong><small>CONTENT DESK</small></span>
       </a>
-      <div class="side-label">CAMPAIGN DATA</div>
-      <nav class="primary-nav" aria-label="Campaign data">
-        <button type="button" class="nav-item" data-view="outpost"><span class="nav-symbol">O</span>Outpost Sheet</button>
-        <button type="button" class="nav-item" data-view="facilities"><span class="nav-symbol">F</span>Facilities<span class="nav-count" id="facilities-count">0</span></button>
-        <button type="button" class="nav-item" data-view="projects"><span class="nav-symbol">⧗</span>Projects<span class="nav-count" id="projects-count">0</span></button>
-        <button type="button" class="nav-item" data-view="characters"><span class="nav-symbol">P</span>Characters<span class="nav-count" id="characters-count">0</span></button>
-        <button type="button" class="nav-item" data-view="jobs"><span class="nav-symbol">J</span>Job Board<span class="nav-count" id="jobs-count">0</span></button>
-        <button type="button" class="nav-item" data-view="archive"><span class="nav-symbol">A</span>Archive<span class="nav-count" id="archive-count">0</span></button>
-        <button type="button" class="nav-item" data-view="gear"><span class="nav-symbol">M</span>Marketplace / Gear<span class="nav-count" id="gear-count">0</span></button>
-        <button type="button" class="nav-item" data-view="game"><span class="nav-symbol">✦</span>Game<span class="nav-count" id="game-count">0</span></button>
-        <button type="button" class="nav-item" data-view="site"><span class="nav-symbol">S</span>Site &amp; launch</button>
+      <nav class="primary-nav nav-home" aria-label="Home">
+        <button type="button" class="nav-item" data-view="home"><span class="nav-symbol" aria-hidden="true">⌂</span>Home</button>
       </nav>
+      <div class="nav-group" data-nav-group="outpost">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="outpost">The Outpost<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="The Outpost">
+          <button type="button" class="nav-item" data-view="outpost"><span class="nav-symbol" aria-hidden="true">▤</span>Outpost Sheet</button>
+          <button type="button" class="nav-item" data-view="facilities"><span class="nav-symbol" aria-hidden="true">⚒</span>Facilities<span class="nav-count" id="facilities-count">0</span></button>
+          <button type="button" class="nav-item" data-view="projects"><span class="nav-symbol" aria-hidden="true">⧗</span>Projects<span class="nav-count" id="projects-count">0</span></button>
+          <button type="button" class="nav-item" data-view="gear"><span class="nav-symbol" aria-hidden="true">⚖</span>Marketplace<span class="nav-count" id="gear-count">0</span></button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="expeditions">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="expeditions">Expeditions<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="Expeditions">
+          <button type="button" class="nav-item" data-view="jobs"><span class="nav-symbol" aria-hidden="true">✎</span>Job Board<span class="nav-count" id="jobs-count">0</span></button>
+          <button type="button" class="nav-item" data-view="archive" data-preset="gates"><span class="nav-symbol" aria-hidden="true">◎</span>Gates<span class="nav-count" id="gates-count">0</span></button>
+          <button type="button" class="nav-item" data-view="resources"><span class="nav-symbol" aria-hidden="true">◆</span>Resources<span class="nav-count" id="resources-count">0</span></button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="people">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="people">People &amp; Records<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="People &amp; Records">
+          <button type="button" class="nav-item" data-view="characters"><span class="nav-symbol" aria-hidden="true">♟</span>Characters<span class="nav-count" id="characters-count">0</span></button>
+          <button type="button" class="nav-item" data-view="archive" data-preset="lore"><span class="nav-symbol" aria-hidden="true">❧</span>Archive (lore)<span class="nav-count" id="lore-count">0</span></button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="magic">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="magic">Magic<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="Magic">
+          <button type="button" class="nav-item" data-view="forms"><span class="nav-symbol" aria-hidden="true">✧</span>Spell Forms<span class="nav-count" id="forms-count">0</span></button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="game">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="game">Game &amp; Site<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="Game &amp; Site">
+          <button type="button" class="nav-item" data-view="game"><span class="nav-symbol" aria-hidden="true">✦</span>Announcements &amp; Rules<span class="nav-count" id="game-count">0</span></button>
+          <button type="button" class="nav-item" data-view="readingpath"><span class="nav-symbol" aria-hidden="true">☰</span>Learning Paths</button>
+          <button type="button" class="nav-item" data-view="site"><span class="nav-symbol" aria-hidden="true">⚑</span>Site &amp; Launch</button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="tools">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="tools">CM Tools<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="CM Tools">
+          <button type="button" class="nav-item" data-view="tools"><span class="nav-symbol" aria-hidden="true">⚄</span>Generators</button>
+          <button type="button" class="nav-item" data-view="vocabulary"><span class="nav-symbol" aria-hidden="true">≡</span>Vocabulary</button>
+        </nav>
+      </div>
       <div class="side-label sample-label">PREVIEW</div>
       <label class="sample-switch" title="Sample records are preview data, not campaign canon">
         <input type="checkbox" id="include-samples" />
@@ -60,12 +97,19 @@
               </ol>
             </section>
           </details>
-          <button type="button" class="button button-secondary" id="sync-button" title="Replace only public-site/data from the local manager"><span aria-hidden="true">⟳</span> Sync data</button>
-          <button type="button" class="button button-secondary" id="import-button" title="Replace manager data with the current public-site JSON"><span aria-hidden="true">↙</span> Import site data</button>
-          <button type="button" class="button button-primary" id="export-button"><span aria-hidden="true">↗</span> Export to site</button>
+          <button type="button" class="button button-secondary jump-button" id="jump-button" title="Find any record (Ctrl+K)"><span aria-hidden="true">⌕</span> Jump to… <kbd>Ctrl K</kbd></button>
+          <button type="button" class="button button-primary sync-button" id="sync-button" title="Write published content to public-site/data"><span aria-hidden="true">⟳</span> <span id="sync-label">Sync data</span></button>
+          <details class="more-menu">
+            <summary class="button button-secondary" aria-label="More publishing actions" title="More publishing actions">⋯</summary>
+            <div class="more-menu-panel">
+              <button type="button" class="more-item" id="export-button"><strong>↗ Export full site</strong><span>Build a complete copy of the site in site-export/.</span></button>
+              <button type="button" class="more-item danger" id="import-button"><strong>↙ Import site data</strong><span>Replace the manager's database with public-site/data. Unsynced changes are lost.</span></button>
+            </div>
+          </details>
         </div>
       </header>
       <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+      <div class="back-bar" id="back-bar" hidden></div>
       <section id="work-area" class="work-area" aria-live="polite"></section>
       <footer class="workspace-footer"><span>Changes are stored locally in SQLite.</span><span id="database-indicator">Initialising local database</span></footer>
     </main>

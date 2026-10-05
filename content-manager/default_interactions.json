@@ -1,0 +1,674 @@
+[
+ {
+  "a": "Absorb",
+  "b": "Amplify",
+  "kind": "instability",
+  "keyword": "Overload",
+  "note": ""
+ },
+ {
+  "a": "Absorb",
+  "b": "Dampen",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Absorb",
+  "b": "Nullify",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Absorb",
+  "b": "Regenerate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Absorb",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Runaway / Feedback",
+  "note": ""
+ },
+ {
+  "a": "Absorb",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Catalyze",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Flex",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Nullify",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Record",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Regenerate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Stabilize",
+  "kind": "opposition",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Transmute",
+  "kind": "instability",
+  "keyword": "Runaway",
+  "note": ""
+ },
+ {
+  "a": "Adapt",
+  "b": "Transmute",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Conduct",
+  "kind": "instability",
+  "keyword": "Overload risk",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Conduct",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Dampen",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Insulate",
+  "kind": "instability",
+  "keyword": "Containment failure",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Nullify",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Refract",
+  "kind": "instability",
+  "keyword": "Focusing hazard",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Release",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Resonate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Sense",
+  "kind": "instability",
+  "keyword": "Overload risk",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Amplify",
+  "b": "Store",
+  "kind": "instability",
+  "keyword": "Overload",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Bind",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Dampen",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Flex",
+  "kind": "opposition",
+  "keyword": "Strain",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Insulate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Nullify",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Phase",
+  "kind": "opposition",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Reinforce",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Stabilize",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Anchor",
+  "b": "Transmute",
+  "kind": "opposition",
+  "keyword": "Strain / Structural conflict",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Catalyze",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Flex",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Phase",
+  "kind": "opposition",
+  "keyword": "Separation",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Reinforce",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Rupture",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Stabilize",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Transmute",
+  "kind": "instability",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Bind",
+  "b": "Transmute",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Nullify",
+  "kind": "opposition",
+  "keyword": "Cancellation / Suppression",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Regenerate",
+  "kind": "instability",
+  "keyword": "Runaway",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Regenerate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Runaway",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Stabilize",
+  "kind": "opposition",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Catalyze",
+  "b": "Transmute",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Insulate",
+  "kind": "opposition",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Nullify",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Refract",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Release",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Conduct",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Insulate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Nullify",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Pressure buildup",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Resonate",
+  "kind": "opposition",
+  "keyword": "Suppression",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Sense",
+  "kind": "opposition",
+  "keyword": "Signal loss",
+  "note": ""
+ },
+ {
+  "a": "Dampen",
+  "b": "Stabilize",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Flex",
+  "b": "Reinforce",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Flex",
+  "b": "Stabilize",
+  "kind": "opposition",
+  "keyword": "Reduced function",
+  "note": ""
+ },
+ {
+  "a": "Insulate",
+  "b": "Nullify",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Insulate",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Rupture risk",
+  "note": ""
+ },
+ {
+  "a": "Insulate",
+  "b": "Stabilize",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Insulate",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Nullify",
+  "b": "Record",
+  "kind": "opposition",
+  "keyword": "Erasure",
+  "note": ""
+ },
+ {
+  "a": "Nullify",
+  "b": "Refract",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Nullify",
+  "b": "Regenerate",
+  "kind": "opposition",
+  "keyword": "Suppression",
+  "note": ""
+ },
+ {
+  "a": "Nullify",
+  "b": "Resonate",
+  "kind": "opposition",
+  "keyword": "Cancellation",
+  "note": ""
+ },
+ {
+  "a": "Nullify",
+  "b": "Sense",
+  "kind": "opposition",
+  "keyword": "Blindness",
+  "note": ""
+ },
+ {
+  "a": "Phase",
+  "b": "Refract",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Phase",
+  "b": "Reinforce",
+  "kind": "instability",
+  "keyword": "Fracture risk",
+  "note": ""
+ },
+ {
+  "a": "Phase",
+  "b": "Reinforce",
+  "kind": "opposition",
+  "keyword": "Structural strain",
+  "note": ""
+ },
+ {
+  "a": "Phase",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Regenerate",
+  "kind": "opposition",
+  "keyword": "Replication of errors",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Regenerate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Resonate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Record",
+  "b": "Transmute",
+  "kind": "instability",
+  "keyword": "Corruption / Pattern corruption",
+  "note": ""
+ },
+ {
+  "a": "Refract",
+  "b": "Release",
+  "kind": "instability",
+  "keyword": "Discharge hazard",
+  "note": ""
+ },
+ {
+  "a": "Refract",
+  "b": "Release",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Refract",
+  "b": "Resonate",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Refract",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Regenerate",
+  "b": "Reinforce",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Regenerate",
+  "b": "Transmute",
+  "kind": "instability",
+  "keyword": "Runaway growth / Runaway transformation",
+  "note": ""
+ },
+ {
+  "a": "Reinforce",
+  "b": "Stabilize",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Release",
+  "b": "Store",
+  "kind": "instability",
+  "keyword": "Overload / Catastrophic discharge",
+  "note": "When the release is not controlled."
+ },
+ {
+  "a": "Release",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Resonate",
+  "b": "Sense",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Resonate",
+  "b": "Stabilize",
+  "kind": "opposition",
+  "keyword": "Detuning",
+  "note": ""
+ },
+ {
+  "a": "Stabilize",
+  "b": "Store",
+  "kind": "synergy",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Stabilize",
+  "b": "Transmute",
+  "kind": "opposition",
+  "keyword": "",
+  "note": ""
+ },
+ {
+  "a": "Store",
+  "b": "Transmute",
+  "kind": "instability",
+  "keyword": "Containment instability",
+  "note": ""
+ }
+]

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Discoveries | Nowhere Expeditions</title>
+    <meta name="description" content="Resources, Resource Functions, Domains and spell Forms discovered in the Nowhere Expeditions campaign." />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/markdown-it.min.js" defer></script>
+    <script src="site.js" defer></script>
+  </head>
+  <body data-page="discoveries">
+    <header class="site-header">
+      <div class="wrapper topbar">
+        <div class="brand" aria-label="Nowhere Expeditions home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Nowhere Expeditions</span>
+        </div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="nav-link" href="index.html">Overview</a>
+          <a class="nav-link" href="outpost.html">Outpost</a>
+          <a class="nav-link" href="jobs.html">Job Board</a>
+          <a class="nav-link" href="archive.html">Archive</a>
+          <a class="nav-link" href="discoveries.html">Discoveries</a>
+          <a class="nav-link" href="marketplace.html">Marketplace</a>
+          <a class="nav-link" href="characters.html">Characters</a>
+          <a class="nav-link nav-meta" href="game.html">Rules &amp; News</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell wrapper">
+      <section aria-labelledby="discoveries-head">
+        <div class="section-header">
+          <span class="kicker">Field Science</span>
+          <h1 id="discoveries-head">Discoveries</h1>
+          <p class="page-subtitle">What the Expeditioners have brought back and worked out: Resources and what they can do, the Functions that describe them, the Domains of the Gates, and the spell Forms built from them.</p>
+        </div>
+        <div class="profile-tabs discovery-tabs" role="tablist" aria-label="Discoveries">
+          <button type="button" class="profile-tab" role="tab" id="tab-resources" aria-controls="panel-resources" data-discovery-tab="resources">Resources</button>
+          <button type="button" class="profile-tab" role="tab" id="tab-functions" aria-controls="panel-functions" data-discovery-tab="functions">Functions</button>
+          <button type="button" class="profile-tab" role="tab" id="tab-domains" aria-controls="panel-domains" data-discovery-tab="domains">Domains</button>
+          <button type="button" class="profile-tab" role="tab" id="tab-forms" aria-controls="panel-forms" data-discovery-tab="forms">Spell Forms</button>
+        </div>
+        <div id="panel-resources" role="tabpanel" aria-labelledby="tab-resources"><p class="empty-state">Loading Resources...</p></div>
+        <div id="panel-functions" role="tabpanel" aria-labelledby="tab-functions" hidden></div>
+        <div id="panel-domains" role="tabpanel" aria-labelledby="tab-domains" hidden></div>
+        <div id="panel-forms" role="tabpanel" aria-labelledby="tab-forms" hidden></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-community wrapper" id="footer-community" hidden></div>
+      <div class="wrapper">
+        <span>Nowhere Expeditions · © 2026 Josephkhland<span class="site-version" id="site-version" hidden></span></span>
+        <span>Resources • Functions • Domains • spell Forms</span>
+      </div>
+    </footer>
+  </body>
+</html>
