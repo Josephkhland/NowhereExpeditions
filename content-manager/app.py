@@ -61,38 +61,41 @@ GAME_POST_TYPES = ("announcement", "rule")
 # The shared vocabulary of Resources, Projects and Spellcasting: Resource Functions, manifested as Words.
 # The GM manages it in the content manager (stored in metadata); this is only the starting vocabulary.
 DEFAULT_FUNCTION_VOCABULARY = [
-    {"name": "Energy & Transfer", "functions": [
-        {"name": "Absorb", "definition": "Draw something into itself or remove it from elsewhere."},
-        {"name": "Amplify", "definition": "Increase the strength or intensity of an existing effect."},
-        {"name": "Conduct", "definition": "Transfer an effect efficiently."},
-        {"name": "Dampen", "definition": "Reduce the strength or intensity of an effect."},
-        {"name": "Heat", "definition": "Increase thermal energy."},
-        {"name": "Insulate", "definition": "Resist or prevent transfer."},
-        {"name": "Release", "definition": "Emit or discharge something currently available or contained."},
-        {"name": "Store", "definition": "Retain something for later use."}]},
+    {"name": "Energy & Light", "functions": [
+        {"name": "Absorb", "definition": "Draw something into itself, taking it out of its surroundings."},
+        {"name": "Amplify", "definition": "Increase the strength or intensity of an effect that already exists."},
+        {"name": "Conduct", "definition": "Carry energy, force or a signal through itself efficiently."},
+        {"name": "Dampen", "definition": "Reduce the strength or intensity of an effect without ending it."},
+        {"name": "Glow", "definition": "Give off light."},
+        {"name": "Heat", "definition": "Raise the temperature of itself or its target."},
+        {"name": "Release", "definition": "Emit or discharge what it holds or can reach, often all at once."},
+        {"name": "Store", "definition": "Hold energy, matter or charge safely for later use."}]},
     {"name": "Matter & Structure", "functions": [
         {"name": "Bind", "definition": "Join separate things and keep them connected."},
         {"name": "Corrode", "definition": "Break down or degrade matter."},
-        {"name": "Flex", "definition": "Deform while maintaining structural integrity."},
-        {"name": "Regenerate", "definition": "Restore damaged structure."},
-        {"name": "Reinforce", "definition": "Increase resistance to damage or deformation."},
-        {"name": "Stabilize", "definition": "Resist unwanted change or instability."},
-        {"name": "Transmute", "definition": "Change matter or properties into another form."}]},
+        {"name": "Flex", "definition": "Bend, stretch or deform under stress and return to shape without breaking."},
+        {"name": "Regenerate", "definition": "Restore damaged structure or lost substance to what it was."},
+        {"name": "Reinforce", "definition": "Increase resistance to damage, pressure or deformation."},
+        {"name": "Stabilize", "definition": "Resist unwanted change and keep processes steady."},
+        {"name": "Transmute", "definition": "Change matter, or its properties, into another form."}]},
     {"name": "Motion & Space", "functions": [
-        {"name": "Anchor", "definition": "Resist displacement or enforce positional stability."},
-        {"name": "Move", "definition": "Impart or alter motion."},
-        {"name": "Phase", "definition": "Alter how something occupies or interacts with physical space."}]},
-    {"name": "Information & Response", "functions": [
-        {"name": "Adapt", "definition": "Change in response to conditions in a useful or self-directed way."},
-        {"name": "React", "definition": "Produce a defined response to a specific stimulus."},
-        {"name": "Record", "definition": "Retain information, impressions, states, or patterns."},
-        {"name": "Resonate", "definition": "Respond strongly to a particular frequency, pattern, or signature."},
+        {"name": "Anchor", "definition": "Hold fast in place, resisting any force or effect that would shift it."},
+        {"name": "Move", "definition": "Impart, alter, speed up or direct motion."},
+        {"name": "Phase", "definition": "Change how something occupies space, letting it pass partly or wholly through solid matter."},
+        {"name": "Slip", "definition": "Escape grip, friction or restraint, sliding free of whatever would hold it."}]},
+    {"name": "Signal & Perception", "functions": [
+        {"name": "Hide", "definition": "Conceal from perception or detection, whether senses or instruments."},
+        {"name": "Record", "definition": "Keep impressions, states or patterns that can be read back later."},
+        {"name": "Resonate", "definition": "Respond strongly to a particular frequency, pattern or signature."},
         {"name": "Sense", "definition": "Detect a target phenomenon or condition."}]},
-    {"name": "Transformation & Mediation", "functions": [
-        {"name": "Catalyze", "definition": "Enable or accelerate another process."},
-        {"name": "Filter", "definition": "Selectively permit some things through while excluding others."},
-        {"name": "Nullify", "definition": "Cancel or suppress a phenomenon."},
-        {"name": "Refract", "definition": "Redirect, split, or focus a transmitted phenomenon."}]},
+    {"name": "Process & Response", "functions": [
+        {"name": "Adapt", "definition": "Change in response to conditions, in a useful or self-directed way."},
+        {"name": "Catalyze", "definition": "Start, enable or speed up a process without being used up by it."},
+        {"name": "Filter", "definition": "Let some things through while holding others back."},
+        {"name": "Invert", "definition": "Reverse a property, direction or effect: hot to cold, pull to push, growth to decay."},
+        {"name": "Loop", "definition": "Repeat a process, motion or event in a cycle, returning to where it began."},
+        {"name": "Nullify", "definition": "Cancel or suppress a phenomenon outright, especially an anomalous one."},
+        {"name": "React", "definition": "Produce a defined response to a specific trigger."}]},
 ]
 FUNCTION_NAME_RE = re.compile(r"[A-Z][A-Za-z-]{1,30}")
 # How two Functions behave together. A pair can carry more than one kind (Store + Release is a synergy and an

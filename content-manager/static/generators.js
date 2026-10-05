@@ -18,7 +18,7 @@ const cap = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 // Per Domain: the Functions its environment favours, words for names and descriptions, and Gate-level ideas.
 const DOMAIN_PROFILES = {
   verdant: {
-    functions: ["Regenerate", "Adapt", "Bind", "Absorb", "Sense", "Catalyze", "Filter", "Flex", "React"],
+    functions: ["Regenerate", "Adapt", "Bind", "Absorb", "Sense", "Catalyze", "Filter", "Flex", "React", "Hide"],
     prefixes: ["Moss", "Thorn", "Bloom", "Rot", "Vine", "Spore", "Mire", "Sap", "Briar", "Lichen"],
     looks: ["damp, fibrous", "pale green and spongy", "veined and translucent", "sticky, amber-coloured", "velvety and dark", "glistening, mottled"],
     creatures: ["canopy stalkers", "mire grazers", "spore moths", "root-crawlers", "lantern beetles"],
@@ -31,7 +31,7 @@ const DOMAIN_PROFILES = {
     landmarks: ["a hollow tree the size of a tower", "a lake of floating blossoms", "a ring of petrified giants", "a fungal bridge over a ravine"],
   },
   volcanic: {
-    functions: ["Heat", "Store", "Release", "Absorb", "Reinforce", "Conduct", "Insulate", "Corrode"],
+    functions: ["Heat", "Store", "Release", "Absorb", "Reinforce", "Conduct", "Glow", "Corrode", "Catalyze"],
     prefixes: ["Ash", "Ember", "Cinder", "Slag", "Char", "Magma", "Soot", "Pyre", "Basalt", "Flare"],
     looks: ["black and glassy", "warm, porous", "red-veined", "ash-grey and brittle", "smoke-dark and dense", "faintly glowing"],
     creatures: ["ash burrowers", "vent crabs", "cinder hounds", "slag eels", "magma-backed tortoises"],
@@ -44,7 +44,7 @@ const DOMAIN_PROFILES = {
     landmarks: ["a smoking crater lake", "a forest of obsidian spires", "a river of slow-moving magma", "a vent field that pulses in rhythm"],
   },
   abyssal: {
-    functions: ["Sense", "Absorb", "Phase", "Store", "Filter", "Dampen", "Resonate", "Insulate", "Move"],
+    functions: ["Sense", "Absorb", "Phase", "Store", "Filter", "Dampen", "Resonate", "Glow", "Hide", "Move"],
     prefixes: ["Deep", "Brine", "Pale", "Drown", "Murk", "Tide", "Gloam", "Kelp", "Hollow", "Silt"],
     looks: ["slick and lightless", "pale and gelatinous", "pressure-dense", "faintly bioluminescent", "cold and rubbery", "pearl-smooth"],
     creatures: ["lantern-jawed eels", "pressure crabs", "drift jellies", "blind trench hunters", "shell-backed rays"],
@@ -57,7 +57,7 @@ const DOMAIN_PROFILES = {
     landmarks: ["a pillar of black smokers", "a shoal of drifting wreckage", "a reef that sings at night", "a pit that swallows light"],
   },
   arid: {
-    functions: ["Store", "Absorb", "Reinforce", "Insulate", "Record", "Filter", "Stabilize", "Corrode", "Refract"],
+    functions: ["Store", "Absorb", "Reinforce", "Hide", "Record", "Filter", "Stabilize", "Corrode", "Slip", "Glow"],
     prefixes: ["Salt", "Dune", "Dust", "Sun", "Bone", "Glass", "Mirage", "Sand", "Dry", "Rust"],
     looks: ["sun-bleached and brittle", "fine as powder", "crusted with salt", "mirror-bright", "rust-red", "hollow and light"],
     creatures: ["salt striders", "dune burrowers", "glass-backed lizards", "hollow-bone birds", "dust swarms"],
@@ -70,7 +70,7 @@ const DOMAIN_PROFILES = {
     landmarks: ["a field of standing glass", "a dry riverbed of bones", "a salt arch", "an oasis that is never in the same place"],
   },
   frozen: {
-    functions: ["Absorb", "Stabilize", "Record", "Insulate", "Store", "Anchor", "Dampen", "Heat", "Refract"],
+    functions: ["Absorb", "Stabilize", "Record", "Invert", "Store", "Anchor", "Dampen", "Heat", "Slip", "Loop"],
     prefixes: ["Rime", "Frost", "Hoar", "Glacier", "Pale", "Shiver", "Snow", "Ice", "Still", "Winter"],
     looks: ["frost-white", "glass-clear and cold", "blue and dense", "brittle as thin ice", "furred with rime", "still and silent"],
     creatures: ["ice-shelled crawlers", "snow-white hunters", "frost moths", "glacier worms", "sleeping giants in the ice"],
@@ -83,7 +83,7 @@ const DOMAIN_PROFILES = {
     landmarks: ["a frozen waterfall", "an ice-locked ship", "a field of frozen statues", "a blue cavern that hums"],
   },
   constructed: {
-    functions: ["Conduct", "Store", "Record", "React", "Move", "Anchor", "Stabilize", "Transmute", "Sense"],
+    functions: ["Conduct", "Store", "Record", "React", "Move", "Anchor", "Stabilize", "Transmute", "Sense", "Loop"],
     prefixes: ["Gear", "Lattice", "Cog", "Wire", "Forge", "Static", "Circuit", "Rivet", "Echo", "Index"],
     looks: ["precisely machined", "segmented and metallic", "lattice-patterned", "faintly humming", "oil-dark", "seamless and smooth"],
     creatures: ["wandering maintenance drones", "spider-legged repairers", "patrolling sentries", "scavenger units"],
@@ -100,7 +100,7 @@ const DOMAIN_PROFILES = {
 // A Domain added in the content manager has no word lists of its own yet: it gets neutral ones, and its
 // description becomes the Gate concept.
 const GENERIC_PROFILE = {
-  functions: ["Absorb", "Store", "Release", "Sense", "Adapt", "Stabilize", "Reinforce", "Resonate"],
+  functions: ["Absorb", "Store", "Release", "Sense", "Adapt", "Stabilize", "Reinforce", "Resonate", "Phase"],
   prefixes: ["Strange", "Pale", "Hollow", "Shard", "Echo", "Drift", "Veil", "Mire", "Glim", "Rift"],
   looks: ["oddly textured", "faintly luminous", "cold and smooth", "irregular and veined", "dense and heavy", "light and brittle"],
   creatures: ["native grazers", "lurking hunters", "drifting swarms", "burrowing things"],
@@ -137,7 +137,7 @@ const FUNCTION_BEHAVIOR = {
   Conduct: ["carries a tingle of current from one end to the other", "passes heat through itself almost instantly"],
   Dampen: ["muffles sound and vibration around it", "softens any blow that strikes it"],
   Heat: ["is always warm to the touch", "slowly warms whatever rests against it"],
-  Insulate: ["stays the same temperature whatever surrounds it", "blocks heat and current completely"],
+  Glow: ["gives off a soft light of its own", "shines brighter the more it is handled"],
   Release: ["discharges in a sudden burst when struck", "vents what it holds when cracked open"],
   Store: ["holds a charge for days after being exposed", "keeps what it absorbs locked inside"],
   Bind: ["fuses with whatever it touches", "knits separate pieces into one"],
@@ -150,15 +150,18 @@ const FUNCTION_BEHAVIOR = {
   Anchor: ["refuses to be moved once it settles", "stays fixed in place even in strong currents"],
   Move: ["shifts on its own when disturbed", "pushes away anything that touches it"],
   Phase: ["seems to sink partly into solid surfaces", "flickers as if not entirely here"],
+  Slip: ["cannot be held for long, sliding out of any grip", "lets nothing stick to it"],
   Adapt: ["changes texture to match its surroundings", "reshapes itself to whatever holds it"],
   React: ["responds sharply to one particular trigger", "snaps shut or flares at a specific touch"],
+  Hide: ["is hard to spot even when you know where it is", "slips out of notice the moment you look away"],
   Record: ["keeps impressions of what happens near it", "plays back faint echoes of past sounds"],
   Resonate: ["hums in answer to certain sounds", "vibrates in sympathy with others of its kind"],
   Sense: ["turns towards movement nearby", "changes colour when something living approaches"],
   Catalyze: ["speeds up any reaction it is dropped into", "makes nearby materials react faster"],
   Filter: ["lets water through but holds back everything else", "passes some things freely and stops others"],
   Nullify: ["seems to quieten strange phenomena near it", "makes Gate effects around it falter"],
-  Refract: ["splits light into strange bands", "bends light and heat around itself"],
+  Invert: ["turns cold when heated and warm in the cold", "pushes away what should fall towards it"],
+  Loop: ["repeats the same slow motion over and over", "returns to the same state every few hours, whatever is done to it"],
 };
 const PAIR_BEHAVIOR = {
   "Absorb+Heat": "stays warm itself while the air immediately around it turns unnaturally cold",
@@ -167,7 +170,10 @@ const PAIR_BEHAVIOR = {
   "Move+Release": "jets away when disturbed, pushing against the air",
   "Absorb+Move": "stops anything thrown at it dead, as if catching it",
   "Release+Store": "holds a charge for days, then discharges it all at once",
-  "Conduct+Insulate": "carries current along one face while the other stays completely inert",
+  "Conduct+Dampen": "carries current along one face while the other stays completely inert",
+  "Glow+Store": "drinks in light all day and shines faintly all night",
+  "Hide+Phase": "fades from sight and touch together when disturbed",
+  "Loop+Record": "replays the same scene in faint echoes, over and over",
   "Anchor+Phase": "seems pinned in place even as its outline blurs",
   "Resonate+Sense": "hums whenever another sample of it is nearby",
   "Record+Sense": "changes colour to show where something passed hours ago",
@@ -317,7 +323,9 @@ const FUNCTION_INFERENCES = {
   Move: ["Little here stays still for long.", "engines, lifting gear and propulsion"],
   Phase: ["Boundaries here are not entirely solid.", "Gate technology and barrier penetration"],
   Conduct: ["Energy flows easily through this place.", "wiring, circuits and power systems"],
-  Insulate: ["Life here shelters from the extremes around it.", "protective suits and containment"],
+  Glow: ["The place makes its own light.", "lamps, beacons and signalling"],
+  Hide: ["Everything here survives by not being seen.", "camouflage, stealth gear and concealment"],
+  Slip: ["Nothing here can be held for long.", "lubricants, escape gear and low-friction surfaces"],
   Stabilize: ["Things here resist change.", "containment and precision equipment"],
   Filter: ["Survival here depends on keeping the wrong things out.", "masks, purification and separation"],
   Corrode: ["The environment slowly eats away at everything.", "etching, demolition and waste processing"],
@@ -329,7 +337,8 @@ const FUNCTION_INFERENCES = {
   Transmute: ["Matter here does not stay what it was.", "refining, recycling and fabrication"],
   Catalyze: ["Reactions here happen fast and spread.", "synthesis, refining and medicine"],
   Nullify: ["Strange effects falter in parts of this place.", "anti-magic and anomaly suppression"],
-  Refract: ["Light and energy bend in unexpected ways here.", "lenses, optics and camouflage"],
+  Invert: ["The usual rules run backwards here.", "reversers, refrigeration and counter-force devices"],
+  Loop: ["The place repeats itself.", "clocks, cycling engines and perpetual mechanisms"],
   Anchor: ["Things here hold fast against every force.", "anchors, foundations and restraints"],
   Resonate: ["The place answers sound with sound.", "communications, scanners and tuned devices"],
 };

@@ -569,7 +569,7 @@ class ContentStoreTests(unittest.TestCase):
         with self.assertRaises(ManagerError):
             self.store.save_record("resources", None, {"name": "Old word", "functions": ["Heat"]})
         reopened = ContentStore(self.database, self.data_dir)
-        self.assertIn("Warm", reopened.state()["vocabulary"]["functionGroups"]["Energy & Transfer"])
+        self.assertIn("Warm", reopened.state()["vocabulary"]["functionGroups"]["Energy & Light"])
 
     def test_functions_in_use_cannot_be_removed_but_unused_ones_can(self) -> None:
         self.store.save_record("resources", None, {"name": "Emberglass", "functions": ["Heat"]})
@@ -638,7 +638,7 @@ class ContentStoreTests(unittest.TestCase):
 
     def test_function_interactions_start_from_the_design_table_and_follow_renames(self) -> None:
         interactions = self.store.function_interactions()
-        self.assertIn({"a": "Conduct", "b": "Insulate", "kind": "opposition", "keyword": "", "note": ""}, interactions)
+        self.assertIn({"a": "Conduct", "b": "Dampen", "kind": "opposition", "keyword": "Resistance", "note": ""}, interactions)
         self.assertTrue(any(entry["a"] == "Release" and entry["b"] == "Store" and entry["kind"] == "synergy" for entry in interactions))
         self.store.save_function_interactions([{"a": "Store", "b": "Heat", "kind": "synergy", "keyword": "Thermal battery", "note": "Holds warmth."},
                                                {"a": "Move", "b": "Anchor", "kind": "opposition"}])
