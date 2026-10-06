@@ -2131,6 +2131,8 @@ const initializeDestinationCarousel = () => {
   const slides = [...carousel.querySelectorAll("[data-carousel-slide]")];
   const dots = [...carousel.querySelectorAll("[data-carousel-to]")];
   const currentLabel = carousel.querySelector("[data-carousel-current]");
+  const totalLabel = carousel.querySelector("[data-carousel-total]");
+  if (totalLabel) totalLabel.textContent = String(slides.length).padStart(2, "0");
   let activeIndex = 0;
 
   const showSlide = (index) => {
