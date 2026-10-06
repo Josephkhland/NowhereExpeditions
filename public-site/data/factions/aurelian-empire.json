@@ -1,0 +1,46 @@
+{
+  "id": "aurelian-empire",
+  "name": "Aurelian Empire",
+  "shortName": "Aurelia",
+  "aliases": [
+    "Aurelia",
+    "Aurelian"
+  ],
+  "tagline": "Maritime empire of navy and bureaucracy",
+  "summary": "A powerful maritime empire defined by navy, bureaucracy, standardization, etiquette and the belief that power creates responsibility.",
+  "government": "",
+  "knownFor": "",
+  "coreValues": [
+    "Standardization",
+    "Etiquette",
+    "Responsibility"
+  ],
+  "gateAttitude": "Aurelia treats magic as a strategic asset requiring responsible administration.",
+  "beliefs": "Aurelia follows the **Faith of the First Light**, a religious family it shares with Vesper, in the form of the **Aurelian Communion**, also called the **Crowned Sun**. It emphasizes order, duty, stewardship, continuity and reciprocal hierarchy. Older folklore that predates the First Light also survives.",
+  "history": "",
+  "visualSummary": "Polished brass, navy and cream uniforms, monumental institutions and standardized equipment.",
+  "palette": "Navy, cream, polished brass",
+  "materials": "",
+  "relations": [
+    {
+      "factionId": "vardic-holds",
+      "text": "Old naval rivalry and mutual respect."
+    },
+    {
+      "factionId": "vesper-republic",
+      "text": "Shares the Faith of the First Light, read differently."
+    }
+  ],
+  "ruleId": "faction-aurelian-empire",
+  "sponsorFraming": "Aurelian sponsorship represents logistics, manifests, standardized supply and contingency planning.",
+  "extraName": "Properly Provisioned",
+  "extraRule": "Once per session, bring one item from your Personal Stash into action without paying the normal Stress or Fate Point cost.",
+  "expectations": "Imperial sponsors may expect their people to:\n\n- keep proper records, manifests and reports;\n- maintain issued equipment to standard;\n- conduct themselves with proper etiquette, especially before officials;\n- report magical discoveries so they can be responsibly administered.",
+  "flag": "data/images/aurelian-empire-flag-dfc34225.jpg",
+  "homeland": "data/images/aurelian-empire-homeland-45e5f79b.jpg",
+  "gallery": [],
+  "clothing": [
+    "data/images/aurelian-empire-clothing-ef0470e2.jpg"
+  ],
+  "order": 2
+}

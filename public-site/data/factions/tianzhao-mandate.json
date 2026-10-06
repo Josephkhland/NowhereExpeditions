@@ -1,0 +1,42 @@
+{
+  "id": "tianzhao-mandate",
+  "name": "Tianzhao Mandate",
+  "shortName": "the Mandate",
+  "aliases": [
+    "Tianzhao",
+    "Mandate"
+  ],
+  "tagline": "Ancient bureaucratic civilization",
+  "summary": "An ancient bureaucratic civilization whose politics and culture are shaped by harmony, long-term consequence, celestial order and practical engagement with supernatural forces.",
+  "government": "Ancient bureaucracy",
+  "knownFor": "",
+  "coreValues": [
+    "Harmony",
+    "Long-term consequence",
+    "Celestial order"
+  ],
+  "gateAttitude": "Tianzhao first interpreted the Gates through its existing concepts of the Spirit and Celestial realms.",
+  "beliefs": "Tianzhao's religious life is its own: overlapping traditions of Heaven, ancestor veneration, local gods, divine officials, spirits, death courts, reincarnation, household rites and a celestial bureaucracy. Its folklore tells of **Collectors**, or Officers of Passage, who guide the dead; of spirit officials, dragons, fox spirits, talismans and true names; and of old stories of passages into other realms.",
+  "history": "",
+  "visualSummary": "Lacquer, porcelain, paper seals, cinnabar, jade and precise machinery, integrated into very old architectural traditions.",
+  "palette": "Cinnabar, jade, lacquer",
+  "materials": "Lacquer, porcelain, paper seals, jade",
+  "relations": [
+    {
+      "factionId": "vardic-holds",
+      "text": "Mutual respect for craft; disagreement over metaphysical caution."
+    }
+  ],
+  "ruleId": "faction-tianzhao-mandate",
+  "sponsorFraming": "Access to Tianzhao physicians, medicines, therapeutic traditions and spiritual care through your sponsor.",
+  "extraName": "Restorative Care",
+  "extraRule": "Once between expeditions, when you make progress on a Recovery Project for one of your own Consequences, gain +1 additional Progress.",
+  "expectations": "The Mandate may expect the people it sponsors to:\n\n- weigh the long-term consequences of what they do;\n- show proper respect to officials, ancestors and spirits;\n- keep harmony within their crew;\n- report what the Gates reveal about the Spirit and Celestial realms.",
+  "flag": "data/images/tianzhao-mandate-flag-b01942c3.jpg",
+  "homeland": "data/images/tianzhao-mandate-homeland-e16867e5.jpg",
+  "gallery": [],
+  "clothing": [
+    "data/images/tianzhao-mandate-clothing-b9528577.jpg"
+  ],
+  "order": 5
+}

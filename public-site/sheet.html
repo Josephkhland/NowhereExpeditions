@@ -93,6 +93,7 @@
   .identity textarea { min-height: 5rem; }
   .back { color: var(--muted); font-size: 0.8rem; text-decoration: none; }
   .back:hover { color: var(--accent-2); }
+  @media (pointer: coarse) { .back { display: inline-flex; align-items: center; min-height: 2.5rem; } }
   dialog { width: min(32rem, calc(100% - 2rem)); padding: 1.2rem; border: 1px solid var(--line-strong); background: var(--panel); color: var(--text); }
   dialog::backdrop { background: rgba(5, 9, 10, 0.75); }
   dialog h2 { color: var(--accent-2); }
@@ -555,7 +556,7 @@
       </div>
 
       <section aria-labelledby="h-v-skills" style="margin-top:1rem">
-        <h2 id="h-v-skills">Skills · click to roll</h2>
+        <h2 id="h-v-skills">Skills · click or tap to roll</h2>
         ${tiers.length ? `<div class="pyramid">${tiers.map((rating) => `
           <div class="tier">
             <span class="tier-rating">${escapeHtml(LADDER_NAMES[rating] || "Rated")} ${signed(rating)}</span>

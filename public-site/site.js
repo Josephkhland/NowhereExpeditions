@@ -547,6 +547,12 @@ const renderGame = async () => {
         <h2 id="rule-view-title">${escapeHtml(rule.title || "Untitled rule")}</h2>
         ${rule.summary ? `<p class="rule-lead">${richInline(rule.summary, campaign)}</p>` : ""}
       </header>
+      ${(() => {
+        const faction = campaign.factions.find((item) => item.ruleId === rule.id);
+        return faction ? `<a class="rule-faction" href="factions.html#${encodeURIComponent(faction.id)}">${factionFlag(faction, "rule-faction-flag")}
+          <span><strong>Learn more about ${escapeHtml(faction.name)}</strong>${faction.tagline ? `<span>${escapeHtml(faction.tagline)}</span>` : ""}</span>
+          <span class="rule-faction-arrow" aria-hidden="true">→</span></a>` : "";
+      })()}
       ${rule.details ? `<div class="rule-content">${postText(rule.details)}</div>` : ""}
       ${pathNav(rule)}
       ${tagList(rule.tags, "Related topics")}`;
@@ -637,20 +643,27 @@ const renderGame = async () => {
   route();
 };
 
-// The Overview shows the newest pinned announcement as a single line.
+// The Overview features the newest pinned announcement: its title, date and opening paragraph, with a way to the
+// full post.
 const renderAnnouncementBanner = async () => {
   const banner = document.getElementById("announcement-banner");
   if (!banner) return;
   try {
     const pinned = visibleAnnouncements(await fetchGame()).find((post) => post.pinned);
     if (!pinned) return;
+    const href = `game.html#post-${encodeURIComponent(pinned.id)}`;
+    const lede = String(pinned.summary || "").split(/\n\s*\n/).find((part) => part.trim()) || "";
     banner.innerHTML = `
-      <a class="announcement-banner-link" href="game.html#post-${encodeURIComponent(pinned.id)}">
-        <span class="kicker">Announcement</span>
-        <strong>${escapeHtml(pinned.title)}</strong>
-        <span class="muted">${escapeHtml(formatDate(pinned.publishedAt))}</span>
-        <span class="announcement-banner-arrow" aria-hidden="true">→</span>
-      </a>`;
+      <article class="announcement-feature${pinned.image ? " has-art" : ""}" aria-labelledby="announcement-feature-title">
+        ${pinned.image ? `<img class="announcement-feature-art" src="${escapeHtml(pinned.image)}" alt="" loading="lazy" onerror="this.closest('.has-art')?.classList.remove('has-art'); this.remove()" />` : ""}
+        <div class="announcement-feature-body">
+          <p class="announcement-feature-meta"><span class="announcement-feature-flag">Pinned announcement</span>
+            ${pinned.publishedAt ? `<span>${escapeHtml(formatDate(pinned.publishedAt))}</span>` : ""}</p>
+          <h2 id="announcement-feature-title"><a href="${href}">${escapeHtml(pinned.title)}</a></h2>
+          ${lede ? `<p class="announcement-feature-lede">${richInline(lede, { archiveById: new Map() })}</p>` : ""}
+          <a class="announcement-feature-cta" href="${href}">Read the announcement <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>`;
     banner.hidden = false;
   } catch (error) {
     console.warn("No announcements available.", error);
@@ -746,7 +759,8 @@ const renderLaunchPanel = async () => {
   const steps = site.roadmap || [];
   const done = steps.filter((step) => step.status === "done").length;
   const launchYear = Number(site.launchAt.slice(0, 4));
-  const visitorTime = launch.toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+  // The launch is shown in the visitor's own time zone; the GM's time zone only when it differs.
+  const visitorTime = `${launch.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, ${launch.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}`;
   const sameOffset = new Date(launch).getTimezoneOffset() === -Number((/([+-]\d{2}):(\d{2})$/.exec(site.launchAt) || [0, "+00", "00"]).slice(1, 3).reduce((hours, minutes) => Number(hours) * 60 + Math.sign(Number(hours) || 1) * Number(minutes)));
   const discord = safeUrl(site.discordUrl);
   panel.innerHTML = `
@@ -767,8 +781,8 @@ const renderLaunchPanel = async () => {
     }).join("")}</ol>` : ""}
     <div class="launch-countdown">
       <p class="launch-when"><span class="kicker">Countdown to the first session</span>
-        <span><strong>${escapeHtml(launchWallClock(site.launchAt))}</strong>${site.launchLabel ? ` ${escapeHtml(site.launchLabel)}` : ""}</span>
-        ${sameOffset ? "" : `<span class="muted">Your time: ${escapeHtml(visitorTime)}</span>`}</p>
+        <strong><time datetime="${escapeHtml(launch.toISOString())}">${escapeHtml(visitorTime)}</time></strong>
+        <span class="muted">In your local time${sameOffset ? "" : ` · ${escapeHtml(launchWallClock(site.launchAt))}${site.launchLabel ? ` ${escapeHtml(site.launchLabel)}` : ""}`}</span></p>
       <div class="countdown" role="timer" aria-label="Time until launch">
         ${["days", "hours", "minutes", "seconds"].map((unit) => `<div><span class="countdown-value" data-unit="${unit}">--</span><span class="countdown-label">${unit}</span></div>`).join("")}
       </div>
@@ -811,16 +825,19 @@ let campaignPromise = null;
 
 const loadCampaign = () => {
   if (!campaignPromise) {
-    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms"].map(fetchCollection),
+    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms", "factions"].map(fetchCollection),
       fetchJson("data/vocabulary.json").catch(() => null)])
-      .then(([characters, jobs, archive, gear, projects, resources, forms, vocabulary]) => {
+      .then(([characters, jobs, archive, gear, projects, resources, forms, factions, vocabulary]) => {
         DOMAIN_INFO = new Map((vocabulary?.domains || []).map((domain) => [domain.key, domain]));
         VOCABULARY_WORDS = new Set((vocabulary?.functionGroups || []).flatMap((group) => group.functions.map((fn) => fn.name)));
         const byId = (items) => new Map(items.map((item) => [item.id, item]));
         const mentions = (item, id) => [item.summary, item.content, item.objective, item.briefing]
           .some((text) => String(text || "").includes(`[[${id}]]`) || String(text || "").includes(`[[${id}|`));
         return {
-          characters, jobs, archive, gear, projects, resources, forms,
+          characters, jobs, archive, gear, projects, resources, forms, factions,
+          factionById: byId(factions),
+          archiveForFaction: (factionId) => archive.filter((entry) => (entry.factionIds || []).includes(factionId))
+            .sort((left, right) => String(left.type).localeCompare(String(right.type)) || String(left.title).localeCompare(String(right.title))),
           vocabulary: { functionGroups: vocabulary?.functionGroups || [], interactions: vocabulary?.interactions || [], domains: vocabulary?.domains || [] },
           characterById: byId(characters),
           resourceById: byId(resources),
@@ -895,10 +912,15 @@ const markdown = (() => {
     tokens[index].tag = tokens[index - 2]?.tag || tokens[index].tag;
     return self.renderToken(tokens, index, options);
   };
+  // ![alt](src "caption") shows the caption under the image, so lore can say what to notice in a picture.
   const image = md.renderer.rules.image || renderDefault;
   md.renderer.rules.image = (tokens, index, options, env, self) => {
-    tokens[index].attrSet("loading", "lazy");
-    return image(tokens, index, options, env, self);
+    const token = tokens[index];
+    token.attrSet("loading", "lazy");
+    const caption = token.attrGet("title");
+    if (!caption) return image(tokens, index, options, env, self);
+    token.attrs = token.attrs.filter(([name]) => name !== "title");
+    return `<span class="rich-figure">${image(tokens, index, options, env, self)}<span class="rich-caption">${md.utils.escapeHtml(caption)}</span></span>`;
   };
   md.renderer.rules.table_open = () => '<div class="rich-table"><table>';
   md.renderer.rules.table_close = () => "</table></div>";
@@ -1206,11 +1228,13 @@ const renderJobBoard = async () => {
 
 /* ---------- Archive: the campaign's lore, one entry per page ---------- */
 
+// Structural types. What a lore entry is about (History, Folklore, Religion...) is its topics; an entry can have several.
 const ARCHIVE_CATEGORIES = [
-  ["", "All"], ["gate-record", "Gate Records"], ["session-record", "Session Records"],
-  ["newspaper", "Newspaper"], ["history", "History"], ["folklore", "Folklore"]
+  ["", "All"], ["gate-record", "Gate Records"], ["session-record", "Session Records"], ["newspaper", "Newspapers"], ["lore", "Lore"]
 ];
-const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate Record", "session-record": "Session Record", newspaper: "Newspaper", history: "History", folklore: "Folklore" };
+const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate Record", "session-record": "Session Record", newspaper: "Newspaper", lore: "Lore" };
+// How an entry is labelled in lists: a lore entry by its topics.
+const archiveEntryKind = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics.join(" · ") : archiveTypeLabel(entry.type);
 const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
 
 /* ---------- Archive Explore mode: a neighborhood view of how records link ---------- */
@@ -1446,17 +1470,45 @@ const renderArchive = async () => {
       return;
     }
 
+    // Factions used by at least one entry can filter the list; ?faction=<id> (from a faction page) sets it.
+    const usedFactions = campaign.factions.filter((item) => entries.some((entry) => (entry.factionIds || []).includes(item.id)))
+      .sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    let faction = new URLSearchParams(window.location.search).get("faction") || "";
+    if (!usedFactions.some((item) => item.id === faction)) faction = "";
+    // Lore topics in use, most used first; ?topic=<name> sets the filter.
+    const topicCounts = new Map();
+    entries.forEach((entry) => (entry.topics || []).forEach((name) => topicCounts.set(name, (topicCounts.get(name) || 0) + 1)));
+    const usedTopics = [...topicCounts.keys()].sort((left, right) => topicCounts.get(right) - topicCounts.get(left) || left.localeCompare(right));
+    let topic = new URLSearchParams(window.location.search).get("topic") || "";
+    if (!usedTopics.includes(topic)) topic = "";
+    const setParam = (name, value) => {
+      const url = new URL(window.location.href);
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+      window.history.replaceState(null, "", url);
+    };
     root.innerHTML = `
       <div id="archive-browse">
       <div class="filter-bar" role="group" aria-label="Archive categories">
         ${ARCHIVE_CATEGORIES.map(([type, label]) => `<button type="button" class="filter-chip" data-archive-type="${type}" aria-pressed="${type === category}">${label}</button>`).join("")}
       </div>
+      ${usedTopics.length ? `<div class="filter-bar topic-bar" role="group" aria-label="Lore topics">
+        <span class="topic-bar-label">Topics</span>
+        ${usedTopics.map((name) => `<button type="button" class="filter-chip topic-chip" data-archive-topic="${escapeHtml(name)}" aria-pressed="${name === topic}">${escapeHtml(name)}</button>`).join("")}
+      </div>` : ""}
       <div class="browser-shell">
         <aside class="browser-sidebar">
           <label class="search-wrap" for="archive-search">
             <span class="sr-only">Search the Archive</span>
             <input id="archive-search" class="search-input" type="search" placeholder="Search the Archive..." />
           </label>
+          ${usedFactions.length ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
+            <span class="sr-only">Show entries about a faction</span>
+            <select id="archive-faction" class="search-input archive-faction-filter">
+              <option value="">Any faction</option>
+              ${usedFactions.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === faction ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
+            </select>
+          </label>` : ""}
           <div id="archive-list" class="entry-list"></div>
         </aside>
         <div id="archive-detail" class="browser-detail"></div>
@@ -1521,6 +1573,7 @@ const renderArchive = async () => {
         ...references.entries.map((other) => `<li>${archiveLink(other)} <span class="muted">${escapeHtml(archiveTypeLabel(other.type))}</span></li>`)
       ];
       detail.innerHTML = `
+        <a class="back-link archive-back" href="#">← All records</a>
         <article class="detail-surface archive-entry archive-${escapeHtml(entry.type)}">
           <div class="detail-heading">
             <div>
@@ -1528,6 +1581,9 @@ const renderArchive = async () => {
               <h2>${escapeHtml(entry.title)}</h2>
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
+              ${entry.topics?.length ? `<p class="entry-topics"><span class="muted">Topics</span>${entry.topics.map((name) => `<button type="button" class="topic-link" data-archive-topic="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</p>` : ""}
+              ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
+                .map((id) => campaign.factionById.get(id)).filter(Boolean).map(factionChip).join("")}</p>` : ""}
             </div>
             <div class="detail-actions">
               ${isGate ? statusPill(entry.details?.gateStatus) : ""}
@@ -1545,17 +1601,21 @@ const renderArchive = async () => {
 
     const renderList = () => {
       const list = document.getElementById("archive-list");
-      const filtered = entries.filter((entry) => (!category || entry.type === category) && [entry.title, entry.subtitle, entry.summary,
-        entry.content, entry.author, entry.details?.designation, entry.details?.environment, ...(entry.tags || [])]
+      const filtered = entries.filter((entry) => (!category || entry.type === category)
+        && (!faction || (entry.factionIds || []).includes(faction)) && (!topic || (entry.topics || []).includes(topic))
+        && [entry.title, entry.subtitle, entry.summary, entry.content, entry.author, entry.details?.designation,
+          entry.details?.environment, ...(entry.tags || []), ...(entry.topics || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query));
       // A linked entry always opens, even when the current filter hides it from the list.
       const linked = campaign.archiveById.get(selectedHash());
       const selected = linked || filtered[0];
+      // Phones show either the list or the opened entry, never both stacked.
+      document.getElementById("archive-browse").classList.toggle("is-reading", Boolean(linked));
       list.innerHTML = filtered.length ? filtered.map((entry) => `
         <a class="entry-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" ${entry === selected ? 'aria-current="true"' : ""}>
           <span class="entry-name">${escapeHtml(entry.title)}</span>
           <span class="entry-meta">${escapeHtml(entryMeta(entry))}</span>
-          ${entry.type === "gate-record" ? statusPill(entry.details?.gateStatus, "entry-pill") : `<span class="entry-pill">${escapeHtml(archiveTypeLabel(entry.type))}</span>`}
+          ${entry.type === "gate-record" ? statusPill(entry.details?.gateStatus, "entry-pill") : `<span class="entry-pill">${escapeHtml(archiveEntryKind(entry))}</span>`}
         </a>`).join("") : '<div class="empty-state">No entries match the current filter.</div>';
       renderDetail(selected);
     };
@@ -1563,11 +1623,27 @@ const renderArchive = async () => {
     root.querySelectorAll("[data-archive-type]").forEach((button) => button.addEventListener("click", () => {
       category = button.dataset.archiveType;
       root.querySelectorAll("[data-archive-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-      if (selectedHash()) window.history.replaceState(null, "", window.location.pathname);
+      if (selectedHash()) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
       renderList();
     }));
+    // A topic chip, in the bar or on an entry, filters by that topic; pressing the active one clears it.
+    root.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-archive-topic]");
+      if (!button) return;
+      topic = topic === button.dataset.archiveTopic && button.classList.contains("topic-chip") ? "" : button.dataset.archiveTopic;
+      root.querySelectorAll(".topic-chip").forEach((chip) => chip.setAttribute("aria-pressed", String(chip.dataset.archiveTopic === topic)));
+      setParam("topic", topic);
+      if (selectedHash()) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      renderList();
+      if (window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-browse").scrollIntoView({ block: "start" });
+    });
     document.getElementById("archive-search").addEventListener("input", (event) => {
       query = event.target.value.trim().toLowerCase();
+      renderList();
+    });
+    document.getElementById("archive-faction")?.addEventListener("change", (event) => {
+      faction = event.target.value;
+      setParam("faction", faction);
       renderList();
     });
     // #explore/<archive|job|character>/<id> opens Explore mode; any other hash is an Archive entry.
@@ -1589,8 +1665,8 @@ const renderArchive = async () => {
     };
     window.addEventListener("hashchange", () => {
       route();
-      // On narrow screens the entry sits below the list.
-      if (!window.location.hash.startsWith("#explore/") && window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-detail").scrollIntoView({ block: "start" });
+      // On narrow screens the list and the entry swap places, so start from the top of the Archive.
+      if (!window.location.hash.startsWith("#explore/") && window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-browse").scrollIntoView({ block: "start" });
     });
     let resizeTimer;
     window.addEventListener("resize", () => {
@@ -1989,7 +2065,7 @@ const renderCharacterRoster = async () => {
           ${character.sheet ? `<div id="panel-sheet" role="tabpanel" aria-labelledby="tab-sheet">
             <div class="sheet-download">
               <a class="destination-link" href="sheet.html?id=${encodeURIComponent(character.id)}" target="_blank" rel="noopener">Open editable sheet <span aria-hidden="true">↗</span></a>
-              <p class="muted">Opens in a new tab. Edit during play; your changes stay in this browser. Afterwards press <strong>Save file</strong> there and send the file to the GM. Click a skill to roll it.</p>
+              <p class="muted">Opens in a new tab. Edit during play; your changes stay in this browser. Afterwards press <strong>Save file</strong> there and send the file to the GM. Click or tap a skill to roll it.</p>
             </div>
             ${renderFateSheet(character.sheet, character.name)}
             ${stash}
@@ -2055,6 +2131,8 @@ const initializeDestinationCarousel = () => {
   const slides = [...carousel.querySelectorAll("[data-carousel-slide]")];
   const dots = [...carousel.querySelectorAll("[data-carousel-to]")];
   const currentLabel = carousel.querySelector("[data-carousel-current]");
+  const totalLabel = carousel.querySelector("[data-carousel-total]");
+  if (totalLabel) totalLabel.textContent = String(slides.length).padStart(2, "0");
   let activeIndex = 0;
 
   const showSlide = (index) => {
@@ -2099,6 +2177,67 @@ const setActiveNav = () => {
   });
 };
 
+// Factions, Archive and Discoveries share one "Encyclopedia" entry in the header: a click-to-open dropdown on wide
+// screens, a labelled group inside the Menu on narrow ones. Without JavaScript the three plain links remain.
+// Must match the breakpoint where styles.css folds the header behind the Menu button.
+const HEADER_FOLD_QUERY = "(max-width: 1100px)";
+const ENCYCLOPEDIA_PAGES = [
+  ["factions.html", "Factions", "The powers of the world, and who might sponsor you"],
+  ["archive.html", "Archive", "Gates, session records, history and folklore"],
+  ["discoveries.html", "Discoveries", "Resources, Functions, Domains and spell Forms"],
+];
+
+const setupEncyclopediaMenu = () => {
+  const nav = document.querySelector(".site-header .main-nav");
+  if (!nav) return;
+  const links = ENCYCLOPEDIA_PAGES.map(([href]) => nav.querySelector(`.nav-link[href="${href}"]`)).filter(Boolean);
+  if (!links.length) return;
+  const activeHref = links.find((link) => link.classList.contains("active"))?.getAttribute("href");
+
+  const group = document.createElement("div");
+  group.className = `nav-dropdown${activeHref ? " is-active" : ""}`;
+  group.innerHTML = `
+    <button type="button" class="nav-link nav-dropdown-toggle${activeHref ? " active" : ""}" aria-expanded="false" aria-controls="nav-encyclopedia">
+      Encyclopedia<span class="nav-dropdown-caret" aria-hidden="true"></span>
+    </button>
+    <div class="nav-dropdown-panel" id="nav-encyclopedia" hidden>
+      ${ENCYCLOPEDIA_PAGES.map(([href, label, text]) => `
+        <a class="nav-dropdown-item${href === activeHref ? " active" : ""}" href="${href}" ${href === activeHref ? 'aria-current="page"' : ""}>
+          <strong>${label}</strong><span>${text}</span>
+        </a>`).join("")}
+    </div>`;
+  links[0].before(group);
+  links.forEach((link) => link.remove());
+
+  const toggle = group.querySelector(".nav-dropdown-toggle");
+  const panel = group.querySelector(".nav-dropdown-panel");
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    group.classList.toggle("is-open", open);
+  };
+  const folded = window.matchMedia(HEADER_FOLD_QUERY);
+  const close = () => { if (!folded.matches) setOpen(false); };
+  const applyMode = () => {
+    setOpen(folded.matches);
+    if (folded.matches) toggle.setAttribute("tabindex", "-1");
+    else toggle.removeAttribute("tabindex");
+  };
+  folded.addEventListener("change", applyMode);
+  applyMode();
+  toggle.addEventListener("click", () => { if (!folded.matches) setOpen(panel.hidden); });
+  document.addEventListener("click", (event) => { if (!group.contains(event.target)) close(); });
+  // Keyboard users: Escape closes and returns to the button; tabbing out of the menu closes it.
+  group.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !panel.hidden && !folded.matches) {
+      event.stopPropagation();
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+  group.addEventListener("focusout", (event) => { if (!group.contains(event.relatedTarget)) close(); });
+};
+
 // On narrow screens the links fold behind a Menu button, so the sticky header stays one short row.
 // Without JavaScript the header keeps its full, wrapped layout.
 const setupMobileNav = () => {
@@ -2107,7 +2246,7 @@ const setupMobileNav = () => {
   const nav = header?.querySelector(".main-nav");
   if (!topbar || !nav) return;
   nav.id ||= "main-nav";
-  const current = nav.querySelector(".nav-link.active")?.textContent.trim();
+  const current = (nav.querySelector(".nav-dropdown-item.active strong") || nav.querySelector(".nav-link.active"))?.textContent.trim();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "nav-toggle";
@@ -2277,7 +2416,7 @@ const renderDiscoveries = async () => {
     const strongest = (left, right) => interactionsOf(vocabulary, left, right);
     return `
       <h2>Interaction grid</h2>
-      <p class="muted">Every Word against every other. Click a square to open that pair in Combine.</p>
+      <p class="muted">Every Word against every other. Click or tap a square to open that pair in Combine.</p>
       <p class="grid-legend"><span class="grid-cell is-synergy"></span> Synergy <span class="grid-cell is-opposition"></span> Opposition <span class="grid-cell is-instability"></span> Instability <span class="grid-cell is-mixed"></span> Synergy and a risk</p>
       <div class="grid-scroll"><table class="interaction-grid"><thead><tr><th></th>${wordNames.map((name) => `<th scope="col"><span>${escapeHtml(name)}</span></th>`).join("")}</tr></thead>
         <tbody>${wordNames.map((row) => `<tr><th scope="row">${escapeHtml(row)}</th>${wordNames.map((column) => {
@@ -2405,6 +2544,7 @@ const PAGE_ENTRIES = [
   ["Job Board", "jobs.html", "Expeditions and work looking for crew"], ["Archive", "archive.html", "Gate records, sessions, newspapers, history, folklore"],
   ["Discoveries", "discoveries.html", "Resources, Functions, Domains and spell Forms"], ["Marketplace", "marketplace.html", "Equipment for sale"],
   ["Characters", "characters.html", "Expeditioners and known figures"], ["Rules & News", "game.html", "Announcements and rules"],
+  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"],
   ["Onboarding", "game.html#onboarding", "start here the essential rules new players read first reading path"], ["Create a character", "sheet.html?new", "make build start a new character Expeditioner on a blank sheet"],
 ];
 let searchIndexPromise = null;
@@ -2416,7 +2556,12 @@ const buildSearchIndex = () => searchIndexPromise ||= Promise.all([loadCampaign(
   ...posts.map((post) => ({ label: post.title, href: `game.html#post-${encodeURIComponent(post.id)}`, kind: post.type === "announcement" ? "Announcement" : "Rule",
     text: [post.summary, ...(post.tags || []), post.category].join(" "), body: post.details || "" })),
   ...campaign.archive.map((entry) => ({ label: entry.type === "gate-record" ? gateName(entry) : entry.title, href: `archive.html#${encodeURIComponent(entry.id)}`,
-    kind: entry.type === "gate-record" ? "Gate" : archiveTypeLabel(entry.type), text: [entry.summary, ...(entry.tags || [])].join(" "), body: entry.content || "" })),
+    kind: entry.type === "gate-record" ? "Gate" : `Archive · ${archiveEntryKind(entry)}`, text: [entry.summary, ...(entry.tags || []), ...(entry.topics || []),
+      ...(entry.factionIds || []).map((id) => campaign.factionById.get(id)?.name || "")].join(" "), body: entry.content || "" })),
+  ...campaign.factions.map((faction) => ({ label: faction.name, href: `factions.html#${encodeURIComponent(faction.id)}`, kind: "Faction",
+    text: [...(faction.aliases || []), faction.shortName, faction.tagline, faction.summary, ...(faction.coreValues || []), faction.extraName].join(" ") })),
+  ...campaign.factions.filter((faction) => faction.extraName && faction.ruleId).map((faction) => ({ label: faction.extraName,
+    href: `game.html#post-${encodeURIComponent(faction.ruleId)}`, kind: "Rule", text: `${faction.name} Recruitment Extra sponsor` })),
   ...campaign.resources.map((resource) => ({ label: resource.name, href: `discoveries.html#resource-${encodeURIComponent(resource.id)}`, kind: "Resource",
     text: [resource.description, ...(resource.functions || [])].join(" ") })),
   ...campaign.forms.map((form) => ({ label: form.name, href: `discoveries.html#form-${encodeURIComponent(form.id)}`, kind: "Spell Form", text: [form.effect, ...(form.words || [])].join(" ") })),
@@ -2448,12 +2593,16 @@ async function openSiteSearch() {
     dialog.id = "site-search";
     dialog.className = "site-search";
     dialog.innerHTML = `<div class="site-search-panel" role="dialog" aria-label="Search the site">
-      <input type="search" class="search-input" id="site-search-input" placeholder="Search rules, Gates, Resources, characters…" autocomplete="off" aria-label="Search the site" />
+      <div class="site-search-bar">
+        <input type="search" class="search-input" id="site-search-input" placeholder="Search rules, Gates, Resources, characters…" autocomplete="off" aria-label="Search the site" />
+        <button type="button" class="site-search-close" aria-label="Close search">&#10005;</button>
+      </div>
       <ul class="site-search-results" id="site-search-results" role="listbox"></ul>
       <p class="muted site-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></div>`;
     document.body.append(dialog);
     const input = dialog.querySelector("input");
     dialog.addEventListener("click", (event) => { if (event.target === dialog) closeSiteSearch(); });
+    dialog.querySelector(".site-search-close").addEventListener("click", closeSiteSearch);
     input.addEventListener("input", () => { siteSearch.active = 0; renderSiteSearch(input.value); });
     input.addEventListener("keydown", (event) => {
       if (event.key === "ArrowDown") { event.preventDefault(); siteSearch.active = Math.min(siteSearch.results.length - 1, siteSearch.active + 1); renderSiteSearch(); }
@@ -2522,17 +2671,157 @@ const renderFooterMap = () => {
   if (!footer || footer.querySelector(".footer-map")) return;
   const column = (title, links) => `<div><h2>${title}</h2><ul>${links.map(([label, href]) => `<li><a href="${href}">${label}</a></li>`).join("")}</ul></div>`;
   footer.insertAdjacentHTML("afterbegin", `<nav class="footer-map wrapper" aria-label="Site map">
-    ${column("The world", [["Outpost", "outpost.html"], ["Archive", "archive.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
+    ${column("The world", [["Outpost", "outpost.html"], ["Factions", "factions.html"], ["Archive", "archive.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
     ${column("Expeditions", [["Job Board", "jobs.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"]])}
     ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
     ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
   </nav>`);
 };
 
-const PAGE_RENDERERS ={ game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries };
+/* ---------- Factions: the powers Expeditioners come from and deal with ---------- */
+
+// A faction page is a map into the lore: who these people are at a glance, what sponsorship by them does, and links
+// to the Archive entries that tell the rest. Every section is left out when it has nothing to show.
+const factionFlag = (faction, className = "faction-flag") => faction.flag
+  ? `<img class="${className}" src="${escapeHtml(faction.flag)}" alt="Flag of ${escapeHtml(faction.name)}" loading="lazy" />` : "";
+const factionChip = (faction) => `<a class="faction-chip" href="factions.html#${encodeURIComponent(faction.id)}">${factionFlag(faction, "faction-chip-flag")}<span>${escapeHtml(faction.name)}</span></a>`;
+const factionValues = (faction) => (faction.coreValues || []).map(escapeHtml).join(" • ");
+
+const renderFactions = async () => {
+  const root = document.getElementById("faction-root");
+  if (!root) return;
+  let campaign;
+  try {
+    campaign = await loadCampaign();
+  } catch (error) {
+    root.innerHTML = '<p class="empty-state">Faction records could not be loaded.</p>';
+    console.error(error);
+    return;
+  }
+  const factions = [...campaign.factions].sort((left, right) => (left.order ?? 999) - (right.order ?? 999) || String(left.name).localeCompare(String(right.name)));
+  const baseTitle = document.title;
+
+  const card = (faction) => `
+    <a class="faction-card" href="#${encodeURIComponent(faction.id)}">
+      <div class="faction-card-art">
+        ${faction.homeland ? `<img class="faction-card-homeland" src="${escapeHtml(faction.homeland)}" alt="" loading="lazy" />` : ""}
+        ${factionFlag(faction, "faction-card-flag")}
+      </div>
+      <div class="faction-card-body">
+        <h2>${escapeHtml(faction.name)}</h2>
+        ${faction.tagline ? `<p class="faction-tagline">${escapeHtml(faction.tagline)}</p>` : ""}
+        ${faction.coreValues?.length ? `<p class="faction-values">${factionValues(faction)}</p>` : ""}
+        ${faction.extraName ? `<p class="faction-card-extra"><span>Sponsor Extra</span>${escapeHtml(faction.extraName)}</p>` : ""}
+        <span class="faction-card-cta">Explore faction <span aria-hidden="true">→</span></span>
+      </div>
+    </a>`;
+
+  const renderList = () => {
+    document.title = baseTitle;
+    root.innerHTML = factions.length
+      ? `<div class="faction-grid">${factions.map(card).join("")}</div>`
+      : '<p class="empty-state">The faction records are still being prepared. Check back soon.</p>';
+  };
+
+  const section = (title, body, className = "") => body ? `<section class="faction-section ${className}"><h3>${title}</h3>${body}</section>` : "";
+
+  const renderDetail = (faction) => {
+    document.title = `${faction.name} | ${baseTitle}`;
+    const glance = [
+      ["Government", escapeHtml(faction.government || "")],
+      ["Known for", escapeHtml(faction.knownFor || "")],
+      ["Core values", factionValues(faction)],
+      ["Relationship with the Gates", faction.gateAttitude ? richInline(faction.gateAttitude, campaign) : ""],
+      ["Common visuals", escapeHtml([faction.palette, faction.materials].filter(Boolean).join(" · "))],
+    ].filter(([, value]) => value);
+    const rule = faction.ruleId;
+    const sponsorship = faction.extraName || faction.extraRule || rule ? `
+      ${faction.sponsorFraming ? richText(faction.sponsorFraming, campaign, "") : ""}
+      ${faction.extraName || faction.extraRule ? `<div class="faction-extra">
+        <span class="kicker">Recruitment Extra</span>
+        ${faction.extraName ? `<strong>${escapeHtml(faction.extraName)}</strong>` : ""}
+        ${faction.extraRule ? richText(faction.extraRule, campaign, "") : ""}
+      </div>` : ""}
+      ${faction.expectations ? `<h4>Expectations</h4>${richText(faction.expectations, campaign, "")}` : ""}
+      <p class="faction-note">A Recruitment Faction is who sponsored your character, not where they are from: you can be sponsored by ${escapeHtml(faction.shortName || faction.name)} without being one of their people, and you can disagree with them.</p>
+      ${rule ? `<a class="destination-link" href="game.html#post-${encodeURIComponent(rule)}">Read the full rule <span aria-hidden="true">→</span></a>` : ""}` : "";
+    const pictures = [
+      ...[faction.homeland, ...(faction.gallery || [])].filter(Boolean).map((src) => [src, `Homeland of ${faction.name}`, "is-landscape"]),
+      ...(faction.clothing || []).map((src) => [src, `Clothing of ${faction.name}`, "is-clothing"]),
+    ];
+    const visual = faction.visualSummary || pictures.length ? `
+      ${faction.visualSummary ? richText(faction.visualSummary, campaign, "") : ""}
+      ${pictures.length ? `<div class="faction-gallery">${pictures.map(([src, alt, kind]) => `
+        <a class="faction-picture ${kind}" href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" /></a>`).join("")}</div>` : ""}` : "";
+    const relations = (faction.relations || []).map((item) => [campaign.factionById.get(item.factionId), item.text]).filter(([other]) => other);
+    const entries = campaign.archiveForFaction(faction.id);
+    const entryKeys = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics : [archiveTypeLabel(entry.type)];
+    const types = [...new Set(entries.flatMap(entryKeys))];
+    const entryRow = (entry) => `<li data-entry-keys="${escapeHtml(JSON.stringify(entryKeys(entry)))}">
+      <a href="archive.html#${encodeURIComponent(entry.id)}">${escapeHtml(entry.type === "gate-record" ? gateName(entry) : entry.title)}</a>
+      <span class="muted">${escapeHtml(archiveEntryKind(entry))}</span>
+      ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
+    </li>`;
+
+    root.innerHTML = `
+      <a class="back-link" href="#">← All factions</a>
+      <article class="faction-detail">
+        <header class="faction-hero${faction.homeland ? " has-art" : ""}">
+          ${faction.homeland ? `<img class="faction-hero-art" src="${escapeHtml(faction.homeland)}" alt="" />` : ""}
+          <div class="faction-hero-body">
+            ${factionFlag(faction, "faction-hero-flag")}
+            <h2>${escapeHtml(faction.name)}</h2>
+            ${faction.tagline ? `<p class="faction-tagline">${escapeHtml(faction.tagline)}</p>` : ""}
+            ${faction.summary ? `<div class="faction-summary">${richText(faction.summary, campaign, "")}</div>` : ""}
+          </div>
+        </header>
+        <div class="faction-layout">
+          <div class="faction-main">
+            ${section("At a glance", glance.length ? `<dl class="faction-glance">${glance.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}</dl>` : "", "faction-glance-section")}
+            ${section("Beliefs & folklore", faction.beliefs ? richText(faction.beliefs, campaign, "") : "")}
+            ${section("History", faction.history ? richText(faction.history, campaign, "") : "")}
+            ${section("Visual identity", visual)}
+          </div>
+          <aside class="faction-side">
+            ${section("Sponsorship", sponsorship, "faction-sponsor")}
+            ${section("Relations", relations.length ? `<ul class="faction-relations">${relations.map(([other, text]) => `
+              <li>${factionChip(other)}${text ? `<span>${richInline(text, campaign)}</span>` : ""}</li>`).join("")}</ul>` : "")}
+          </aside>
+        </div>
+        ${section("In the Archive", entries.length ? `
+          ${types.length > 1 ? `<div class="filter-bar" role="group" aria-label="Filter Archive entries">
+            <button type="button" class="filter-chip" data-faction-type="" aria-pressed="true">All</button>
+            ${types.map((key) => `<button type="button" class="filter-chip" data-faction-type="${escapeHtml(key)}" aria-pressed="false">${escapeHtml(key)}</button>`).join("")}
+          </div>` : ""}
+          <ul class="faction-entries">${entries.map(entryRow).join("")}</ul>
+          <a class="destination-link" href="archive.html?faction=${encodeURIComponent(faction.id)}">Browse in the Archive <span aria-hidden="true">→</span></a>`
+          : '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
+      </article>`;
+    root.querySelectorAll("[data-faction-type]").forEach((button) => button.addEventListener("click", () => {
+      root.querySelectorAll("[data-faction-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
+      root.querySelectorAll(".faction-entries li").forEach((item) => { item.hidden = Boolean(button.dataset.factionType) && !JSON.parse(item.dataset.entryKeys).includes(button.dataset.factionType); });
+    }));
+  };
+
+  const route = () => {
+    const faction = campaign.factionById.get(selectedHash());
+    if (faction) renderDetail(faction);
+    else renderList();
+  };
+  window.addEventListener("hashchange", () => {
+    route();
+    const header = document.querySelector(".site-header");
+    window.scrollTo({ top: Math.max(0, root.getBoundingClientRect().top + window.scrollY - (header?.offsetHeight || 0) - 16) });
+  });
+  route();
+};
+
+const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster,
+  discoveries: renderDiscoveries, factions: renderFactions };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
+  setupEncyclopediaMenu();
   setupMobileNav();
   setupSiteSearch();
   renderFooterMap();

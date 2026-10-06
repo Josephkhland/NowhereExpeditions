@@ -923,23 +923,35 @@ a.footer-credit-link:focus-visible { color: var(--accent-2); }
 .announcement .rule-tags { margin-top: 0.8rem; }
 .rule-entry { scroll-margin-top: 110px; }
 
-.announcement-banner { margin-top: 1rem; }
+/* Overview: the newest pinned announcement, featured above Start here. */
+.announcement-banner { margin-top: 1.4rem; }
 
-.announcement-banner-link {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem 0.9rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent-2);
-  background: rgba(224, 168, 93, 0.06);
+.announcement-feature {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(224, 168, 93, 0.45);
+  border-left: 4px solid var(--accent-2);
+  background: linear-gradient(110deg, rgba(224, 168, 93, 0.14), rgba(224, 168, 93, 0.03) 60%), var(--panel);
 }
 
-.announcement-banner-link .kicker { color: var(--accent-2); }
-.announcement-banner-link:hover,
-.announcement-banner-link:focus-visible { border-color: var(--accent-2); background: rgba(224, 168, 93, 0.1); }
-.announcement-banner-arrow { margin-left: auto; color: var(--accent-2); }
+.announcement-feature.has-art { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.announcement-feature-art { order: 2; width: 100%; height: 100%; min-height: 12rem; object-fit: cover; opacity: 0.8; }
+.announcement-feature-body { padding: 1.4rem 1.6rem 1.5rem; }
+.announcement-feature-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; margin: 0; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.announcement-feature-flag { padding: 0.2rem 0.55rem; background: var(--accent-2); color: #14100a; font-weight: 700; }
+.announcement-feature h2 { margin: 0.6rem 0 0.5rem; font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 500; line-height: 1.15; overflow-wrap: anywhere; }
+.announcement-feature h2 a { color: var(--text); }
+.announcement-feature h2 a:hover, .announcement-feature h2 a:focus-visible { color: var(--accent-2); }
+.announcement-feature-lede { max-width: 60ch; margin: 0 0 1.1rem; color: var(--text-soft); font-size: 1.05rem; }
+.announcement-feature-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; border: 1px solid var(--accent-2); color: var(--accent-2); font-weight: 700; }
+.announcement-feature-cta:hover, .announcement-feature-cta:focus-visible { background: var(--accent-2); color: #14100a; }
+
+@media (max-width: 720px) {
+  .announcement-feature.has-art { grid-template-columns: 1fr; }
+  .announcement-feature-art { order: 0; min-height: 0; max-height: 10rem; }
+  .announcement-feature-body { padding: 1.1rem 1rem 1.2rem; }
+}
 
 .rule-tags {
   display: flex;
@@ -2679,6 +2691,8 @@ a.domain-pill:hover, a.domain-pill:focus-visible { background: rgba(255, 255, 25
 .interaction-grid thead th { height: 6.5rem; vertical-align: bottom; }
 .interaction-grid thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); padding: 0.2rem 0; }
 .interaction-grid tbody th { padding-right: 0.5rem; text-align: right; }
+/* The row labels stay put while the grid scrolls sideways. */
+.interaction-grid tbody th, .interaction-grid thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); }
 .interaction-grid td { padding: 1px; }
 .grid-cell { display: block; width: 1.15rem; height: 1.15rem; padding: 0; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); cursor: pointer; }
 .grid-legend .grid-cell { display: inline-block; cursor: default; }
@@ -2729,14 +2743,14 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
   .has-nav-toggle .search-toggle { margin-left: 0; }
 }
 
-/* ---------- Header: compact menu on desktop, folded below 1180px ---------- */
+/* ---------- Header: compact menu on desktop, folded at 1100px and below ---------- */
 .brand { white-space: nowrap; }
 .nav-link { padding: 0.6rem 0.7rem; }
 .main-nav { order: 1; flex-wrap: nowrap; }
 .search-toggle { order: 2; margin-left: 0.4rem; }
 .topbar { gap: 1rem; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1100px) {
   /* The header folds to one row: brand and a Menu button that opens the links below it. */
   .has-nav-toggle .topbar {
     flex-direction: row;
@@ -2799,7 +2813,7 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
 }
 
 /* One line per menu item on desktop. */
-@media (min-width: 1181px) {
+@media (min-width: 1101px) {
   .main-nav { gap: 0.25rem; }
   .nav-link { padding: 0.55rem 0.55rem; font-size: 0.7rem; letter-spacing: 0.06em; white-space: nowrap; }
   .nav-meta { margin-left: 0.6rem; }
@@ -2808,6 +2822,7 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
 @media (max-width: 800px) {
   .functions-layout { display: flex; flex-direction: column; }
   .functions-layout .function-panel { order: -1; }
+  .functions-layout > * { min-width: 0; max-width: 100%; } /* the Interaction grid scrolls inside its box */
 }
 @media (max-width: 800px) {
   .discovery-tabs { flex-wrap: wrap; }
@@ -2824,3 +2839,209 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
 a.rule-step { text-decoration: none; }
 a.rule-step:hover { text-decoration: underline; }
 @media (max-width: 800px) { .learning-paths { grid-template-columns: 1fr; } }
+
+/* ---------- Factions ---------- */
+
+/* Landing grid: recognise a faction by its flag and homeland before reading anything. */
+.faction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 1rem; margin-top: 1rem; }
+.faction-card { display: grid; grid-template-rows: auto 1fr; overflow: hidden; border: 1px solid var(--line); background: var(--panel); color: var(--text); text-decoration: none; }
+.faction-card:hover, .faction-card:focus-visible { border-color: var(--accent-2); }
+.faction-card:hover .faction-card-homeland { transform: scale(1.03); }
+.faction-card-art { position: relative; aspect-ratio: 16 / 7; overflow: hidden; background: linear-gradient(135deg, var(--panel-strong), var(--bg)); }
+.faction-card-homeland { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: transform 0.4s ease; }
+.faction-card-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(13, 21, 23, 0.85), transparent 60%); }
+.faction-card-flag { position: absolute; z-index: 1; left: 1rem; bottom: 0.8rem; width: 4.2rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid rgba(231, 240, 242, 0.5); box-shadow: 0 4px 14px var(--shadow); }
+.faction-card-body { display: grid; align-content: start; gap: 0.35rem; padding: 0.9rem 1rem 1rem; }
+.faction-card h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.4rem; font-weight: 500; }
+.faction-tagline { margin: 0; color: var(--text-soft); }
+.faction-values { margin: 0; color: var(--accent); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.faction-card-extra { margin: 0.3rem 0 0; color: var(--text); font-size: 0.92rem; }
+.faction-card-extra span { display: block; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.faction-card-cta { margin-top: 0.4rem; color: var(--accent-2); font-weight: 700; }
+
+/* Detail: a hero with the homeland behind the flag and name, then the essentials beside the sponsorship panel. */
+.faction-detail { display: grid; gap: 1.2rem; }
+.faction-hero { position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+.faction-hero-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+.faction-hero.has-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(13, 21, 23, 0.95) 0%, rgba(13, 21, 23, 0.7) 55%, rgba(13, 21, 23, 0.2) 100%); }
+.faction-hero-body { position: relative; z-index: 1; display: grid; gap: 0.5rem; max-width: 46rem; padding: 2rem 1.6rem; }
+.faction-hero.has-art .faction-hero-body { padding-top: 4rem; }
+.faction-hero-flag { width: 6rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid rgba(231, 240, 242, 0.5); box-shadow: 0 6px 18px var(--shadow); }
+.faction-hero h2 { margin: 0.3rem 0 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 500; line-height: 1.05; overflow-wrap: anywhere; }
+.faction-hero .faction-tagline { font-size: 1.1rem; }
+.faction-summary .rich-text p { margin: 0.4rem 0 0; color: var(--text); font-size: 1.05rem; }
+.faction-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.faction-main, .faction-side { display: grid; gap: 1.2rem; min-width: 0; }
+.faction-section { padding: 1.1rem 1.3rem; border: 1px solid var(--line); background: var(--panel); }
+.faction-section h3 { margin: 0 0 0.7rem; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.faction-section h4 { margin: 1rem 0 0.3rem; font-size: 0.95rem; }
+.faction-section .rich-text p { color: var(--text-soft); }
+.faction-glance { display: grid; gap: 0.7rem; margin: 0; }
+.faction-glance div { display: grid; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr); gap: 0.2rem 1rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--line); }
+.faction-glance div:last-child { padding-bottom: 0; border-bottom: 0; }
+.faction-glance dt { color: var(--muted); font-size: 0.85rem; }
+.faction-glance dd { margin: 0; color: var(--text); }
+.faction-sponsor { border-color: rgba(224, 168, 93, 0.45); border-left: 3px solid var(--accent-2); }
+.faction-extra { display: grid; gap: 0.3rem; margin: 0.4rem 0 0.6rem; padding: 0.8rem 0.9rem; border: 1px solid var(--line); background: rgba(9, 14, 16, 0.6); }
+.faction-extra .kicker { margin: 0; }
+.faction-extra > strong { color: var(--accent-2); font-size: 1.1rem; }
+.faction-note { margin: 0.8rem 0; color: var(--muted); font-size: 0.88rem; }
+.faction-relations { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.faction-relations li { display: grid; gap: 0.25rem; }
+.faction-relations li > span { color: var(--text-soft); font-size: 0.93rem; }
+.faction-chip { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--text); font-weight: 700; text-decoration: none; }
+.faction-chip:hover, .faction-chip:focus-visible { color: var(--accent-2); }
+.faction-chip-flag { width: 1.7rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
+.faction-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.7rem; margin-top: 0.8rem; }
+.faction-picture { display: block; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 16 / 9; }
+.faction-picture.is-clothing { aspect-ratio: 16 / 9; }
+.faction-picture img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.faction-picture:hover img { transform: scale(1.04); }
+.faction-entries { display: grid; gap: 0; margin: 0.6rem 0 1rem; padding: 0; list-style: none; }
+.faction-entries li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+.faction-entries li[hidden] { display: none; }
+.faction-entries a { color: var(--text); font-weight: 700; }
+.faction-entries a:hover { color: var(--accent); }
+.faction-entries .muted { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.faction-entries p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+/* Archive: the factions an entry is about, and the faction filter. */
+.entry-factions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; margin: 0.5rem 0 0; }
+.entry-factions .muted { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.archive-faction-filter { appearance: auto; }
+/* Captioned images in authored text: ![alt](src "caption"). */
+.rich-text img { max-width: 100%; height: auto; }
+.rich-figure { display: block; margin: 1.2rem 0; }
+.rich-figure img { display: block; width: 100%; border: 1px solid var(--line); }
+.rich-caption { display: block; margin-top: 0.45rem; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+
+/* Lore topics: a second filter row, and the topics of an open entry. */
+.topic-bar { align-items: center; margin-top: -0.4rem; }
+.topic-bar-label { margin-right: 0.3rem; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.topic-chip { text-transform: none; letter-spacing: 0.02em; }
+.entry-topics { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem; margin: 0.5rem 0 0; }
+.entry-topics .muted { margin-right: 0.3rem; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.topic-link { padding: 0.15rem 0.55rem; border: 1px solid var(--line-strong); background: transparent; color: var(--accent); font: inherit; font-size: 0.85rem; cursor: pointer; }
+.topic-link:hover, .topic-link:focus-visible { border-color: var(--accent); background: rgba(122, 215, 209, 0.08); }
+
+/* Rules: a Recruitment Faction rule points to its faction. */
+.rule-faction { display: flex; align-items: center; gap: 0.9rem; margin: 0 0 1.4rem; padding: 0.8rem 1rem; border: 1px solid var(--line); border-left: 3px solid var(--accent-2); background: rgba(224, 168, 93, 0.06); color: var(--text); text-decoration: none; }
+.rule-faction:hover, .rule-faction:focus-visible { border-color: var(--accent-2); background: rgba(224, 168, 93, 0.1); }
+.rule-faction > span:not(.rule-faction-arrow) { display: grid; gap: 0.1rem; min-width: 0; }
+.rule-faction > span > span { color: var(--muted); font-size: 0.9rem; }
+.rule-faction-flag { flex: 0 0 auto; width: 3.2rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
+.rule-faction-arrow { margin-left: auto; color: var(--accent-2); }
+
+@media (max-width: 800px) {
+  /* One column on phones: the essentials and the sponsorship first, the rest after. */
+  .faction-layout { display: flex; flex-direction: column; gap: 1.2rem; }
+  .faction-main, .faction-side { display: contents; }
+  .faction-glance-section { order: -2; }
+  .faction-sponsor { order: -1; }
+  .faction-hero-body { padding: 1.2rem 1rem; }
+  .faction-hero.has-art .faction-hero-body { padding-top: 7rem; }
+  .faction-hero.has-art::after { background: linear-gradient(0deg, rgba(13, 21, 23, 0.97) 35%, rgba(13, 21, 23, 0.35) 100%); }
+  .faction-section { padding: 1rem; }
+  .faction-glance div { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Header: the Encyclopedia dropdown (Factions, Archive, Discoveries) ---------- */
+.nav-dropdown { position: relative; display: flex; }
+.nav-dropdown-toggle { display: inline-flex; align-items: center; gap: 0.45rem; background: transparent; font: inherit; font-size: 0.72rem; cursor: pointer; }
+.nav-dropdown-caret { width: 0.45rem; height: 0.45rem; margin-top: -0.2rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 0.2s ease; }
+.nav-dropdown.is-open .nav-dropdown-caret { margin-top: 0.15rem; transform: rotate(225deg); }
+.nav-dropdown.is-open .nav-dropdown-toggle { color: var(--text); border-color: var(--line-strong); background: rgba(122, 215, 209, 0.05); }
+.nav-dropdown-panel { position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 60; display: grid; gap: 0.2rem; width: 20rem; padding: 0.45rem; border: 1px solid var(--line-strong); background: var(--bg-alt); box-shadow: 0 18px 40px var(--shadow); }
+.nav-dropdown-panel[hidden] { display: none; }
+.nav-dropdown-item { display: grid; gap: 0.15rem; padding: 0.65rem 0.75rem; border-left: 2px solid transparent; color: var(--text); text-decoration: none; }
+.nav-dropdown-item strong { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.nav-dropdown-item span { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+.nav-dropdown-item:hover, .nav-dropdown-item:focus-visible { background: rgba(122, 215, 209, 0.07); border-left-color: var(--accent); }
+.nav-dropdown-item.active { border-left-color: var(--accent-2); background: rgba(224, 168, 93, 0.07); }
+
+/* Folded header (the Menu button): the three pages sit open under an "Encyclopedia" heading. */
+@media (max-width: 1100px) {
+  .has-nav-toggle .nav-dropdown { display: block; margin: 0.3rem 0; padding: 0.3rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .has-nav-toggle .nav-dropdown-toggle,
+  .has-nav-toggle .nav-dropdown-toggle.active { width: 100%; padding: 0.45rem 0.8rem 0.15rem; border: 0; background: none; color: var(--accent); font-size: 0.64rem; letter-spacing: 0.14em; pointer-events: none; }
+  .has-nav-toggle .nav-dropdown-caret { display: none; }
+  .has-nav-toggle .nav-dropdown-panel { position: static; width: auto; gap: 0.15rem; padding: 0; border: 0; background: none; box-shadow: none; }
+  .has-nav-toggle .nav-dropdown-item { padding: 0.75rem 0.8rem 0.75rem 1.4rem; }
+  .has-nav-toggle .nav-dropdown-item strong { color: var(--muted); font-size: 0.78rem; font-weight: 400; }
+  .has-nav-toggle .nav-dropdown-item.active strong,
+  .has-nav-toggle .nav-dropdown-item:hover strong { color: var(--text); }
+  .has-nav-toggle .nav-dropdown-item span { display: none; }
+}
+
+/* ---------- Phones ---------- */
+
+/* Site search: a close button beside the field; the keyboard hint only where there is a keyboard. */
+.site-search-bar { display: flex; gap: 0.5rem; }
+.site-search-bar .search-input { flex: 1 1 auto; min-width: 0; }
+.site-search-close { flex: 0 0 auto; width: 2.75rem; border: 1px solid var(--line-strong); background: transparent; color: var(--text); font-size: 1rem; cursor: pointer; }
+.site-search-close:hover, .site-search-close:focus-visible { border-color: var(--accent); color: var(--accent); }
+@media (hover: none) { .site-search-help { display: none; } }
+
+/* Archive: the back link only matters when the list and the entry swap places. */
+.archive-back { display: none; }
+
+@media (max-width: 800px) {
+  #archive-browse:not(.is-reading) .browser-detail { display: none; }
+  #archive-browse.is-reading .browser-sidebar,
+  #archive-browse.is-reading .filter-bar { display: none; }
+  #archive-browse.is-reading .archive-back { display: inline-flex; }
+  #archive-browse { scroll-margin-top: 70px; }
+
+  /* Outpost capabilities: name, rating and info on one line, the summary below. */
+  .capability-table tr.capability-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.3rem 0.8rem;
+    padding: 0.85rem 0.9rem;
+  }
+  .capability-table tr.capability-row > th,
+  .capability-table tr.capability-row > td { width: auto; padding: 0; border: 0; }
+  .capability-table tr.capability-row > .summary-cell { grid-column: 1 / -1; grid-row: 2; }
+  .capability-table tr.capability-row > .capability-action { grid-column: 3; grid-row: 1; }
+}
+
+@media (max-width: 560px) {
+  /* The header stays one short row: brand, search and an icon-only Menu button. */
+  .has-nav-toggle .topbar { flex-wrap: wrap; column-gap: 0.5rem; }
+  .has-nav-toggle .brand { flex: 1 1 0; overflow: hidden; }
+  .has-nav-toggle .brand > :last-child { overflow: hidden; text-overflow: ellipsis; }
+  .has-nav-toggle .nav-toggle-current { display: none; }
+  .has-nav-toggle .nav-toggle,
+  .has-nav-toggle .search-toggle { justify-content: center; min-width: 2.75rem; min-height: 2.75rem; padding: 0.5rem; }
+  .has-nav-toggle .main-nav { flex-basis: 100%; }
+  .has-nav-toggle .search-toggle > span[aria-hidden] { font-size: 1.35rem; line-height: 1; }
+}
+
+/* Touch screens: links and buttons big enough to hit with a thumb. */
+@media (pointer: coarse) {
+  .back-link,
+  #back-link { display: inline-flex; align-items: center; min-height: 2.5rem; }
+  .rule-back { line-height: 2.5rem; }
+  .footer-credit-link,
+  .footer-map a { display: inline-flex; align-items: center; min-height: 2.5rem; }
+  .footer-map li { padding: 0; }
+  .function-chip,
+  .domain-pill { display: inline-flex; align-items: center; min-height: 2rem; }
+  .function-chip { padding: 0.15rem 0.55rem; }
+  .gear-open { min-height: 2.5rem; }
+  .skill-roll { min-height: 2.5rem; }
+  .capability-roll { min-width: 2.75rem; min-height: 2.25rem; }
+  .rule-step { display: inline-flex; align-items: center; min-height: 2.5rem; }
+  .site-search-results a { padding-top: 0.8rem; padding-bottom: 0.8rem; }
+  .complication-jump { display: inline-flex; align-items: center; min-height: 2.5rem; }
+  details > summary { padding: 0.5rem 0; }
+  .resource-card h4 a { display: inline-block; padding: 0.4rem 0; }
+  .word-index-link { min-height: 2.5rem; }
+  .faction-chip { min-height: 2.5rem; }
+  .topic-link { min-height: 2.25rem; }
+  .faction-entries a { display: inline-block; padding: 0.35rem 0; }
+  .board-link { display: inline-flex; align-items: center; min-height: 2.5rem; }
+  .board-card h3 a { display: inline-block; padding: 0.35rem 0; }
+  .interaction-grid .grid-cell { width: 1.6rem; height: 1.6rem; }
+}

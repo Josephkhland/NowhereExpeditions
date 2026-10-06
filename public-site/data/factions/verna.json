@@ -1,0 +1,45 @@
+{
+  "id": "verna",
+  "name": "Verna",
+  "shortName": "",
+  "aliases": [
+    "Vernan"
+  ],
+  "tagline": "Small republic, home of the University",
+  "summary": "A small independent republic neighbouring Vesper, famous above all as the home of the University of Verna.",
+  "government": "Small independent republic",
+  "knownFor": "The University of Verna",
+  "coreValues": [
+    "Political neutrality",
+    "Scholarly independence",
+    "Preservation of knowledge"
+  ],
+  "gateAttitude": "",
+  "beliefs": "",
+  "history": "Verna survives on treaties and guarantees from neighbouring powers rather than a large standing army. Centuries ago, scholars fleeing the **Silencing of the Schools**, when an older Kharadi predecessor conquered the Old Scholastic Coast and violently suppressed heterodox intellectual and religious traditions, helped turn Verna's existing colleges into the modern University.",
+  "visualSummary": "",
+  "palette": "",
+  "materials": "",
+  "relations": [
+    {
+      "factionId": "vesper-republic",
+      "text": "Its larger neighbour."
+    },
+    {
+      "factionId": "kharad-compact",
+      "text": "Trades with it, but stays especially wary of depending on Kharadi credit or patronage."
+    }
+  ],
+  "ruleId": "faction-university-of-verna",
+  "sponsorFraming": "The Recruitment Faction is the **University of Verna**, which sponsors scholars and specialists from anywhere: being sponsored by the University is not the same as being Vernan.",
+  "extraName": "Institutional Access",
+  "extraRule": "Once between expeditions, when you make a Research Project Action, gain +1 additional Progress if the University's laboratories, archives, specialists or equipment could reasonably assist you.",
+  "expectations": "",
+  "flag": "data/images/verna-flag-f4affe1d.jpg",
+  "homeland": "data/images/verna-homeland-45f9a531.jpg",
+  "gallery": [],
+  "clothing": [
+    "data/images/verna-clothing-253dedfd.jpg"
+  ],
+  "order": 6
+}

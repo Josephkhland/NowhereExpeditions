@@ -44,7 +44,7 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 10
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -52,7 +52,15 @@ CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
 GATE_STATUSES = ("active", "emerging", "dormant", "collapsed", "sealed", "lost")
 JOB_TYPES = ("expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other")
 JOB_STATUSES = ("open", "scheduled", "in-progress", "completed", "failed", "cancelled")
-ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "history", "folklore")
+# Structural Archive types: each renders differently. What a lore entry is about (History, Folklore, Religion...) is
+# its topics, and an entry can have several.
+ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "lore")
+# Before schema v10, History and Folklore were types of their own; they become lore entries with that topic.
+LEGACY_LORE_TYPES = {"history": "History", "folklore": "Folklore"}
+# Topics the manager suggests. Others can be added; the public filters list the ones in use.
+LORE_TOPICS = ("History", "Folklore", "Religion", "Politics", "Technology", "Culture", "Notable People", "Institutions",
+               "Events", "Diplomacy")
+MAX_TOPICS = 12
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
@@ -195,6 +203,13 @@ def safe_filename(value: str, extension: str = ".json") -> str:
     if not slug:
         raise ManagerError("A record ID is required to create an export filename.")
     return f"{slug}{extension}"
+
+
+def image_paths(value: Any) -> list[str]:
+    """The image paths in an image field, which holds one path or a list of them."""
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str) and item]
+    return [value] if isinstance(value, str) and value else []
 
 
 def media_filename(path: Any) -> str | None:
@@ -512,8 +527,24 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
     return {}
 
 
+def clean_topics(data: dict[str, Any], extra: tuple[str, ...] = ()) -> list[str]:
+    """Lore topics, without repeats. A suggested topic keeps its usual spelling whatever case it was typed in."""
+    canonical = {topic.lower(): topic for topic in LORE_TOPICS}
+    topics: list[str] = []
+    for value in [*extra, *clean_list(data, "topics")]:
+        topic = canonical.get(value.lower(), value)
+        if len(topic) > 40:
+            raise ManagerError(f"Keep the topic “{topic[:40]}…” short (40 characters at most).")
+        if topic.lower() not in {item.lower() for item in topics}:
+            topics.append(topic)
+    if len(topics) > MAX_TOPICS:
+        raise ManagerError(f"An entry can have at most {MAX_TOPICS} topics.")
+    return topics
+
+
 def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
-    entry_type = clean_choice(data, "type", ARCHIVE_TYPES, "history")
+    legacy = LEGACY_LORE_TYPES.get(str(data.get("type") or "").strip().lower())
+    entry_type = "lore" if legacy else clean_choice(data, "type", ARCHIVE_TYPES, "lore")
     return {
         "type": entry_type,
         "title": clean_text(data, "title", "An Archive title"),
@@ -525,6 +556,9 @@ def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
         "eventDate": clean_text(data, "eventDate"),
         "image": clean_text(data, "image") or None,
         "tags": clean_list(data, "tags"),
+        "topics": clean_topics(data, (legacy,) if legacy else ()),
+        # The factions this entry is about. An entry can belong to several (a shared religion, a treaty).
+        "factionIds": clean_ids(data, "factionIds", "Factions"),
         # Only Session Records carry a crew; other types never store participants.
         "participantIds": clean_ids(data, "participantIds", "Participants") if entry_type == "session-record" else [],
         "details": clean_archive_details(entry_type, data.get("details")),
@@ -818,6 +852,62 @@ def clean_form(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+MAX_FACTION_IMAGES = 8
+
+
+def clean_image_list(data: dict[str, Any], key: str, label: str) -> list[str]:
+    """Several images in one field, in order, without repeats."""
+    images = list(dict.fromkeys(clean_list(data, key)))
+    if len(images) > MAX_FACTION_IMAGES:
+        raise ManagerError(f"{label}: at most {MAX_FACTION_IMAGES} images.")
+    return images
+
+
+def clean_faction(data: dict[str, Any]) -> dict[str, Any]:
+    """A power of the wider world: a country, league or institution Expeditioners come from and deal with. The page is
+    a map into the lore: short orientation here, the deeper history and folklore in Archive entries that name it."""
+    relations = data.get("relations") or []
+    if not isinstance(relations, list) or any(not isinstance(item, dict) for item in relations):
+        raise ManagerError("Relations must be a list of objects.")
+    cleaned_relations, seen = [], set()
+    for item in relations:
+        faction_id = slugify(str(item.get("factionId") or ""))
+        if not faction_id:
+            continue
+        if faction_id in seen:
+            raise ManagerError(f"The relation with “{faction_id}” is listed twice.")
+        seen.add(faction_id)
+        cleaned_relations.append({"factionId": faction_id, "text": clean_text(item, "text")})
+    return {
+        "name": clean_text(data, "name", "A faction name"),
+        "shortName": clean_text(data, "shortName"),
+        "aliases": clean_list(data, "aliases"),
+        "tagline": clean_text(data, "tagline"),
+        "summary": clean_text(data, "summary"),
+        "government": clean_text(data, "government"),
+        "knownFor": clean_text(data, "knownFor"),
+        "coreValues": clean_list(data, "coreValues"),
+        "gateAttitude": clean_text(data, "gateAttitude"),
+        "beliefs": clean_text(data, "beliefs"),
+        "history": clean_text(data, "history"),
+        "visualSummary": clean_text(data, "visualSummary"),
+        "palette": clean_text(data, "palette"),
+        "materials": clean_text(data, "materials"),
+        "relations": cleaned_relations,
+        # Sponsorship: the Recruitment Faction rule it links to, and a compact version of its Extra.
+        "ruleId": slugify(str(data.get("ruleId") or "")) or None,
+        "sponsorFraming": clean_text(data, "sponsorFraming"),
+        "extraName": clean_text(data, "extraName"),
+        "extraRule": clean_text(data, "extraRule"),
+        "expectations": clean_text(data, "expectations"),
+        "flag": clean_text(data, "flag") or None,
+        "homeland": clean_text(data, "homeland") or None,
+        "gallery": clean_image_list(data, "gallery", "Homeland gallery"),
+        "clothing": clean_image_list(data, "clothing", "Clothing references"),
+        "order": clean_int(data.get("order"), "Sort order", 1, 999, allow_none=True),
+    }
+
+
 def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
     """Out-of-character notes on the Game page: announcements and campaign rules."""
     post_type = clean_choice(data, "type", GAME_POST_TYPES, "rule")
@@ -877,6 +967,15 @@ def _gate_designation(record: dict[str, Any]) -> tuple[str, str] | None:
 
 # Order matters: records are imported in this order, so referenced collections come first.
 COLLECTIONS: dict[str, Collection] = {
+    "factions": Collection(
+        "factions", "Faction", ("name",), clean_faction, lambda record: str(record.get("name", "")),
+        unique=lambda record: ("name", record["name"]),
+        public_fields=("id", "name", "shortName", "aliases", "tagline", "summary", "government", "knownFor", "coreValues",
+                       "gateAttitude", "beliefs", "history", "visualSummary", "palette", "materials", "relations", "ruleId",
+                       "sponsorFraming", "extraName", "extraRule", "expectations", "flag", "homeland", "gallery", "clothing", "order"),
+        image_fields=("flag", "homeland", "gallery", "clothing"),
+        text_fields=("summary", "gateAttitude", "beliefs", "history", "visualSummary", "sponsorFraming", "extraRule", "expectations"),
+    ),
     "gear": Collection(
         "gear", "Gear", ("name",), clean_gear, lambda record: str(record.get("name", "")),
         refs=(("projectId", "project_id", "projects"),),
@@ -905,10 +1004,11 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "archive": Collection(
         "archive_entries", "Archive entry", ("title",), clean_archive_entry, lambda record: str(record.get("title", "")),
-        links=(("participantIds", "archive_participants", "entry_id", "character_id", "characters"),),
+        links=(("participantIds", "archive_participants", "entry_id", "character_id", "characters"),
+               ("factionIds", "archive_factions", "entry_id", "faction_id", "factions")),
         unique=_gate_designation,
         public_fields=("id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt", "eventDate",
-                       "image", "tags", "participantIds", "details"),
+                       "image", "tags", "topics", "participantIds", "factionIds", "details"),
         image_fields=("image",), text_fields=("summary", "content"),
     ),
     "jobs": Collection(
@@ -942,7 +1042,7 @@ COLLECTIONS: dict[str, Collection] = {
         image_fields=("image",), text_fields=("summary", "details"),
     ),
 }
-PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs", "resources", "forms")
+PAGE_COLLECTIONS = ("factions", "gear", "characters", "projects", "archive", "jobs", "resources", "forms")
 GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image")
 
 
@@ -969,6 +1069,7 @@ class ContentStore:
         self.migration_report += self._migrate_rules_to_game()
         self.migration_report += self._migrate_outpost_facilities()
         self.migration_report += self._migrate_outpost_projects()
+        self.migration_report += self._migrate_lore_types()
         with self._connect() as connection:
             initialized = connection.execute("SELECT value FROM metadata WHERE key = 'initialized'").fetchone()
         if not initialized:
@@ -1083,6 +1184,16 @@ class ContentStore:
                     resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE RESTRICT,
                     position INTEGER NOT NULL,
                     PRIMARY KEY (project_id, resource_id)
+                );
+                CREATE TABLE IF NOT EXISTS factions (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS archive_factions (
+                    entry_id TEXT NOT NULL REFERENCES archive_entries(id) ON DELETE CASCADE,
+                    faction_id TEXT NOT NULL REFERENCES factions(id) ON DELETE RESTRICT,
+                    position INTEGER NOT NULL,
+                    PRIMARY KEY (entry_id, faction_id)
                 );
                 CREATE INDEX IF NOT EXISTS archive_type ON archive_entries(type);
                 CREATE INDEX IF NOT EXISTS jobs_session_record ON jobs(session_record_id);
@@ -1311,6 +1422,25 @@ class ContentStore:
                           "is kept in legacy_records (source 'outpost').")
         return report
 
+    def _migrate_lore_types(self) -> list[str]:
+        """Schema v10: History and Folklore stop being Archive types. Those entries become lore entries with that
+        topic, so an entry can be both (and Religion, Politics...). The database is copied first."""
+        with self._connect() as connection:
+            rows = connection.execute("SELECT id, type, data FROM archive_entries WHERE type IN ('history', 'folklore')").fetchall()
+        if not rows:
+            return []
+        backup = self.database_path.with_name(f"{self.database_path.stem}.pre-v10{self.database_path.suffix}")
+        if not backup.exists():
+            shutil.copy2(self.database_path, backup)
+        with self._connect() as connection:
+            for row in rows:
+                data = json.loads(row["data"])
+                topic = LEGACY_LORE_TYPES[row["type"]]
+                topics = [topic, *[item for item in data.get("topics") or [] if str(item).lower() != topic.lower()]]
+                connection.execute("UPDATE archive_entries SET type = 'lore', data = ? WHERE id = ?",
+                                   (json.dumps({**data, "type": "lore", "topics": topics}, ensure_ascii=False), row["id"]))
+        return [f"History and Folklore became topics: {len(rows)} Archive entries are now lore entries (backup: {backup.name})."]
+
     def _migrate_outpost_projects(self) -> list[str]:
         """Schema v7: the Outpost Sheet's active projects became Outpost projects in the Projects collection, and
         persistent conditions were retired (consequences and aspects already cover them). The sheet as it was is
@@ -1357,7 +1487,7 @@ class ContentStore:
         values = [json.dumps(data, ensure_ascii=False), *(record.get(field) for field, _, _ in spec.refs)]
         if name == "archive":
             columns.append("type")
-            values.append(record.get("type") or "history")
+            values.append(record.get("type") or "lore")
         if insert:
             connection.execute(
                 f"INSERT INTO {spec.table} (id, {', '.join(columns)}) VALUES (?, {', '.join('?' for _ in columns)})",
@@ -1433,6 +1563,13 @@ class ContentStore:
         for capability in (json.loads(row["data"]).get("capabilities") or []) if row else []:
             if any(asset == {"type": kind, "id": record_id} for asset in outpost_assets(capability)):
                 blockers.append(f"Outpost capability “{capability.get('name') or 'Unnamed'}” (contributing assets)")
+        if name in ("factions", "game"):
+            for row in connection.execute("SELECT id, data FROM factions"):
+                faction = json.loads(row["data"])
+                if name == "factions" and any(item.get("factionId") == record_id for item in faction.get("relations") or []):
+                    blockers.append(f"Faction “{faction.get('name') or row['id']}” (relations)")
+                if name == "game" and faction.get("ruleId") == record_id:
+                    blockers.append(f"Faction “{faction.get('name') or row['id']}” (sponsorship rule)")
         if name == "gear":
             for row in connection.execute(
                 "SELECT c.id, c.data FROM character_stash s JOIN characters c ON c.id = s.character_id WHERE s.gear_id = ?",
@@ -1447,7 +1584,7 @@ class ContentStore:
             return
         for spec_name, spec in COLLECTIONS.items():
             for record in self._records(connection, spec_name) if spec.image_fields else []:
-                if any(media_filename(record.get(field)) == filename for field in spec.image_fields):
+                if any(media_filename(path) == filename for field in spec.image_fields for path in image_paths(record.get(field))):
                     return
         connection.execute("DELETE FROM media WHERE filename = ?", (filename,))
 
@@ -1516,6 +1653,16 @@ class ContentStore:
             if name == "archive" and existing and existing.get("type") == "session-record" and clean["type"] != "session-record":
                 for row in connection.execute("SELECT id FROM jobs WHERE session_record_id = ?", (chosen_id,)):
                     raise ManagerError(f"Job “{row['id']}” uses this entry as its Session Record; detach it before changing the type.")
+            if name == "factions":
+                for relation in clean["relations"]:
+                    if relation["factionId"] == chosen_id:
+                        raise ManagerError("A faction cannot have a relation with itself.")
+                    if not connection.execute("SELECT 1 FROM factions WHERE id = ?", (relation["factionId"],)).fetchone():
+                        raise ManagerError(f"Unknown faction in relations: {relation['factionId']}")
+                if clean.get("ruleId"):
+                    row = connection.execute("SELECT data FROM game_posts WHERE id = ?", (clean["ruleId"],)).fetchone()
+                    if not row or json.loads(row["data"]).get("type") != "rule":
+                        raise ManagerError(f"The sponsorship rule must be an existing rule: {clean['ruleId']}")
             for item in clean.get("stash") or [] if name == "characters" else []:
                 if not connection.execute("SELECT 1 FROM gear WHERE id = ?", (item["gearId"],)).fetchone():
                     raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
@@ -1525,8 +1672,8 @@ class ContentStore:
             record = {**clean, "id": chosen_id}
             self._write_record(connection, name, chosen_id, record, insert=existing is None)
             for field in spec.image_fields if existing else ():
-                if existing.get(field) != clean.get(field):
-                    self._prune_media(connection, existing.get(field))
+                for path in set(image_paths(existing.get(field))) - set(image_paths(clean.get(field))):
+                    self._prune_media(connection, path)
         return {"id": chosen_id}
 
     # --- Learning paths: Onboarding first, then optional paths that each teach one area -------------
@@ -1606,7 +1753,8 @@ class ContentStore:
                 )
             connection.execute(f"DELETE FROM {spec.table} WHERE id = ?", (record_id,))
             for field in spec.image_fields:
-                self._prune_media(connection, existing.get(field))
+                for path in image_paths(existing.get(field)):
+                    self._prune_media(connection, path)
 
     def save_media(self, body: dict[str, Any]) -> dict[str, str]:
         match = re.fullmatch(r"data:([a-z/+]+);base64,(.+)", str(body.get("dataUrl") or ""), re.S)
@@ -1679,9 +1827,9 @@ class ContentStore:
             # Gear and characters point at projects, which point back at characters: check references at commit.
             connection.execute("BEGIN")  # the pragma lasts until this transaction ends
             connection.execute("PRAGMA defer_foreign_keys = ON")
-            for table in ("character_stash", "job_participants", "archive_participants", "project_characters", "project_resources",
-                          "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects", "characters", "media",
-                          "outpost_state", "game_posts"):
+            for table in ("character_stash", "job_participants", "archive_participants", "archive_factions", "project_characters",
+                          "project_resources", "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects",
+                          "characters", "factions", "media", "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -1781,7 +1929,7 @@ class ContentStore:
                                 "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
                                 "domains": domain_keys(), "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
                                 "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
-                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES}
+                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "loreTopics": LORE_TOPICS}
         return result
 
     # --- The Function vocabulary (Resource Functions / spell Words) ---------------------------------------
@@ -1988,15 +2136,28 @@ class ContentStore:
             spec = COLLECTIONS[name]
             record = dict(record)
             for field in spec.image_fields:
-                filename = media_filename(record.get(field))
-                media = self.media(filename) if filename else None
-                if media:
-                    output[str(record[field]).removeprefix("data/")] = media[1]
-                elif filename:
-                    record[field] = None
+                kept = []
+                for path in image_paths(record.get(field)):
+                    filename = media_filename(path)
+                    media = self.media(filename) if filename else None
+                    if media:
+                        output[path.removeprefix("data/")] = media[1]
+                    if media or not filename:
+                        kept.append(path)
+                record[field] = kept if isinstance(record.get(field), list) else (kept[0] if kept else None)
             for field in spec.text_fields:
                 record[field] = scrub_archive_links(record.get(field) or "", public_archive)
             return record
+
+        public_rules = {post_id for post_id, post in published["game"].items() if post.get("type") == "rule"}
+        for faction in published["factions"].values():
+            faction = public_record("factions", faction)
+            exported["factions"].append({
+                **faction,
+                "relations": [{**item, "text": scrub_archive_links(item.get("text") or "", public_archive)}
+                              for item in faction.get("relations") or [] if item["factionId"] in published["factions"]],
+                "ruleId": faction.get("ruleId") if faction.get("ruleId") in public_rules else None,
+            })
 
         public_project = lambda project_id: project_id if project_id in published["projects"] else None
         exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId"))}
@@ -2033,6 +2194,7 @@ class ContentStore:
             entry = public_record("archive", entry)
             entry["details"] = {key: value for key, value in (entry.get("details") or {}).items() if key != "gmNotes"}
             entry["participantIds"] = [item for item in entry.get("participantIds", []) if item in published["characters"]]
+            entry["factionIds"] = [item for item in entry.get("factionIds", []) if item in published["factions"]]
             exported["archive"].append(entry)
 
         for job in published["jobs"].values():
@@ -2094,7 +2256,6 @@ class ContentStore:
                 credit["logo"] = None
         output["site.json"] = json_bytes(site)
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
-        public_rules = {post["id"] for post in game if post.get("type") != "announcement"}
         output["learning-paths.json"] = json_bytes([{**path, "ruleIds": [rule_id for rule_id in path["ruleIds"] if rule_id in public_rules]}
                                                     for path in self.learning_paths()])
         output["vocabulary.json"] = json_bytes({"functionGroups": self.function_vocabulary(), "interactions": self.function_interactions(),

@@ -6,6 +6,7 @@
     <title>Nowhere Expeditions</title>
     <meta name="description" content="Public campaign site for the Nowhere Expeditions West Marches RPG campaign." />
     <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/markdown-it.min.js" defer></script>
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -19,6 +20,7 @@
           <a class="nav-link active" href="index.html">Overview</a>
           <a class="nav-link" href="outpost.html">Outpost</a>
           <a class="nav-link" href="jobs.html">Job Board</a>
+          <a class="nav-link" href="factions.html">Factions</a>
           <a class="nav-link" href="archive.html">Archive</a>
           <a class="nav-link" href="discoveries.html">Discoveries</a>
           <a class="nav-link" href="marketplace.html">Marketplace</a>
@@ -30,7 +32,7 @@
 
     <main class="landing-main">
       <section class="destination-carousel" aria-label="Campaign destinations" aria-roledescription="carousel">
-        <article class="destination-slide is-active" data-carousel-slide aria-label="1 of 3: Outpost Sheet">
+        <article class="destination-slide is-active" data-carousel-slide aria-label="1 of 4: Outpost Sheet">
           <img src="assets/images/overview-island.png" alt="Sculptural concrete architecture rising toward a cloudy sky" fetchpriority="high" />
           <div class="destination-content wrapper">
             <span class="kicker">Shared campaign world</span>
@@ -40,7 +42,17 @@
           </div>
         </article>
 
-        <article class="destination-slide" data-carousel-slide aria-label="2 of 3: Archive" hidden>
+        <article class="destination-slide" data-carousel-slide aria-label="2 of 4: Factions" hidden>
+          <img src="assets/images/overview-factions.png" alt="Envoys of the great powers arguing around a map table, the floating Valeoran Ruins beyond the windows" loading="lazy" />
+          <div class="destination-content wrapper">
+            <span class="kicker">The wider world</span>
+            <h2>Everyone came here from somewhere.</h2>
+            <p>Six powers send their people to Endros. Meet the factions, what they believe, and who might sponsor your Expeditioner.</p>
+            <a class="destination-link" href="factions.html">Meet the Factions <span aria-hidden="true">&#8594;</span></a>
+          </div>
+        </article>
+
+        <article class="destination-slide" data-carousel-slide aria-label="3 of 4: Archive" hidden>
           <img src="assets/images/overview-gate.png" alt="A large rolling ocean swell beneath a muted sky" loading="lazy" />
           <div class="destination-content wrapper">
             <span class="kicker">Public record</span>
@@ -50,7 +62,7 @@
           </div>
         </article>
 
-        <article class="destination-slide" data-carousel-slide aria-label="3 of 3: Job Board" hidden>
+        <article class="destination-slide" data-carousel-slide aria-label="4 of 4: Job Board" hidden>
           <img src="assets/images/overview-expedition.png" alt="A rugged mountain range beyond a broad wilderness valley" loading="lazy" />
           <div class="destination-content wrapper">
             <span class="kicker">Choose your next route</span>
@@ -62,15 +74,18 @@
 
         <div class="carousel-controls wrapper" aria-label="Carousel controls">
           <button class="carousel-arrow" type="button" data-carousel-previous aria-label="Previous slide">&#8592;</button>
-          <div class="carousel-position" aria-live="polite"><span data-carousel-current>01</span><span aria-hidden="true"> / 03</span></div>
+          <div class="carousel-position" aria-live="polite"><span data-carousel-current>01</span><span aria-hidden="true"> / <span data-carousel-total>04</span></span></div>
           <div class="carousel-dots" aria-label="Choose a slide">
             <button type="button" data-carousel-to="0" aria-label="Show Outpost Sheet slide" aria-current="true"></button>
-            <button type="button" data-carousel-to="1" aria-label="Show Archive slide" aria-current="false"></button>
-            <button type="button" data-carousel-to="2" aria-label="Show Job Board slide" aria-current="false"></button>
+            <button type="button" data-carousel-to="1" aria-label="Show Factions slide" aria-current="false"></button>
+            <button type="button" data-carousel-to="2" aria-label="Show Archive slide" aria-current="false"></button>
+            <button type="button" data-carousel-to="3" aria-label="Show Job Board slide" aria-current="false"></button>
           </div>
           <button class="carousel-arrow" type="button" data-carousel-next aria-label="Next slide">&#8594;</button>
         </div>
       </section>
+
+      <div id="announcement-banner" class="announcement-banner wrapper" hidden></div>
 
       <section class="start-here wrapper" aria-labelledby="start-here-title">
         <div class="start-here-head">
@@ -88,11 +103,10 @@
       </section>
       <section id="launch-panel" class="launch-panel wrapper" aria-labelledby="launch-title" hidden></section>
 
-      <div id="announcement-banner" class="announcement-banner wrapper" hidden></div>
-
       <nav class="section-tiles wrapper" aria-label="Campaign sections">
         <a href="outpost.html"><strong>Outpost</strong><span>The settlement: its capabilities, facilities, projects and troubles.</span></a>
         <a href="jobs.html"><strong>Job Board</strong><span>Expeditions and other work looking for crew, and jobs already run.</span></a>
+        <a href="factions.html"><strong>Factions</strong><span>The countries and powers Expeditioners come from, and who might sponsor yours.</span></a>
         <a href="archive.html"><strong>Archive</strong><span>Gate records, session reports, newspapers, history and folklore.</span></a>
         <a href="discoveries.html"><strong>Discoveries</strong><span>Resources, Functions, Domains and spell Forms found so far.</span></a>
         <a href="marketplace.html"><strong>Marketplace</strong><span>Equipment for sale in Endros, with prices and weights.</span></a>
