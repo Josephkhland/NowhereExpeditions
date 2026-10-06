@@ -81,7 +81,7 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance, Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations, and the Archive entries that name the faction. On phones the essentials and sponsorship come first. |
 | `outpost.html`, the **Outpost Sheet** | The settlement as a Fate character: High Concept, Trouble, Aspects, six Capabilities with ratings and dice rolls, Stress, Consequences, the Facilities table (filterable by Capability) and ongoing Outpost Projects with Complications. |
 | `jobs.html`, the **Job Board** | Open listings (objective, briefing, schedule, crew size, who posted it), filterable by type, plus closed jobs linked to their Session Records. |
-| `archive.html`, the **Archive** | All lore as a wiki: Gate Records, Session Records, newspapers, history and folklore. Search, category filters, a **faction filter** (`archive.html?faction=<id>`), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view. |
+| `archive.html`, the **Archive** | All lore as a wiki: Gate Records, Session Records, Newspapers and Lore. Lore entries carry **topics** (History, Folklore, Religion, Politics…), and an entry can have several. Search, category filters, a **topic filter** (`archive.html?topic=<name>`), a **faction filter** (`archive.html?faction=<id>`), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view. |
 | `discoveries.html`, **Discoveries** | Four tabs: **Resources** (searchable catalogue), **Functions** (look up a Word, combine two, random Resource, a 30×30 interaction grid), **Domains**, and **Spell Forms**. |
 | `marketplace.html`, the **Marketplace** | Featured Gear carousel and the full price list (grid or list view), with prices in Coins, weights and availability. |
 | `characters.html`, **Characters** | Player characters and NPCs, profiles, Fate sheets (with clickable skill rolls), Personal Stash, Projects, and "Create new character". |
@@ -111,7 +111,7 @@ The content manager is desktop-only.
 ## 4. The content manager
 
 A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:8001>.
-- **Tech:** Python standard library only, with SQLite storage (`content.db`, gitignored, schema v8). Its tests live in `content-manager/tests/` (run with `python -m unittest discover -s tests`).
+- **Tech:** Python standard library only, with SQLite storage (`content.db`, gitignored, schema v10). Its tests live in `content-manager/tests/` (run with `python -m unittest discover -s tests`).
 - **Code:** `app.py` (server, storage, validation, export) and `static/` (`manager.js`, `generators.js`, `manager.css`).
 
 ### Collections (record types)
@@ -121,7 +121,7 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 | **Factions** | Countries, powers and sponsors | Name, aliases, descriptor, identity, government, values, Gate attitude, beliefs and history summaries, visual notes, relations to other factions, the Recruitment Faction rule it links to plus a compact Extra, and images (flag, homeland, gallery, clothing). Archive entries name their factions (`factionIds`, many-to-many), and the faction page lists them automatically. Schema v9. |
 | **Characters** | PCs and NPCs | Optional Fate sheet, Personal Stash (Gear × quantity, "brought into action"), Coins, Downtime, Projects. |
 | **Jobs** | Job Board listings | Type, schedule, crew and participants, optional link to a Session Record. |
-| **Archive** | Lore entries | Types: gate-record, session-record, newspaper, history, folklore. Gate Records add a designation, status, Domains, environment, traits, hazards, locations and creatures. Any entry can name the factions it is about. |
+| **Archive** | Lore entries | Structural types: gate-record, session-record, newspaper, lore. What a lore entry is about is its **topics** (suggested: History, Folklore, Religion, Politics, Technology, Culture, Notable People, Institutions, Events, Diplomacy; others can be added). Schema v10 turned the old History and Folklore types into lore entries with that topic. Gate Records add a designation, status, Domains, environment, traits, hazards, locations and creatures. Any entry can name the factions it is about. Free-text search tags are separate from topics. |
 | **Gear** | Marketplace items | Category, price, sale price, weight, availability, featured flag. |
 | **Facilities** | What Endros has | Assigned to Capabilities, optionally built by a Project. |
 | **Projects** | Progress tracks | Personal, Public, Research, Marketplace, Facility, Recovery, Establish Supply or Spell Innovation. Each has Progress, Requirements (required Functions, Resources, Domain), Complications and a result. |
@@ -201,7 +201,7 @@ Somewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so
 
 ### Recruitment Factions
 
-Every character picks the faction that brought them to Endros. It grants a small **Extra** and roleplay hooks, but doesn't decide profession or Skills. **A Recruitment Faction means sponsor, not nationality.** The three below are published; five more are written but not yet published (see section 6, *Factions*).
+Every character picks the faction that brought them to Endros. It grants a small **Extra** and roleplay hooks, but doesn't decide profession or Skills. **A Recruitment Faction means sponsor, not nationality.** There are eight. The three below come from Endros itself; the five major powers (Vardic Holds, Aurelian Empire, Vesper Republic, Kharad Compact, Tianzhao Mandate) are listed in section 6, *Factions*. Each has a rule on the Recruitment Factions learning path with Lore, Recruitment Extra and Expectations sections.
 
 | Faction | Extra | Expectations |
 | --- | --- | --- |
@@ -427,9 +427,9 @@ The settlement's sheet, played as a shared Fate character:
 | **Downtime / Project Action / Progress** | Between-session time / one unit of work / filling a Project's track. |
 | **Recruitment Faction** | Who brought a character to Endros. |
 
-### Factions (written, not yet published)
+### Factions
 
-Six world factions and five new Recruitment Faction rules are in the database, unpublished, awaiting the GM's review. Their content comes from the *Factions Site Integration Guide*. The artwork in `artwork/` (gitignored) supplies their flags, homelands and clothing references. The art files say `valdic-holds`, but the canonical name is **Vardic Holds**.
+Six world factions are published on the Factions page, and the five major powers have Recruitment Faction rules. Their content comes from the *Factions Site Integration Guide*. The Expectations lists of the five new rules are drafts written for the site. The artwork in `artwork/` (gitignored) supplies their flags, homelands and clothing references. The art files say `valdic-holds`, but the canonical name is **Vardic Holds**.
 
 | Faction | Identity | Recruitment Extra |
 | --- | --- | --- |
@@ -448,7 +448,7 @@ Religions cross faction lines: the Faith of the First Light is shared by Aurelia
 
 The database holds **sample** records used to test layouts. They are hidden from the live site and **must not be treated as lore**. They will be replaced around 18 Oct 2026 with the real Archive, gear and first jobs.
 
-- **Archive:** five Gate Records (The Silt Choir G-03, Glass Verge G-07, The Lantern Reef G-12, The Hollow Orchard, The Brass Tide), plus session records, newspapers, history and folklore entries ("Founding of the Outpost", "The Silence of Year Three", "The Karthian Flood Myth", "The Bell That Rings Early"…).
+- **Archive:** five Gate Records (The Silt Choir G-03, Glass Verge G-07, The Lantern Reef G-12, The Hollow Orchard, The Brass Tide), plus session records, newspapers and lore entries ("Founding of the Outpost", "The Silence of Year Three", "The Karthian Flood Myth", "The Bell That Rings Early"…).
 - **Jobs:** 12 sample jobs (e.g. Saltglass Survey E-17, Find Teodor Quell).
 - **Characters:** 8 sample characters (e.g. Ilse Markov, Doctor Enna Hale, Quartermaster Varga, The Archivist).
 - **Other records:** 18 sample Gear items, 3 sample Projects (Harbor Reinforcement, Gate Mapping Sweep, Ruin Stabilization) and 3 sample Facilities.
@@ -463,8 +463,9 @@ No real Gates, Resources, spell Forms, Jobs, Gear or Projects have been publishe
 - **Undesigned spellcasting details:** see the list in section 5.
 - **Old wording in `instructions.md`:** it describes "an industrial Island built around enormous ancient floating ruins". The published canon describes Endros as floating platforms around ruins over a still ocean. Update `instructions.md` (and its "Island Sheet", "Expedition Board" and "Gate Archive" sections) to the current terms.
 - **Palava Bansz's spell list:** it uses D&D-style spells rather than Words and Forms.
-- **Factions awaiting review:** the six faction records and five Recruitment Faction rules are unpublished. The Factions page shows an empty-state message until they are published. Two Extras (Vesper, Kharad) are marked working design.
-- **Archive tags (Phase 2 of the factions brief):** History and Folklore are still Archive types, not tags. Faction filtering works with the current types.
+- **Working designs:** the Vesper (*Someone Knows Someone*) and Kharad (*Established Credit*) Extras are marked as working design in their rules.
+- **Faction lore:** no Archive lore entries about the factions exist yet (e.g. the Old Gods of the Holds, the Faith of the First Light, the Covenant of the One, the Silencing of the Schools). Write them as Lore entries with topics and tick their factions; the faction pages list them automatically.
+- **Factions brief, Phase 3** (relationship visuals, faction nodes in the connection graph, Marketplace origins, NPC and Job faction links) is not built.
 - **Capability ratings:** they are all +0 except Infrastructure +1. This is the starting state, not a placeholder.
 
 ---

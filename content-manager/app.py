@@ -44,7 +44,7 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -52,7 +52,15 @@ CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
 GATE_STATUSES = ("active", "emerging", "dormant", "collapsed", "sealed", "lost")
 JOB_TYPES = ("expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other")
 JOB_STATUSES = ("open", "scheduled", "in-progress", "completed", "failed", "cancelled")
-ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "history", "folklore")
+# Structural Archive types: each renders differently. What a lore entry is about (History, Folklore, Religion...) is
+# its topics, and an entry can have several.
+ARCHIVE_TYPES = ("gate-record", "session-record", "newspaper", "lore")
+# Before schema v10, History and Folklore were types of their own; they become lore entries with that topic.
+LEGACY_LORE_TYPES = {"history": "History", "folklore": "Folklore"}
+# Topics the manager suggests. Others can be added; the public filters list the ones in use.
+LORE_TOPICS = ("History", "Folklore", "Religion", "Politics", "Technology", "Culture", "Notable People", "Institutions",
+               "Events", "Diplomacy")
+MAX_TOPICS = 12
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
@@ -519,8 +527,24 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
     return {}
 
 
+def clean_topics(data: dict[str, Any], extra: tuple[str, ...] = ()) -> list[str]:
+    """Lore topics, without repeats. A suggested topic keeps its usual spelling whatever case it was typed in."""
+    canonical = {topic.lower(): topic for topic in LORE_TOPICS}
+    topics: list[str] = []
+    for value in [*extra, *clean_list(data, "topics")]:
+        topic = canonical.get(value.lower(), value)
+        if len(topic) > 40:
+            raise ManagerError(f"Keep the topic “{topic[:40]}…” short (40 characters at most).")
+        if topic.lower() not in {item.lower() for item in topics}:
+            topics.append(topic)
+    if len(topics) > MAX_TOPICS:
+        raise ManagerError(f"An entry can have at most {MAX_TOPICS} topics.")
+    return topics
+
+
 def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
-    entry_type = clean_choice(data, "type", ARCHIVE_TYPES, "history")
+    legacy = LEGACY_LORE_TYPES.get(str(data.get("type") or "").strip().lower())
+    entry_type = "lore" if legacy else clean_choice(data, "type", ARCHIVE_TYPES, "lore")
     return {
         "type": entry_type,
         "title": clean_text(data, "title", "An Archive title"),
@@ -532,6 +556,7 @@ def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
         "eventDate": clean_text(data, "eventDate"),
         "image": clean_text(data, "image") or None,
         "tags": clean_list(data, "tags"),
+        "topics": clean_topics(data, (legacy,) if legacy else ()),
         # The factions this entry is about. An entry can belong to several (a shared religion, a treaty).
         "factionIds": clean_ids(data, "factionIds", "Factions"),
         # Only Session Records carry a crew; other types never store participants.
@@ -983,7 +1008,7 @@ COLLECTIONS: dict[str, Collection] = {
                ("factionIds", "archive_factions", "entry_id", "faction_id", "factions")),
         unique=_gate_designation,
         public_fields=("id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt", "eventDate",
-                       "image", "tags", "participantIds", "factionIds", "details"),
+                       "image", "tags", "topics", "participantIds", "factionIds", "details"),
         image_fields=("image",), text_fields=("summary", "content"),
     ),
     "jobs": Collection(
@@ -1044,6 +1069,7 @@ class ContentStore:
         self.migration_report += self._migrate_rules_to_game()
         self.migration_report += self._migrate_outpost_facilities()
         self.migration_report += self._migrate_outpost_projects()
+        self.migration_report += self._migrate_lore_types()
         with self._connect() as connection:
             initialized = connection.execute("SELECT value FROM metadata WHERE key = 'initialized'").fetchone()
         if not initialized:
@@ -1396,6 +1422,25 @@ class ContentStore:
                           "is kept in legacy_records (source 'outpost').")
         return report
 
+    def _migrate_lore_types(self) -> list[str]:
+        """Schema v10: History and Folklore stop being Archive types. Those entries become lore entries with that
+        topic, so an entry can be both (and Religion, Politics...). The database is copied first."""
+        with self._connect() as connection:
+            rows = connection.execute("SELECT id, type, data FROM archive_entries WHERE type IN ('history', 'folklore')").fetchall()
+        if not rows:
+            return []
+        backup = self.database_path.with_name(f"{self.database_path.stem}.pre-v10{self.database_path.suffix}")
+        if not backup.exists():
+            shutil.copy2(self.database_path, backup)
+        with self._connect() as connection:
+            for row in rows:
+                data = json.loads(row["data"])
+                topic = LEGACY_LORE_TYPES[row["type"]]
+                topics = [topic, *[item for item in data.get("topics") or [] if str(item).lower() != topic.lower()]]
+                connection.execute("UPDATE archive_entries SET type = 'lore', data = ? WHERE id = ?",
+                                   (json.dumps({**data, "type": "lore", "topics": topics}, ensure_ascii=False), row["id"]))
+        return [f"History and Folklore became topics: {len(rows)} Archive entries are now lore entries (backup: {backup.name})."]
+
     def _migrate_outpost_projects(self) -> list[str]:
         """Schema v7: the Outpost Sheet's active projects became Outpost projects in the Projects collection, and
         persistent conditions were retired (consequences and aspects already cover them). The sheet as it was is
@@ -1442,7 +1487,7 @@ class ContentStore:
         values = [json.dumps(data, ensure_ascii=False), *(record.get(field) for field, _, _ in spec.refs)]
         if name == "archive":
             columns.append("type")
-            values.append(record.get("type") or "history")
+            values.append(record.get("type") or "lore")
         if insert:
             connection.execute(
                 f"INSERT INTO {spec.table} (id, {', '.join(columns)}) VALUES (?, {', '.join('?' for _ in columns)})",
@@ -1884,7 +1929,7 @@ class ContentStore:
                                 "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
                                 "domains": domain_keys(), "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
                                 "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
-                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES}
+                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "loreTopics": LORE_TOPICS}
         return result
 
     # --- The Function vocabulary (Resource Functions / spell Words) ---------------------------------------

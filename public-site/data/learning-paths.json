@@ -19,7 +19,12 @@
     "ruleIds": [
       "faction-nowhere-expeditions",
       "faction-university-of-verna",
-      "faction-independent"
+      "faction-independent",
+      "faction-vardic-holds",
+      "faction-aurelian-empire",
+      "faction-vesper-republic",
+      "faction-kharad-compact",
+      "faction-tianzhao-mandate"
     ]
   },
   {

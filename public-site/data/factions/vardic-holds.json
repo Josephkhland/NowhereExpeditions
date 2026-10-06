@@ -1,0 +1,56 @@
+{
+  "id": "vardic-holds",
+  "name": "Vardic Holds",
+  "shortName": "the Holds",
+  "aliases": [
+    "Vardic",
+    "Vards",
+    "Holds"
+  ],
+  "tagline": "Industrial northern jarldoms",
+  "summary": "A loose federation of industrial northern jarldoms whose culture values craftsmanship, reputation, self-reliance and deeds worth remembering.",
+  "government": "Loose confederation of Holds",
+  "knownFor": "Heavy industry, ships, craftsmanship",
+  "coreValues": [
+    "Craft",
+    "Reputation",
+    "Self-Reliance",
+    "Oaths"
+  ],
+  "gateAttitude": "The unknown is something to master: they tend to see the Gates as another frontier to enter, understand and master.",
+  "beliefs": "The Holds predominantly follow the **Old Gods of the Holds**, a tradition centred on Fate, Making and Memory, and on reputation and remembrance. Smaller First Light communities also exist, especially around trade routes and ports.",
+  "history": "",
+  "visualSummary": "An industrial identity that combines heavy iron, timber, ships, maker's marks and old northern motifs.",
+  "palette": "",
+  "materials": "Dark iron, timber, wool, leather, knotwork",
+  "relations": [
+    {
+      "factionId": "aurelian-empire",
+      "text": "Old naval rivalry and mutual respect."
+    },
+    {
+      "factionId": "vesper-republic",
+      "text": "Admiration for engineering; impatience with political argument."
+    },
+    {
+      "factionId": "kharad-compact",
+      "text": "Strong trade ties, distrust of debt."
+    },
+    {
+      "factionId": "tianzhao-mandate",
+      "text": "Mutual respect for craft; disagreement over metaphysical caution."
+    }
+  ],
+  "ruleId": "faction-vardic-holds",
+  "sponsorFraming": "The benefit represents Vardic training, tools or practical sponsorship.",
+  "extraName": "Built to Endure",
+  "extraRule": "Once per session, when you Create an Advantage using **Crafts** by repairing, reinforcing, modifying or improvising equipment, you may treat a tie as a success with one free invoke instead.",
+  "expectations": "The Holds may expect the people they back to:\n\n- keep the oaths they swear;\n- do work worthy of a maker's mark;\n- uphold the reputation of whoever vouched for them;\n- help other Vardic workers in Endros when asked.",
+  "flag": "data/images/vardic-holds-flag-0322b0bc.jpg",
+  "homeland": "data/images/vardic-holds-homeland-83dbd42f.jpg",
+  "gallery": [],
+  "clothing": [
+    "data/images/vardic-holds-clothing-6e438b13.jpg"
+  ],
+  "order": 1
+}

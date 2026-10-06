@@ -1223,11 +1223,13 @@ const renderJobBoard = async () => {
 
 /* ---------- Archive: the campaign's lore, one entry per page ---------- */
 
+// Structural types. What a lore entry is about (History, Folklore, Religion...) is its topics; an entry can have several.
 const ARCHIVE_CATEGORIES = [
-  ["", "All"], ["gate-record", "Gate Records"], ["session-record", "Session Records"],
-  ["newspaper", "Newspaper"], ["history", "History"], ["folklore", "Folklore"]
+  ["", "All"], ["gate-record", "Gate Records"], ["session-record", "Session Records"], ["newspaper", "Newspapers"], ["lore", "Lore"]
 ];
-const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate Record", "session-record": "Session Record", newspaper: "Newspaper", history: "History", folklore: "Folklore" };
+const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate Record", "session-record": "Session Record", newspaper: "Newspaper", lore: "Lore" };
+// How an entry is labelled in lists: a lore entry by its topics.
+const archiveEntryKind = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics.join(" · ") : archiveTypeLabel(entry.type);
 const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
 
 /* ---------- Archive Explore mode: a neighborhood view of how records link ---------- */
@@ -1468,11 +1470,27 @@ const renderArchive = async () => {
       .sort((left, right) => String(left.name).localeCompare(String(right.name)));
     let faction = new URLSearchParams(window.location.search).get("faction") || "";
     if (!usedFactions.some((item) => item.id === faction)) faction = "";
+    // Lore topics in use, most used first; ?topic=<name> sets the filter.
+    const topicCounts = new Map();
+    entries.forEach((entry) => (entry.topics || []).forEach((name) => topicCounts.set(name, (topicCounts.get(name) || 0) + 1)));
+    const usedTopics = [...topicCounts.keys()].sort((left, right) => topicCounts.get(right) - topicCounts.get(left) || left.localeCompare(right));
+    let topic = new URLSearchParams(window.location.search).get("topic") || "";
+    if (!usedTopics.includes(topic)) topic = "";
+    const setParam = (name, value) => {
+      const url = new URL(window.location.href);
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+      window.history.replaceState(null, "", url);
+    };
     root.innerHTML = `
       <div id="archive-browse">
       <div class="filter-bar" role="group" aria-label="Archive categories">
         ${ARCHIVE_CATEGORIES.map(([type, label]) => `<button type="button" class="filter-chip" data-archive-type="${type}" aria-pressed="${type === category}">${label}</button>`).join("")}
       </div>
+      ${usedTopics.length ? `<div class="filter-bar topic-bar" role="group" aria-label="Lore topics">
+        <span class="topic-bar-label">Topics</span>
+        ${usedTopics.map((name) => `<button type="button" class="filter-chip topic-chip" data-archive-topic="${escapeHtml(name)}" aria-pressed="${name === topic}">${escapeHtml(name)}</button>`).join("")}
+      </div>` : ""}
       <div class="browser-shell">
         <aside class="browser-sidebar">
           <label class="search-wrap" for="archive-search">
@@ -1558,6 +1576,7 @@ const renderArchive = async () => {
               <h2>${escapeHtml(entry.title)}</h2>
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
+              ${entry.topics?.length ? `<p class="entry-topics"><span class="muted">Topics</span>${entry.topics.map((name) => `<button type="button" class="topic-link" data-archive-topic="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</p>` : ""}
               ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
                 .map((id) => campaign.factionById.get(id)).filter(Boolean).map(factionChip).join("")}</p>` : ""}
             </div>
@@ -1578,8 +1597,9 @@ const renderArchive = async () => {
     const renderList = () => {
       const list = document.getElementById("archive-list");
       const filtered = entries.filter((entry) => (!category || entry.type === category)
-        && (!faction || (entry.factionIds || []).includes(faction)) && [entry.title, entry.subtitle, entry.summary,
-        entry.content, entry.author, entry.details?.designation, entry.details?.environment, ...(entry.tags || [])]
+        && (!faction || (entry.factionIds || []).includes(faction)) && (!topic || (entry.topics || []).includes(topic))
+        && [entry.title, entry.subtitle, entry.summary, entry.content, entry.author, entry.details?.designation,
+          entry.details?.environment, ...(entry.tags || []), ...(entry.topics || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query));
       // A linked entry always opens, even when the current filter hides it from the list.
       const linked = campaign.archiveById.get(selectedHash());
@@ -1590,7 +1610,7 @@ const renderArchive = async () => {
         <a class="entry-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" ${entry === selected ? 'aria-current="true"' : ""}>
           <span class="entry-name">${escapeHtml(entry.title)}</span>
           <span class="entry-meta">${escapeHtml(entryMeta(entry))}</span>
-          ${entry.type === "gate-record" ? statusPill(entry.details?.gateStatus, "entry-pill") : `<span class="entry-pill">${escapeHtml(archiveTypeLabel(entry.type))}</span>`}
+          ${entry.type === "gate-record" ? statusPill(entry.details?.gateStatus, "entry-pill") : `<span class="entry-pill">${escapeHtml(archiveEntryKind(entry))}</span>`}
         </a>`).join("") : '<div class="empty-state">No entries match the current filter.</div>';
       renderDetail(selected);
     };
@@ -1598,19 +1618,27 @@ const renderArchive = async () => {
     root.querySelectorAll("[data-archive-type]").forEach((button) => button.addEventListener("click", () => {
       category = button.dataset.archiveType;
       root.querySelectorAll("[data-archive-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-      if (selectedHash()) window.history.replaceState(null, "", window.location.pathname);
+      if (selectedHash()) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
       renderList();
     }));
+    // A topic chip, in the bar or on an entry, filters by that topic; pressing the active one clears it.
+    root.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-archive-topic]");
+      if (!button) return;
+      topic = topic === button.dataset.archiveTopic && button.classList.contains("topic-chip") ? "" : button.dataset.archiveTopic;
+      root.querySelectorAll(".topic-chip").forEach((chip) => chip.setAttribute("aria-pressed", String(chip.dataset.archiveTopic === topic)));
+      setParam("topic", topic);
+      if (selectedHash()) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      renderList();
+      if (window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-browse").scrollIntoView({ block: "start" });
+    });
     document.getElementById("archive-search").addEventListener("input", (event) => {
       query = event.target.value.trim().toLowerCase();
       renderList();
     });
     document.getElementById("archive-faction")?.addEventListener("change", (event) => {
       faction = event.target.value;
-      const url = new URL(window.location.href);
-      if (faction) url.searchParams.set("faction", faction);
-      else url.searchParams.delete("faction");
-      window.history.replaceState(null, "", url);
+      setParam("faction", faction);
       renderList();
     });
     // #explore/<archive|job|character>/<id> opens Explore mode; any other hash is an Archive entry.
@@ -2460,7 +2488,7 @@ const buildSearchIndex = () => searchIndexPromise ||= Promise.all([loadCampaign(
   ...posts.map((post) => ({ label: post.title, href: `game.html#post-${encodeURIComponent(post.id)}`, kind: post.type === "announcement" ? "Announcement" : "Rule",
     text: [post.summary, ...(post.tags || []), post.category].join(" "), body: post.details || "" })),
   ...campaign.archive.map((entry) => ({ label: entry.type === "gate-record" ? gateName(entry) : entry.title, href: `archive.html#${encodeURIComponent(entry.id)}`,
-    kind: entry.type === "gate-record" ? "Gate" : `Archive · ${archiveTypeLabel(entry.type)}`, text: [entry.summary, ...(entry.tags || []),
+    kind: entry.type === "gate-record" ? "Gate" : `Archive · ${archiveEntryKind(entry)}`, text: [entry.summary, ...(entry.tags || []), ...(entry.topics || []),
       ...(entry.factionIds || []).map((id) => campaign.factionById.get(id)?.name || "")].join(" "), body: entry.content || "" })),
   ...campaign.factions.map((faction) => ({ label: faction.name, href: `factions.html#${encodeURIComponent(faction.id)}`, kind: "Faction",
     text: [...(faction.aliases || []), faction.shortName, faction.tagline, faction.summary, ...(faction.coreValues || []), faction.extraName].join(" ") })),
@@ -2659,10 +2687,11 @@ const renderFactions = async () => {
         <a class="faction-picture ${kind}" href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" /></a>`).join("")}</div>` : ""}` : "";
     const relations = (faction.relations || []).map((item) => [campaign.factionById.get(item.factionId), item.text]).filter(([other]) => other);
     const entries = campaign.archiveForFaction(faction.id);
-    const types = [...new Set(entries.map((entry) => entry.type))];
-    const entryRow = (entry) => `<li data-entry-type="${escapeHtml(entry.type)}">
+    const entryKeys = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics : [archiveTypeLabel(entry.type)];
+    const types = [...new Set(entries.flatMap(entryKeys))];
+    const entryRow = (entry) => `<li data-entry-keys="${escapeHtml(JSON.stringify(entryKeys(entry)))}">
       <a href="archive.html#${encodeURIComponent(entry.id)}">${escapeHtml(entry.type === "gate-record" ? gateName(entry) : entry.title)}</a>
-      <span class="muted">${escapeHtml(archiveTypeLabel(entry.type))}</span>
+      <span class="muted">${escapeHtml(archiveEntryKind(entry))}</span>
       ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
     </li>`;
 
@@ -2694,7 +2723,7 @@ const renderFactions = async () => {
         ${section("In the Archive", entries.length ? `
           ${types.length > 1 ? `<div class="filter-bar" role="group" aria-label="Filter Archive entries">
             <button type="button" class="filter-chip" data-faction-type="" aria-pressed="true">All</button>
-            ${types.map((type) => `<button type="button" class="filter-chip" data-faction-type="${escapeHtml(type)}" aria-pressed="false">${escapeHtml(archiveTypeLabel(type))}</button>`).join("")}
+            ${types.map((key) => `<button type="button" class="filter-chip" data-faction-type="${escapeHtml(key)}" aria-pressed="false">${escapeHtml(key)}</button>`).join("")}
           </div>` : ""}
           <ul class="faction-entries">${entries.map(entryRow).join("")}</ul>
           <a class="destination-link" href="archive.html?faction=${encodeURIComponent(faction.id)}">Browse in the Archive <span aria-hidden="true">→</span></a>`
@@ -2702,7 +2731,7 @@ const renderFactions = async () => {
       </article>`;
     root.querySelectorAll("[data-faction-type]").forEach((button) => button.addEventListener("click", () => {
       root.querySelectorAll("[data-faction-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-      root.querySelectorAll(".faction-entries li").forEach((item) => { item.hidden = Boolean(button.dataset.factionType) && item.dataset.entryType !== button.dataset.factionType; });
+      root.querySelectorAll(".faction-entries li").forEach((item) => { item.hidden = Boolean(button.dataset.factionType) && !JSON.parse(item.dataset.entryKeys).includes(button.dataset.factionType); });
     }));
   };
 

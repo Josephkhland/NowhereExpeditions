@@ -411,6 +411,9 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .function-group strong { display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #4a5b52; }
 .function-group label, .domain-options label { display: inline-flex; align-items: center; gap: 5px; margin: 2px 10px 2px 0; font-size: 12px; }
 .domain-options { display: flex; flex-wrap: wrap; gap: 2px 6px; margin-top: 6px; }
+.domain-options label { white-space: nowrap; }
+.domain-options input[type="checkbox"] { flex: 0 0 auto; width: auto; }
+.topic-options + input { margin-top: 8px; }
 .gm-only { border-left: 3px solid #b9853b; padding-left: 10px; }
 
 /* CM Tools */

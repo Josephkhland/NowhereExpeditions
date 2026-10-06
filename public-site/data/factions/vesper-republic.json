@@ -1,0 +1,48 @@
+{
+  "id": "vesper-republic",
+  "name": "Vesper Republic",
+  "shortName": "Vesper",
+  "aliases": [
+    "Vesper",
+    "Vesperian"
+  ],
+  "tagline": "Young revolutionary republic",
+  "summary": "A young revolutionary republic built around citizenship, public argument, inquiry and the belief that institutions must justify themselves.",
+  "government": "Revolutionary republic",
+  "knownFor": "",
+  "coreValues": [
+    "Citizenship",
+    "Public argument",
+    "Inquiry"
+  ],
+  "gateAttitude": "Vesper strongly resists monopolies over magical knowledge.",
+  "beliefs": "Vesper follows the **Vesperian Communion** of the Faith of the First Light, also called the **Sacred Flame**, which emphasizes conscience, inquiry, creation, liberty and the divine Spark shared by thinking beings. It shares older myths with Aurelia's Crowned Sun but reads them differently. Vesper abolished, marginalized or absorbed much of its older belief system; traces of it linger in fairy tales, urban legends, festivals, folk customs and place names.",
+  "history": "",
+  "visualSummary": "Belle Époque and Art Nouveau modernity, with posters, iron, glass, civic symbolism and experimental technology.",
+  "palette": "",
+  "materials": "Iron, glass",
+  "relations": [
+    {
+      "factionId": "aurelian-empire",
+      "text": "Shares the Faith of the First Light, read differently."
+    },
+    {
+      "factionId": "verna",
+      "text": "Its small neighbour."
+    }
+  ],
+  "ruleId": "faction-vesper-republic",
+  "sponsorFraming": "",
+  "extraName": "Someone Knows Someone",
+  "extraRule": "Once per session, establish that your sponsor or one of its affiliated societies provided a reasonable, useful contact relevant to the problem: information, an introduction or limited assistance. The contact can't solve the main problem for you.",
+  "expectations": "Vesperian sponsors may expect their people to:\n\n- share what they learn rather than hoard it;\n- make their case openly when they disagree;\n- return favours to the societies and contacts who help them;\n- question institutions that can't justify themselves.",
+  "flag": "data/images/vesper-republic-flag-dfa78739.jpg",
+  "homeland": "data/images/vesper-republic-homeland-bdd4f282.jpg",
+  "gallery": [
+    "data/images/vesper-republic-homeland-2-0ac4afd9.jpg"
+  ],
+  "clothing": [
+    "data/images/vesper-republic-clothing-e239bbb2.jpg"
+  ],
+  "order": 3
+}

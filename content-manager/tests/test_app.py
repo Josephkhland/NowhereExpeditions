@@ -313,7 +313,7 @@ class ContentStoreTests(unittest.TestCase):
         self.store.export_site()
         gate = read_json(self.export_dir / "data" / "archive" / "g-03.json")
         self.assertEqual(set(gate), {"id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt",
-                                     "eventDate", "image", "tags", "participantIds", "factionIds", "details"})
+                                     "eventDate", "image", "tags", "topics", "participantIds", "factionIds", "details"})
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount", "projectId"})
@@ -717,6 +717,39 @@ class ContentStoreTests(unittest.TestCase):
         self.assertIsNone(self.store.media(clothing.removeprefix("data/images/")))
         self.store.export_site()
         self.assertIsNone(read_json(data / "factions" / f"{aurelia}.json")["ruleId"])
+
+    def test_lore_entries_carry_topics_and_old_types_become_topics(self) -> None:
+        entry = self.store.save_record("archive", None, {"type": "lore", "title": "The Crowned Sun", "published": True,
+                                                         "topics": ["religion", "Folklore", "FOLKLORE", "Tea Rites"]})["id"]
+        self.assertEqual(self.record("archive", entry)["topics"], ["Religion", "Folklore", "Tea Rites"])
+        legacy = self.store.save_record("archive", None, {"type": "history", "title": "Year Three", "topics": ["Politics"]})["id"]
+        saved = self.record("archive", legacy)
+        self.assertEqual((saved["type"], saved["topics"]), ("lore", ["History", "Politics"]))
+        for data in ({"type": "lore", "title": "Long", "topics": ["x" * 41]},
+                     {"type": "lore", "title": "Many", "topics": [f"Topic {n}" for n in range(13)]},
+                     {"type": "history-book", "title": "Bad type"}):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("archive", None, data)
+        self.store.export_site()
+        self.assertEqual(read_json(self.export_dir / "data" / "archive" / f"{entry}.json")["topics"], ["Religion", "Folklore", "Tea Rites"])
+
+    def test_opening_an_older_database_turns_history_and_folklore_into_topics(self) -> None:
+        entry = self.store.save_record("archive", None, {"type": "lore", "title": "Old Myth"})["id"]
+        connection = sqlite3.connect(self.database)
+        try:
+            data = json.loads(connection.execute("SELECT data FROM archive_entries WHERE id = ?", (entry,)).fetchone()[0])
+            data.pop("topics")
+            connection.execute("UPDATE archive_entries SET type = 'folklore', data = ? WHERE id = ?",
+                               (json.dumps({**data, "type": "folklore"}), entry))
+            connection.commit()
+        finally:
+            connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertTrue(any("now lore entries" in line for line in reopened.migration_report))
+        migrated = next(item for item in reopened.state()["archive"] if item["id"] == entry)
+        self.assertEqual((migrated["type"], migrated["topics"]), ("lore", ["Folklore"]))
+        self.assertTrue(self.database.with_name("manager.pre-v10.db").exists())
+        self.assertEqual(ContentStore(self.database, self.data_dir).migration_report, [], "the migration runs once")
 
     def test_factions_validate_relations_and_guard_deletes(self) -> None:
         announcement = self.store.save_record("game", None, {"type": "announcement", "title": "News", "publishedAt": "2026-10-06"})["id"]

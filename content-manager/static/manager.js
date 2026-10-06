@@ -1,7 +1,7 @@
 const state = { factions: [], gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {},
   settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [],
   // The shared vocabulary (Functions, Domains...), sent by the server so it is defined in one place.
-  vocabulary: { functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
+  vocabulary: { loreTopics: [], functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
 let activeView = "home";
 let selectedId = null;
 let draft = false;
@@ -22,8 +22,8 @@ const humanize = (value = "") => capitalize(String(value).replace(/-/g, " "));
 
 const JOB_TYPES = ["expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other"];
 const JOB_STATUSES = ["open", "scheduled", "in-progress", "completed", "failed", "cancelled"];
-const ARCHIVE_TYPES = [["gate-record", "Gate Record"], ["session-record", "Session Record"], ["newspaper", "Newspaper"],
-  ["history", "History"], ["folklore", "Folklore"]];
+// Structural types; what a lore entry is about is its topics.
+const ARCHIVE_TYPES = [["gate-record", "Gate Record"], ["session-record", "Session Record"], ["newspaper", "Newspaper"], ["lore", "Lore"]];
 const archiveTypeLabel = (type) => (ARCHIVE_TYPES.find(([key]) => key === type) || [type, humanize(type)])[1];
 const GEAR_CATEGORIES = ["weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special"];
 const GEAR_AVAILABILITY = ["common", "restricted", "rare", "unavailable"];
@@ -864,12 +864,13 @@ const collections = {
   archive: {
     title: "Archive", panel: "ARCHIVE ENTRIES", singular: "Archive entry",
     name: (record) => record.title,
-    meta: (record) => [archiveTypeLabel(record.type), record.type === "gate-record" ? record.details?.designation : record.publishedAt || record.details?.sessionDate],
+    meta: (record) => [record.type === "lore" && record.topics?.length ? record.topics.join(" · ") : archiveTypeLabel(record.type),
+      record.type === "gate-record" ? record.details?.designation : record.publishedAt || record.details?.sessionDate],
     filters: [["type", "All types", ARCHIVE_TYPES]],
     idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (archive.html#id) and the target of [[id]] links.",
     fields: (record) => {
       const listType = listFilters.archive?.type;
-      const type = record.type || (activePreset === "gates" ? "gate-record" : listType && !listType.startsWith("!") && listType !== "gate-record" ? listType : "history");
+      const type = record.type || (activePreset === "gates" ? "gate-record" : listType && !listType.startsWith("!") && listType !== "gate-record" ? listType : "lore");
       const details = record.details || {};
       const section = (key, content) => `<div class="field full type-section" data-type-section="${key}" ${type === key ? "" : "hidden"}><div class="form-grid nested-grid">${content}</div></div>`;
       return `
@@ -883,6 +884,7 @@ const collections = {
       ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
       ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
       ${imageField("Image", "image", record.image)}
+      ${topicPicker(record.topics || [])}
       ${recordChecklist("factionIds", record.factionIds || [], "factions", (faction) => faction.name, "Factions",
         "Optional. Who this entry is about; it is listed on those factions' pages. An entry can name several.")}
       ${section("gate-record", `
@@ -933,6 +935,7 @@ const collections = {
         summary: formText(formData, "summary"), content: formText(formData, "content"), author: formText(formData, "author"),
         publishedAt: formText(formData, "publishedAt"), eventDate: formText(formData, "eventDate"),
         image: formText(formData, "image"), tags: linesToArray(formData.get("tags")), details, factionIds: formData.getAll("factionIds"),
+        topics: [...formData.getAll("topics"), ...parseList(formData.get("newTopics"))],
         participantIds: type === "session-record" ? [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value) : []
       };
     }
@@ -1057,6 +1060,17 @@ function domainPicker(name, selected, help = "") {
     <div class="domain-options">${state.vocabulary.domains.map((domain) => `
       <label><input type="checkbox" name="${name}" value="${domain}" ${selected.includes(domain) ? "checked" : ""} />${escapeHtml(domainName(domain))}</label>`).join("")}</div>
     ${help ? `<span class="helper">${help}</span>` : ""}</div>`;
+}
+
+// Lore topics: the suggested ones and any already in use, plus a box for new ones. Read with getAll("topics").
+const topicsInUse = () => [...new Set([...state.vocabulary.loreTopics, ...state.archive.flatMap((entry) => entry.topics || [])])];
+function topicPicker(selected) {
+  const topics = [...new Set([...topicsInUse(), ...selected])];
+  return `<div class="field full"><span class="field-label">Topics</span>
+    <div class="domain-options topic-options">${topics.map((topic) => `
+      <label><input type="checkbox" name="topics" value="${escapeHtml(topic)}" ${selected.includes(topic) ? "checked" : ""} />${escapeHtml(topic)}</label>`).join("")}</div>
+    <input type="text" name="newTopics" placeholder="Add other topics, separated by commas" aria-label="New topics" />
+    <span class="helper">What the entry is about. An entry can have several, e.g. History and Religion. The public Archive filters by them.</span></div>`;
 }
 
 // A filterable list of records to tick. Read with formData.getAll(name).
@@ -2501,7 +2515,8 @@ function filteredRecords(key) {
     : String(config.name(left) || "").localeCompare(String(config.name(right) || ""));
   return state[key]
     .filter((record) => Object.entries(filters).every(([field, value]) => !value
-      || (String(value).startsWith("!") ? record[field] !== value.slice(1) : record[field] === value)))
+      || (String(value).startsWith("!") ? record[field] !== value.slice(1)
+        : Array.isArray(record[field]) ? record[field].includes(value) : record[field] === value)))
     .filter((record) => options.status === "all" || (options.status === "published") === Boolean(record.published))
     .filter((record) => !query || JSON.stringify(record).toLowerCase().includes(query))
     .sort(options.sort === "recent"
@@ -2812,13 +2827,15 @@ function handlePathInput(target) {
 function listFilterBar(key) {
   const config = collections[key];
   let filters = config.filters;
-  if (key === "archive") filters = activePreset === "gates" ? [] : [["type", "All lore", ARCHIVE_TYPES.filter(([value]) => value !== "gate-record")]];
+  if (key === "archive") filters = activePreset === "gates" ? [] : [["type", "All lore", ARCHIVE_TYPES.filter(([value]) => value !== "gate-record")],
+    ["topics", "Any topic", topicsInUse().filter((topic) => state.archive.some((entry) => (entry.topics || []).includes(topic))).map((topic) => [topic, topic])],
+    ["factionIds", "Any faction", state.factions.map((faction) => [faction.id, faction.name])]].filter(([, , choices]) => choices.length);
   if (!filters?.length) return "";
   const current = listFilters[key] || {};
   return `<div class="list-filters">${filters.map(([fieldName, allLabel, choices]) => `
     <select data-list-filter="${fieldName}" aria-label="Filter by ${fieldName}">
       <option value="">${allLabel}</option>
-      ${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${current[fieldName] === value ? "selected" : ""}>${escapeHtml(text)} (${state[key].filter((record) => record[fieldName] === value).length})</option>`).join("")}
+      ${choices.map(([value, text]) => `<option value="${escapeHtml(value)}" ${current[fieldName] === value ? "selected" : ""}>${escapeHtml(text)} (${state[key].filter((record) => Array.isArray(record[fieldName]) ? record[fieldName].includes(value) : record[fieldName] === value).length})</option>`).join("")}
     </select>`).join("")}</div>`;
 }
 

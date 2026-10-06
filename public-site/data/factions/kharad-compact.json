@@ -1,0 +1,39 @@
+{
+  "id": "kharad-compact",
+  "name": "Kharad Compact",
+  "shortName": "the Compact",
+  "aliases": [
+    "Kharad",
+    "Kharadi",
+    "Compact"
+  ],
+  "tagline": "League of mercantile city-states",
+  "summary": "A league of mercantile city-states, banks, merchant houses and treaty networks whose civilization prizes agreement, reputation, patient negotiation and honest measure.",
+  "government": "League of city-states, banks, merchant houses and treaty networks",
+  "knownFor": "",
+  "coreValues": [
+    "Agreement",
+    "Reputation",
+    "Patient negotiation",
+    "Honest measure"
+  ],
+  "gateAttitude": "Kharad sees the Gate era as a new world of value, risk, credit and exchange.",
+  "beliefs": "The dominant religion is the **Covenant of the One**, a monotheistic revelation tradition built around the One, Measure, moral accountability, Messengers, scripture, law and the Final Account. It is not a First Light denomination, but it recognizes Qorvan (Corven) as a mortal Messenger, which gives it both common ground and disagreements with the First Light traditions.",
+  "history": "",
+  "visualSummary": "Cities of pale stone, turquoise, copper, patterned textiles, formal masks and dense commercial architecture.",
+  "palette": "Pale stone, turquoise, copper",
+  "materials": "",
+  "relations": [],
+  "ruleId": "faction-kharad-compact",
+  "sponsorFraming": "",
+  "extraName": "Established Credit",
+  "extraRule": "A **Minor Obligation** slot that can absorb Coins-related stress or costs: someone covers the cost now, and you record the debt, favour or contract until it is settled.",
+  "expectations": "Kharadi sponsors may expect their people to:\n\n- honour every agreement they make;\n- deal in honest measure;\n- settle their obligations, on time or by negotiation;\n- protect their sponsor's reputation, and their own.",
+  "flag": "data/images/kharad-compact-flag-c402892f.jpg",
+  "homeland": "data/images/kharad-compact-homeland-7134d104.jpg",
+  "gallery": [],
+  "clothing": [
+    "data/images/kharad-compact-clothing-dff706d8.jpg"
+  ],
+  "order": 4
+}
