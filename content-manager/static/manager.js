@@ -1,4 +1,4 @@
-const state = { gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {},
+const state = { factions: [], gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {},
   settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [],
   // The shared vocabulary (Functions, Domains...), sent by the server so it is defined in one place.
   vocabulary: { functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
@@ -156,21 +156,40 @@ function imagePreview(path, emptyText = "No image") {
   return `<span>${path ? "Preview unavailable for site paths" : escapeHtml(emptyText)}</span>`;
 }
 
-// One image control per form. `kind` decides the published folder: portraits/ for characters, images/ otherwise.
-function imageField(label, name, value, kind = "image") {
+// An image control. `kind` decides the published folder: portraits/ for characters, images/ otherwise.
+// A form can hold several; each control finds its own preview.
+function imageField(label, name, value, kind = "image", help = "") {
   const folder = kind === "portrait" ? "data/portraits/" : "data/images/";
-  return `<div class="field full"><label for="field-${name}">${label}</label>
+  return `<div class="field full" data-image-control><label for="field-${name}">${label}</label>
     <div class="portrait-editor">
-      <div class="portrait-preview" id="image-preview">${imagePreview(value, `No ${label.toLowerCase()}`)}</div>
+      <div class="portrait-preview" data-image-preview>${imagePreview(value, `No ${label.toLowerCase()}`)}</div>
       <div class="portrait-controls">
         <input id="field-${name}" name="${name}" type="text" value="${escapeHtml(value || "")}" data-image-field placeholder="Upload an image, or enter a site path / URL" />
         <div class="portrait-actions">
           <label class="button button-secondary">Upload image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-upload="${kind}" hidden /></label>
           <button type="button" class="button button-secondary" data-action="clear-image">Remove</button>
         </div>
-        <span class="helper">Uploaded images are stored in SQLite and published to <code>${folder}</code> with the record.</span>
+        <span class="helper">${help ? `${help} ` : ""}Uploaded images are stored in SQLite and published to <code>${folder}</code> with the record.</span>
       </div>
     </div></div>`;
+}
+
+// Several images in order, read with formData.getAll(name).
+const imageListItem = (name, path) => `<div class="image-list-item">
+    <div class="portrait-preview">${imagePreview(path)}</div>
+    <input type="hidden" name="${name}" value="${escapeHtml(path)}" />
+    <div class="image-list-actions">
+      <button type="button" class="button button-secondary" data-action="image-earlier" aria-label="Move earlier" title="Move earlier">←</button>
+      <button type="button" class="button button-secondary" data-action="image-later" aria-label="Move later" title="Move later">→</button>
+      <button type="button" class="button button-secondary" data-action="image-remove">Remove</button>
+    </div>
+  </div>`;
+
+function imageListField(label, name, values, help = "") {
+  return `<div class="field full" data-image-list="${name}"><span class="field-label">${label}</span>
+    <div class="image-list">${(values || []).map((path) => imageListItem(name, path)).join("")}</div>
+    <div class="portrait-actions"><label class="button button-secondary">Add images<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-upload="image" multiple hidden /></label></div>
+    <span class="helper">${help ? `${help} ` : ""}Published to <code>data/images/</code> with the record, in this order.</span></div>`;
 }
 
 /* ---------- Fate Core character sheet ---------- */
@@ -864,6 +883,8 @@ const collections = {
       ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
       ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
       ${imageField("Image", "image", record.image)}
+      ${recordChecklist("factionIds", record.factionIds || [], "factions", (faction) => faction.name, "Factions",
+        "Optional. Who this entry is about; it is listed on those factions' pages. An entry can name several.")}
       ${section("gate-record", `
         <div class="form-section">Gate Record</div>
         ${field("Designation", "gateDesignation", details.designation || "", { placeholder: "G-17", help: "Required for Gate Records." })}
@@ -911,7 +932,7 @@ const collections = {
         type, title: formText(formData, "title"), subtitle: formText(formData, "subtitle"),
         summary: formText(formData, "summary"), content: formText(formData, "content"), author: formText(formData, "author"),
         publishedAt: formText(formData, "publishedAt"), eventDate: formText(formData, "eventDate"),
-        image: formText(formData, "image"), tags: linesToArray(formData.get("tags")), details,
+        image: formText(formData, "image"), tags: linesToArray(formData.get("tags")), details, factionIds: formData.getAll("factionIds"),
         participantIds: type === "session-record" ? [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value) : []
       };
     }
@@ -1094,6 +1115,82 @@ collections.resources = {
     functions: formData.getAll("functions"), specialProperty: formText(formData, "specialProperty"), supply: formText(formData, "supply"),
     projectId: formText(formData, "projectId") || null, hiddenFunctions: formData.getAll("hiddenFunctions"),
     harvestingIssue: formText(formData, "harvestingIssue"), gmNotes: formText(formData, "gmNotes")
+  })
+};
+
+function relationRow(item = { factionId: "", text: "" }, ownId = "") {
+  const choices = state.factions.filter((faction) => faction.id !== ownId)
+    .sort((left, right) => String(left.name).localeCompare(String(right.name)))
+    .map((faction) => `<option value="${escapeHtml(faction.id)}" ${faction.id === item.factionId ? "selected" : ""}>${escapeHtml(faction.name)}${faction.published ? "" : " — unpublished"}</option>`);
+  return `<div class="checklist-row relation-row" data-relation-row>
+    <select data-relation="factionId" aria-label="Faction"><option value="">— Faction —</option>${choices.join("")}</select>
+    <input type="text" data-relation="text" value="${escapeHtml(item.text || "")}" placeholder="One line: how they see each other" aria-label="Relationship" />
+    <button class="remove-record" type="button" data-action="remove-relation" aria-label="Remove relation" title="Remove relation">×</button>
+  </div>`;
+}
+
+const readRelations = (form) => [...form.querySelectorAll("[data-relation-row]")]
+  .map((row) => ({ factionId: row.querySelector('[data-relation="factionId"]').value, text: row.querySelector('[data-relation="text"]').value.trim() }))
+  .filter((item) => item.factionId);
+
+collections.factions = {
+  title: "Factions", panel: "WORLD FACTIONS", singular: "Faction",
+  name: (record) => record.name,
+  meta: (record) => [record.tagline, record.extraName ? `Extra: ${record.extraName}` : ""],
+  sortKey: (record) => `${String(record.order ?? 999).padStart(3, "0")} ${record.name || ""}`,
+  idHelp: "Generated from the name when left blank. It is the faction's permanent URL (factions.html#id).",
+  fields: (record) => `
+    <div class="form-section">Basics</div>
+    ${field("Name", "name", record.name || "", { required: true, placeholder: "e.g. Vardic Holds" })}
+    ${field("Short name", "shortName", record.shortName || "", { placeholder: "e.g. the Holds", help: "Optional. Used in relation lists and other tight spaces." })}
+    ${field("Short descriptor", "tagline", record.tagline || "", { full: true, placeholder: "e.g. Industrial northern jarldoms", help: "A few words under the name on cards." })}
+    ${textarea("One-sentence identity", "summary", record.summary || "", { full: true, rows: 3, help: "Who these people are, in a sentence or two. Shown on the card and at the top of the page." })}
+    ${field("Government", "government", record.government || "", { full: true })}
+    ${field("Known for", "knownFor", record.knownFor || "", { full: true })}
+    ${textarea("Core values", "coreValues", listText(record.coreValues), { help: "One per line, e.g. Craft, Reputation." })}
+    ${textarea("Aliases", "aliases", listText(record.aliases), { help: "One per line. Other names people search for, e.g. Vards, Vardic." })}
+    ${textarea("Relationship with the Gates", "gateAttitude", record.gateAttitude || "", { full: true, rows: 2 })}
+    ${field("Sort order", "order", record.order ?? "", { type: "number", min: 1, help: "Optional. Lower numbers come first on the Factions page." })}
+    <div class="form-section">Sponsorship</div>
+    ${referenceSelect("Recruitment Faction rule", "ruleId", record.ruleId, "game", (post) => post.title, { full: true, filter: (post) => post.type === "rule",
+      emptyLabel: "— Not a Recruitment Faction —", help: "The rule a player reads when choosing this sponsor. The faction page links to it." })}
+    ${textarea("Sponsor framing", "sponsorFraming", record.sponsorFraming || "", { full: true, rows: 2, help: "Optional. Who exactly sponsors people, e.g. \"through the University of Verna\"." })}
+    ${field("Extra name", "extraName", record.extraName || "", { placeholder: "e.g. Built to Endure" })}
+    ${textarea("Extra (short rules text)", "extraRule", record.extraRule || "", { full: true, rows: 3, help: "A compact version; the full rule lives in the Recruitment Faction rule." })}
+    ${textarea("Expectations", "expectations", record.expectations || "", { full: true, rows: 2, help: "What the sponsor expects, as roleplay hooks." })}
+    <div class="form-section">Visual identity</div>
+    ${imageField("Flag", "flag", record.flag, "image", "Shown on the card and the page header.")}
+    ${imageField("Homeland image", "homeland", record.homeland, "image", "The main landscape: the card crop and the page banner.")}
+    ${imageListField("Homeland gallery", "gallery", record.gallery, "Optional extra landscapes.")}
+    ${imageListField("Clothing references", "clothing", record.clothing, "How people dress.")}
+    ${textarea("Visual summary", "visualSummary", record.visualSummary || "", { full: true, rows: 3, help: "Silhouettes, architecture, industrial style. A short paragraph." })}
+    ${field("Colours", "palette", record.palette || "", { full: true, placeholder: "e.g. navy, cream, polished brass" })}
+    ${field("Materials", "materials", record.materials || "", { full: true, placeholder: "e.g. dark iron, timber, wool, leather" })}
+    <div class="form-section">Beliefs, history and relations</div>
+    ${textarea("Beliefs & folklore", "beliefs", record.beliefs || "", { full: true, rows: 3, help: "A short summary. Link the full entries with [[archive-id]]; tag those entries with this faction so they are listed too." })}
+    ${textarea("History", "history", record.history || "", { full: true, rows: 3, help: "Two to four sentences of orientation. Link the full history with [[archive-id]]." })}
+    <div class="field full"><span class="field-label">Relations</span>
+      <div class="checklist-rows" id="relation-rows">${(record.relations || []).map((item) => relationRow(item, record.id)).join("")}</div>
+      <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-relation">+ Add relation</button></div>
+      <span class="helper">One line each. Relations to unpublished factions stay off the site.</span></div>`,
+  related: (record) => {
+    const entries = state.archive.filter((entry) => (entry.factionIds || []).includes(record.id));
+    const relatedBy = state.factions.filter((other) => (other.relations || []).some((item) => item.factionId === record.id));
+    return `<div class="form-section">Derived references</div>
+      ${relatedBlock("Archive entries about this faction", entries.map((entry) => `${referenceLink("archive", entry, entry.title)} <span class="helper">${escapeHtml(archiveTypeLabel(entry.type))}${entry.published ? "" : " · unpublished"}</span>`), "None yet. Tick this faction on an Archive entry to list it here.")}
+      ${relatedBlock("Named in the relations of", relatedBy.map((other) => referenceLink("factions", other, other.name)), "No other faction lists this one.")}
+      ${linkCheck([record.summary, record.beliefs, record.history, record.gateAttitude, record.visualSummary])}`;
+  },
+  read: (formData, form) => ({
+    name: formText(formData, "name"), shortName: formText(formData, "shortName"), tagline: formText(formData, "tagline"),
+    summary: formText(formData, "summary"), government: formText(formData, "government"), knownFor: formText(formData, "knownFor"),
+    coreValues: linesToArray(formData.get("coreValues")), aliases: linesToArray(formData.get("aliases")),
+    gateAttitude: formText(formData, "gateAttitude"), order: formText(formData, "order"),
+    ruleId: formText(formData, "ruleId") || null, sponsorFraming: formText(formData, "sponsorFraming"),
+    extraName: formText(formData, "extraName"), extraRule: formText(formData, "extraRule"), expectations: formText(formData, "expectations"),
+    flag: formText(formData, "flag"), homeland: formText(formData, "homeland"), gallery: formData.getAll("gallery"), clothing: formData.getAll("clothing"),
+    visualSummary: formText(formData, "visualSummary"), palette: formText(formData, "palette"), materials: formText(formData, "materials"),
+    beliefs: formText(formData, "beliefs"), history: formText(formData, "history"), relations: readRelations(form)
   })
 };
 
@@ -1773,7 +1870,7 @@ async function runBulkAction(action) {
 /* ---------- Home ---------- */
 
 const HOME_SECTIONS = [
-  ["outpost", "", "Outpost Sheet"], ["facilities", "", "Facilities"], ["projects", "", "Projects"], ["gear", "", "Marketplace"],
+  ["factions", "", "Factions"], ["outpost", "", "Outpost Sheet"], ["facilities", "", "Facilities"], ["projects", "", "Projects"], ["gear", "", "Marketplace"],
   ["jobs", "", "Job Board"], ["archive", "gates", "Gates"], ["resources", "", "Resources"], ["characters", "", "Characters"],
   ["archive", "lore", "Archive (lore)"], ["forms", "", "Spell Forms"], ["game", "", "Announcements & Rules"],
 ];
@@ -2443,7 +2540,8 @@ const PREVIEW_PAGES = {
   game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`,
   // A Resource shows on its Gate's Archive page, or in the catalogue in the Resources rule.
   resources: (id, data) => data?.gateId ? `archive.html#${encodeURIComponent(data.gateId)}` : "game.html#post-resources",
-  forms: () => "game.html#post-spellcasting"
+  forms: () => "game.html#post-spellcasting",
+  factions: (id) => `factions.html#${encodeURIComponent(id)}`
 };
 
 function currentDraft() {
@@ -2949,19 +3047,52 @@ async function deleteSelected() {
   showNotice("Record deleted from the local manager. Sync or Export to apply the change to the site.");
 }
 
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error("The image could not be read."));
+  reader.readAsDataURL(file);
+});
+
+// Big images (artwork is often several MB) are scaled to at most 1280px and re-encoded as WebP before upload,
+// so pages stay light on phones. Images that are already small, and GIFs, are kept as they are.
+const MAX_IMAGE_EDGE = 1280;
+async function shrinkImage(file) {
+  const original = await readFileAsDataUrl(file);
+  if (file.type === "image/gif" || typeof createImageBitmap !== "function") return original;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 400_000) return original;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const webp = canvas.toDataURL("image/webp", 0.82);
+    return webp.startsWith("data:image/webp") && webp.length < original.length ? webp : original;
+  } catch {
+    return original;
+  }
+}
+
 async function uploadImage(input) {
-  const file = input.files?.[0];
-  if (!file) return;
-  const dataUrl = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("The image could not be read."));
-    reader.readAsDataURL(file);
-  });
-  const result = await api("/api/media", { method: "POST", body: JSON.stringify({ filename: file.name, dataUrl, kind: input.dataset.imageUpload }) });
-  document.querySelector("[data-image-field]").value = result.path;
-  document.getElementById("image-preview").innerHTML = imagePreview(result.path);
-  showNotice("Image uploaded. Save the record to keep it.");
+  const files = [...(input.files || [])];
+  if (!files.length) return;
+  const list = input.closest("[data-image-list]");
+  for (const file of files) {
+    const dataUrl = await shrinkImage(file);
+    const result = await api("/api/media", { method: "POST", body: JSON.stringify({ filename: file.name, dataUrl, kind: input.dataset.imageUpload }) });
+    if (list) {
+      list.querySelector(".image-list").insertAdjacentHTML("beforeend", imageListItem(list.dataset.imageList, result.path));
+    } else {
+      const control = input.closest("[data-image-control]");
+      control.querySelector("[data-image-field]").value = result.path;
+      control.querySelector("[data-image-preview]").innerHTML = imagePreview(result.path);
+    }
+  }
+  input.value = "";
+  if (preview.open) schedulePreview();
+  showNotice(`${files.length > 1 ? `${files.length} images` : "Image"} uploaded. Save the record to keep ${files.length > 1 ? "them" : "it"}.`);
 }
 
 const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.game} Game posts${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}${result.samplesHidden ? `; ${result.samplesHidden} hidden sample records left out` : ""}`;
@@ -3209,8 +3340,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (action === "delete-record") {
       try { await deleteSelected(); } catch (error) { showNotice(error.message, true); }
     } else if (action === "clear-image") {
-      document.querySelector("[data-image-field]").value = "";
-      document.getElementById("image-preview").innerHTML = imagePreview("");
+      const control = actionButton.closest("[data-image-control]");
+      control.querySelector("[data-image-field]").value = "";
+      control.querySelector("[data-image-preview]").innerHTML = imagePreview("");
+      if (preview.open) schedulePreview();
+    } else if (action === "image-remove" || action === "image-earlier" || action === "image-later") {
+      const item = actionButton.closest(".image-list-item");
+      if (action === "image-remove") item.remove();
+      else if (action === "image-earlier" && item.previousElementSibling) item.previousElementSibling.before(item);
+      else if (action === "image-later" && item.nextElementSibling) item.nextElementSibling.after(item);
+      if (preview.open) schedulePreview();
+    } else if (action === "add-relation") {
+      const list = document.getElementById("relation-rows");
+      list.insertAdjacentHTML("beforeend", relationRow({}, workArea.querySelector("form")?.dataset.editingId || ""));
+      list.lastElementChild.querySelector("select")?.focus();
+    } else if (action === "remove-relation") {
+      actionButton.closest("[data-relation-row]").remove();
+      if (preview.open) schedulePreview();
     }
   });
 
@@ -3229,7 +3375,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.querySelector(".stress-boxes").innerHTML = stressBoxes(Array.from({ length: count }, (_, index) => marked[index] || false));
     }
     if (event.target.matches("[data-image-field]")) {
-      document.getElementById("image-preview").innerHTML = imagePreview(event.target.value.trim());
+      event.target.closest("[data-image-control]").querySelector("[data-image-preview]").innerHTML = imagePreview(event.target.value.trim());
     }
     if (event.target.matches("[data-stash-query]")) {
       stashView.query = event.target.value;

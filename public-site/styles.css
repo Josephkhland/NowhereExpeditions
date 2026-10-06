@@ -2840,6 +2840,97 @@ a.rule-step { text-decoration: none; }
 a.rule-step:hover { text-decoration: underline; }
 @media (max-width: 800px) { .learning-paths { grid-template-columns: 1fr; } }
 
+/* ---------- Factions ---------- */
+
+/* Landing grid: recognise a faction by its flag and homeland before reading anything. */
+.faction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 1rem; margin-top: 1rem; }
+.faction-card { display: grid; grid-template-rows: auto 1fr; overflow: hidden; border: 1px solid var(--line); background: var(--panel); color: var(--text); text-decoration: none; }
+.faction-card:hover, .faction-card:focus-visible { border-color: var(--accent-2); }
+.faction-card:hover .faction-card-homeland { transform: scale(1.03); }
+.faction-card-art { position: relative; aspect-ratio: 16 / 7; overflow: hidden; background: linear-gradient(135deg, var(--panel-strong), var(--bg)); }
+.faction-card-homeland { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: transform 0.4s ease; }
+.faction-card-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(13, 21, 23, 0.85), transparent 60%); }
+.faction-card-flag { position: absolute; z-index: 1; left: 1rem; bottom: 0.8rem; width: 4.2rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid rgba(231, 240, 242, 0.5); box-shadow: 0 4px 14px var(--shadow); }
+.faction-card-body { display: grid; align-content: start; gap: 0.35rem; padding: 0.9rem 1rem 1rem; }
+.faction-card h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.4rem; font-weight: 500; }
+.faction-tagline { margin: 0; color: var(--text-soft); }
+.faction-values { margin: 0; color: var(--accent); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.faction-card-extra { margin: 0.3rem 0 0; color: var(--text); font-size: 0.92rem; }
+.faction-card-extra span { display: block; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.faction-card-cta { margin-top: 0.4rem; color: var(--accent-2); font-weight: 700; }
+
+/* Detail: a hero with the homeland behind the flag and name, then the essentials beside the sponsorship panel. */
+.faction-detail { display: grid; gap: 1.2rem; }
+.faction-hero { position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--panel); }
+.faction-hero-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+.faction-hero.has-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(13, 21, 23, 0.95) 0%, rgba(13, 21, 23, 0.7) 55%, rgba(13, 21, 23, 0.2) 100%); }
+.faction-hero-body { position: relative; z-index: 1; display: grid; gap: 0.5rem; max-width: 46rem; padding: 2rem 1.6rem; }
+.faction-hero.has-art .faction-hero-body { padding-top: 4rem; }
+.faction-hero-flag { width: 6rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid rgba(231, 240, 242, 0.5); box-shadow: 0 6px 18px var(--shadow); }
+.faction-hero h2 { margin: 0.3rem 0 0; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 5vw, 3rem); font-weight: 500; line-height: 1.05; overflow-wrap: anywhere; }
+.faction-hero .faction-tagline { font-size: 1.1rem; }
+.faction-summary .rich-text p { margin: 0.4rem 0 0; color: var(--text); font-size: 1.05rem; }
+.faction-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.faction-main, .faction-side { display: grid; gap: 1.2rem; min-width: 0; }
+.faction-section { padding: 1.1rem 1.3rem; border: 1px solid var(--line); background: var(--panel); }
+.faction-section h3 { margin: 0 0 0.7rem; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.faction-section h4 { margin: 1rem 0 0.3rem; font-size: 0.95rem; }
+.faction-section .rich-text p { color: var(--text-soft); }
+.faction-glance { display: grid; gap: 0.7rem; margin: 0; }
+.faction-glance div { display: grid; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr); gap: 0.2rem 1rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--line); }
+.faction-glance div:last-child { padding-bottom: 0; border-bottom: 0; }
+.faction-glance dt { color: var(--muted); font-size: 0.85rem; }
+.faction-glance dd { margin: 0; color: var(--text); }
+.faction-sponsor { border-color: rgba(224, 168, 93, 0.45); border-left: 3px solid var(--accent-2); }
+.faction-extra { display: grid; gap: 0.3rem; margin: 0.4rem 0 0.6rem; padding: 0.8rem 0.9rem; border: 1px solid var(--line); background: rgba(9, 14, 16, 0.6); }
+.faction-extra .kicker { margin: 0; }
+.faction-extra > strong { color: var(--accent-2); font-size: 1.1rem; }
+.faction-note { margin: 0.8rem 0; color: var(--muted); font-size: 0.88rem; }
+.faction-relations { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.faction-relations li { display: grid; gap: 0.25rem; }
+.faction-relations li > span { color: var(--text-soft); font-size: 0.93rem; }
+.faction-chip { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--text); font-weight: 700; text-decoration: none; }
+.faction-chip:hover, .faction-chip:focus-visible { color: var(--accent-2); }
+.faction-chip-flag { width: 1.7rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
+.faction-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 0.7rem; margin-top: 0.8rem; }
+.faction-picture { display: block; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 16 / 9; }
+.faction-picture.is-clothing { aspect-ratio: 16 / 9; }
+.faction-picture img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.faction-picture:hover img { transform: scale(1.04); }
+.faction-entries { display: grid; gap: 0; margin: 0.6rem 0 1rem; padding: 0; list-style: none; }
+.faction-entries li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+.faction-entries li[hidden] { display: none; }
+.faction-entries a { color: var(--text); font-weight: 700; }
+.faction-entries a:hover { color: var(--accent); }
+.faction-entries .muted { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.faction-entries p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+/* Archive: the factions an entry is about, and the faction filter. */
+.entry-factions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; margin: 0.5rem 0 0; }
+.entry-factions .muted { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.archive-faction-filter { appearance: auto; }
+
+/* Rules: a Recruitment Faction rule points to its faction. */
+.rule-faction { display: flex; align-items: center; gap: 0.9rem; margin: 0 0 1.4rem; padding: 0.8rem 1rem; border: 1px solid var(--line); border-left: 3px solid var(--accent-2); background: rgba(224, 168, 93, 0.06); color: var(--text); text-decoration: none; }
+.rule-faction:hover, .rule-faction:focus-visible { border-color: var(--accent-2); background: rgba(224, 168, 93, 0.1); }
+.rule-faction > span:not(.rule-faction-arrow) { display: grid; gap: 0.1rem; min-width: 0; }
+.rule-faction > span > span { color: var(--muted); font-size: 0.9rem; }
+.rule-faction-flag { flex: 0 0 auto; width: 3.2rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
+.rule-faction-arrow { margin-left: auto; color: var(--accent-2); }
+
+@media (max-width: 800px) {
+  /* One column on phones: the essentials and the sponsorship first, the rest after. */
+  .faction-layout { display: flex; flex-direction: column; gap: 1.2rem; }
+  .faction-main, .faction-side { display: contents; }
+  .faction-glance-section { order: -2; }
+  .faction-sponsor { order: -1; }
+  .faction-hero-body { padding: 1.2rem 1rem; }
+  .faction-hero.has-art .faction-hero-body { padding-top: 7rem; }
+  .faction-hero.has-art::after { background: linear-gradient(0deg, rgba(13, 21, 23, 0.97) 35%, rgba(13, 21, 23, 0.35) 100%); }
+  .faction-section { padding: 1rem; }
+  .faction-glance div { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ---------- Phones ---------- */
 
 /* Site search: a close button beside the field; the keyboard hint only where there is a keyboard. */
@@ -2905,6 +2996,8 @@ a.rule-step:hover { text-decoration: underline; }
   details > summary { padding: 0.5rem 0; }
   .resource-card h4 a { display: inline-block; padding: 0.4rem 0; }
   .word-index-link { min-height: 2.5rem; }
+  .faction-chip { min-height: 2.5rem; }
+  .faction-entries a { display: inline-block; padding: 0.35rem 0; }
   .board-link { display: inline-flex; align-items: center; min-height: 2.5rem; }
   .board-card h3 a { display: inline-block; padding: 0.35rem 0; }
   .interaction-grid .grid-cell { width: 1.6rem; height: 1.6rem; }

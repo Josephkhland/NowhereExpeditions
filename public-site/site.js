@@ -547,6 +547,12 @@ const renderGame = async () => {
         <h2 id="rule-view-title">${escapeHtml(rule.title || "Untitled rule")}</h2>
         ${rule.summary ? `<p class="rule-lead">${richInline(rule.summary, campaign)}</p>` : ""}
       </header>
+      ${(() => {
+        const faction = campaign.factions.find((item) => item.ruleId === rule.id);
+        return faction ? `<a class="rule-faction" href="factions.html#${encodeURIComponent(faction.id)}">${factionFlag(faction, "rule-faction-flag")}
+          <span><strong>Learn more about ${escapeHtml(faction.name)}</strong>${faction.tagline ? `<span>${escapeHtml(faction.tagline)}</span>` : ""}</span>
+          <span class="rule-faction-arrow" aria-hidden="true">→</span></a>` : "";
+      })()}
       ${rule.details ? `<div class="rule-content">${postText(rule.details)}</div>` : ""}
       ${pathNav(rule)}
       ${tagList(rule.tags, "Related topics")}`;
@@ -819,16 +825,19 @@ let campaignPromise = null;
 
 const loadCampaign = () => {
   if (!campaignPromise) {
-    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms"].map(fetchCollection),
+    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms", "factions"].map(fetchCollection),
       fetchJson("data/vocabulary.json").catch(() => null)])
-      .then(([characters, jobs, archive, gear, projects, resources, forms, vocabulary]) => {
+      .then(([characters, jobs, archive, gear, projects, resources, forms, factions, vocabulary]) => {
         DOMAIN_INFO = new Map((vocabulary?.domains || []).map((domain) => [domain.key, domain]));
         VOCABULARY_WORDS = new Set((vocabulary?.functionGroups || []).flatMap((group) => group.functions.map((fn) => fn.name)));
         const byId = (items) => new Map(items.map((item) => [item.id, item]));
         const mentions = (item, id) => [item.summary, item.content, item.objective, item.briefing]
           .some((text) => String(text || "").includes(`[[${id}]]`) || String(text || "").includes(`[[${id}|`));
         return {
-          characters, jobs, archive, gear, projects, resources, forms,
+          characters, jobs, archive, gear, projects, resources, forms, factions,
+          factionById: byId(factions),
+          archiveForFaction: (factionId) => archive.filter((entry) => (entry.factionIds || []).includes(factionId))
+            .sort((left, right) => String(left.type).localeCompare(String(right.type)) || String(left.title).localeCompare(String(right.title))),
           vocabulary: { functionGroups: vocabulary?.functionGroups || [], interactions: vocabulary?.interactions || [], domains: vocabulary?.domains || [] },
           characterById: byId(characters),
           resourceById: byId(resources),
@@ -1454,6 +1463,11 @@ const renderArchive = async () => {
       return;
     }
 
+    // Factions used by at least one entry can filter the list; ?faction=<id> (from a faction page) sets it.
+    const usedFactions = campaign.factions.filter((item) => entries.some((entry) => (entry.factionIds || []).includes(item.id)))
+      .sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    let faction = new URLSearchParams(window.location.search).get("faction") || "";
+    if (!usedFactions.some((item) => item.id === faction)) faction = "";
     root.innerHTML = `
       <div id="archive-browse">
       <div class="filter-bar" role="group" aria-label="Archive categories">
@@ -1465,6 +1479,13 @@ const renderArchive = async () => {
             <span class="sr-only">Search the Archive</span>
             <input id="archive-search" class="search-input" type="search" placeholder="Search the Archive..." />
           </label>
+          ${usedFactions.length ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
+            <span class="sr-only">Show entries about a faction</span>
+            <select id="archive-faction" class="search-input archive-faction-filter">
+              <option value="">Any faction</option>
+              ${usedFactions.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === faction ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
+            </select>
+          </label>` : ""}
           <div id="archive-list" class="entry-list"></div>
         </aside>
         <div id="archive-detail" class="browser-detail"></div>
@@ -1537,6 +1558,8 @@ const renderArchive = async () => {
               <h2>${escapeHtml(entry.title)}</h2>
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
+              ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
+                .map((id) => campaign.factionById.get(id)).filter(Boolean).map(factionChip).join("")}</p>` : ""}
             </div>
             <div class="detail-actions">
               ${isGate ? statusPill(entry.details?.gateStatus) : ""}
@@ -1554,7 +1577,8 @@ const renderArchive = async () => {
 
     const renderList = () => {
       const list = document.getElementById("archive-list");
-      const filtered = entries.filter((entry) => (!category || entry.type === category) && [entry.title, entry.subtitle, entry.summary,
+      const filtered = entries.filter((entry) => (!category || entry.type === category)
+        && (!faction || (entry.factionIds || []).includes(faction)) && [entry.title, entry.subtitle, entry.summary,
         entry.content, entry.author, entry.details?.designation, entry.details?.environment, ...(entry.tags || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query));
       // A linked entry always opens, even when the current filter hides it from the list.
@@ -1579,6 +1603,14 @@ const renderArchive = async () => {
     }));
     document.getElementById("archive-search").addEventListener("input", (event) => {
       query = event.target.value.trim().toLowerCase();
+      renderList();
+    });
+    document.getElementById("archive-faction")?.addEventListener("change", (event) => {
+      faction = event.target.value;
+      const url = new URL(window.location.href);
+      if (faction) url.searchParams.set("faction", faction);
+      else url.searchParams.delete("faction");
+      window.history.replaceState(null, "", url);
       renderList();
     });
     // #explore/<archive|job|character>/<id> opens Explore mode; any other hash is an Archive entry.
@@ -2416,6 +2448,7 @@ const PAGE_ENTRIES = [
   ["Job Board", "jobs.html", "Expeditions and work looking for crew"], ["Archive", "archive.html", "Gate records, sessions, newspapers, history, folklore"],
   ["Discoveries", "discoveries.html", "Resources, Functions, Domains and spell Forms"], ["Marketplace", "marketplace.html", "Equipment for sale"],
   ["Characters", "characters.html", "Expeditioners and known figures"], ["Rules & News", "game.html", "Announcements and rules"],
+  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"],
   ["Onboarding", "game.html#onboarding", "start here the essential rules new players read first reading path"], ["Create a character", "sheet.html?new", "make build start a new character Expeditioner on a blank sheet"],
 ];
 let searchIndexPromise = null;
@@ -2427,7 +2460,12 @@ const buildSearchIndex = () => searchIndexPromise ||= Promise.all([loadCampaign(
   ...posts.map((post) => ({ label: post.title, href: `game.html#post-${encodeURIComponent(post.id)}`, kind: post.type === "announcement" ? "Announcement" : "Rule",
     text: [post.summary, ...(post.tags || []), post.category].join(" "), body: post.details || "" })),
   ...campaign.archive.map((entry) => ({ label: entry.type === "gate-record" ? gateName(entry) : entry.title, href: `archive.html#${encodeURIComponent(entry.id)}`,
-    kind: entry.type === "gate-record" ? "Gate" : archiveTypeLabel(entry.type), text: [entry.summary, ...(entry.tags || [])].join(" "), body: entry.content || "" })),
+    kind: entry.type === "gate-record" ? "Gate" : `Archive · ${archiveTypeLabel(entry.type)}`, text: [entry.summary, ...(entry.tags || []),
+      ...(entry.factionIds || []).map((id) => campaign.factionById.get(id)?.name || "")].join(" "), body: entry.content || "" })),
+  ...campaign.factions.map((faction) => ({ label: faction.name, href: `factions.html#${encodeURIComponent(faction.id)}`, kind: "Faction",
+    text: [...(faction.aliases || []), faction.shortName, faction.tagline, faction.summary, ...(faction.coreValues || []), faction.extraName].join(" ") })),
+  ...campaign.factions.filter((faction) => faction.extraName && faction.ruleId).map((faction) => ({ label: faction.extraName,
+    href: `game.html#post-${encodeURIComponent(faction.ruleId)}`, kind: "Rule", text: `${faction.name} Recruitment Extra sponsor` })),
   ...campaign.resources.map((resource) => ({ label: resource.name, href: `discoveries.html#resource-${encodeURIComponent(resource.id)}`, kind: "Resource",
     text: [resource.description, ...(resource.functions || [])].join(" ") })),
   ...campaign.forms.map((form) => ({ label: form.name, href: `discoveries.html#form-${encodeURIComponent(form.id)}`, kind: "Spell Form", text: [form.effect, ...(form.words || [])].join(" ") })),
@@ -2537,14 +2575,152 @@ const renderFooterMap = () => {
   if (!footer || footer.querySelector(".footer-map")) return;
   const column = (title, links) => `<div><h2>${title}</h2><ul>${links.map(([label, href]) => `<li><a href="${href}">${label}</a></li>`).join("")}</ul></div>`;
   footer.insertAdjacentHTML("afterbegin", `<nav class="footer-map wrapper" aria-label="Site map">
-    ${column("The world", [["Outpost", "outpost.html"], ["Archive", "archive.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
+    ${column("The world", [["Outpost", "outpost.html"], ["Factions", "factions.html"], ["Archive", "archive.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
     ${column("Expeditions", [["Job Board", "jobs.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"]])}
     ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
     ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
   </nav>`);
 };
 
-const PAGE_RENDERERS ={ game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries };
+/* ---------- Factions: the powers Expeditioners come from and deal with ---------- */
+
+// A faction page is a map into the lore: who these people are at a glance, what sponsorship by them does, and links
+// to the Archive entries that tell the rest. Every section is left out when it has nothing to show.
+const factionFlag = (faction, className = "faction-flag") => faction.flag
+  ? `<img class="${className}" src="${escapeHtml(faction.flag)}" alt="Flag of ${escapeHtml(faction.name)}" loading="lazy" />` : "";
+const factionChip = (faction) => `<a class="faction-chip" href="factions.html#${encodeURIComponent(faction.id)}">${factionFlag(faction, "faction-chip-flag")}<span>${escapeHtml(faction.name)}</span></a>`;
+const factionValues = (faction) => (faction.coreValues || []).map(escapeHtml).join(" • ");
+
+const renderFactions = async () => {
+  const root = document.getElementById("faction-root");
+  if (!root) return;
+  let campaign;
+  try {
+    campaign = await loadCampaign();
+  } catch (error) {
+    root.innerHTML = '<p class="empty-state">Faction records could not be loaded.</p>';
+    console.error(error);
+    return;
+  }
+  const factions = [...campaign.factions].sort((left, right) => (left.order ?? 999) - (right.order ?? 999) || String(left.name).localeCompare(String(right.name)));
+  const baseTitle = document.title;
+
+  const card = (faction) => `
+    <a class="faction-card" href="#${encodeURIComponent(faction.id)}">
+      <div class="faction-card-art">
+        ${faction.homeland ? `<img class="faction-card-homeland" src="${escapeHtml(faction.homeland)}" alt="" loading="lazy" />` : ""}
+        ${factionFlag(faction, "faction-card-flag")}
+      </div>
+      <div class="faction-card-body">
+        <h2>${escapeHtml(faction.name)}</h2>
+        ${faction.tagline ? `<p class="faction-tagline">${escapeHtml(faction.tagline)}</p>` : ""}
+        ${faction.coreValues?.length ? `<p class="faction-values">${factionValues(faction)}</p>` : ""}
+        ${faction.extraName ? `<p class="faction-card-extra"><span>Sponsor Extra</span>${escapeHtml(faction.extraName)}</p>` : ""}
+        <span class="faction-card-cta">Explore faction <span aria-hidden="true">→</span></span>
+      </div>
+    </a>`;
+
+  const renderList = () => {
+    document.title = baseTitle;
+    root.innerHTML = factions.length
+      ? `<div class="faction-grid">${factions.map(card).join("")}</div>`
+      : '<p class="empty-state">The faction records are still being prepared. Check back soon.</p>';
+  };
+
+  const section = (title, body, className = "") => body ? `<section class="faction-section ${className}"><h3>${title}</h3>${body}</section>` : "";
+
+  const renderDetail = (faction) => {
+    document.title = `${faction.name} | ${baseTitle}`;
+    const glance = [
+      ["Government", escapeHtml(faction.government || "")],
+      ["Known for", escapeHtml(faction.knownFor || "")],
+      ["Core values", factionValues(faction)],
+      ["Relationship with the Gates", faction.gateAttitude ? richInline(faction.gateAttitude, campaign) : ""],
+      ["Common visuals", escapeHtml([faction.palette, faction.materials].filter(Boolean).join(" · "))],
+    ].filter(([, value]) => value);
+    const rule = faction.ruleId;
+    const sponsorship = faction.extraName || faction.extraRule || rule ? `
+      ${faction.sponsorFraming ? richText(faction.sponsorFraming, campaign, "") : ""}
+      ${faction.extraName || faction.extraRule ? `<div class="faction-extra">
+        <span class="kicker">Recruitment Extra</span>
+        ${faction.extraName ? `<strong>${escapeHtml(faction.extraName)}</strong>` : ""}
+        ${faction.extraRule ? richText(faction.extraRule, campaign, "") : ""}
+      </div>` : ""}
+      ${faction.expectations ? `<h4>Expectations</h4>${richText(faction.expectations, campaign, "")}` : ""}
+      <p class="faction-note">A Recruitment Faction is who sponsored your character, not where they are from: you can be sponsored by ${escapeHtml(faction.shortName || faction.name)} without being one of their people, and you can disagree with them.</p>
+      ${rule ? `<a class="destination-link" href="game.html#post-${encodeURIComponent(rule)}">Read the full rule <span aria-hidden="true">→</span></a>` : ""}` : "";
+    const pictures = [
+      ...[faction.homeland, ...(faction.gallery || [])].filter(Boolean).map((src) => [src, `Homeland of ${faction.name}`, "is-landscape"]),
+      ...(faction.clothing || []).map((src) => [src, `Clothing of ${faction.name}`, "is-clothing"]),
+    ];
+    const visual = faction.visualSummary || pictures.length ? `
+      ${faction.visualSummary ? richText(faction.visualSummary, campaign, "") : ""}
+      ${pictures.length ? `<div class="faction-gallery">${pictures.map(([src, alt, kind]) => `
+        <a class="faction-picture ${kind}" href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" /></a>`).join("")}</div>` : ""}` : "";
+    const relations = (faction.relations || []).map((item) => [campaign.factionById.get(item.factionId), item.text]).filter(([other]) => other);
+    const entries = campaign.archiveForFaction(faction.id);
+    const types = [...new Set(entries.map((entry) => entry.type))];
+    const entryRow = (entry) => `<li data-entry-type="${escapeHtml(entry.type)}">
+      <a href="archive.html#${encodeURIComponent(entry.id)}">${escapeHtml(entry.type === "gate-record" ? gateName(entry) : entry.title)}</a>
+      <span class="muted">${escapeHtml(archiveTypeLabel(entry.type))}</span>
+      ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
+    </li>`;
+
+    root.innerHTML = `
+      <a class="back-link" href="#">← All factions</a>
+      <article class="faction-detail">
+        <header class="faction-hero${faction.homeland ? " has-art" : ""}">
+          ${faction.homeland ? `<img class="faction-hero-art" src="${escapeHtml(faction.homeland)}" alt="" />` : ""}
+          <div class="faction-hero-body">
+            ${factionFlag(faction, "faction-hero-flag")}
+            <h2>${escapeHtml(faction.name)}</h2>
+            ${faction.tagline ? `<p class="faction-tagline">${escapeHtml(faction.tagline)}</p>` : ""}
+            ${faction.summary ? `<div class="faction-summary">${richText(faction.summary, campaign, "")}</div>` : ""}
+          </div>
+        </header>
+        <div class="faction-layout">
+          <div class="faction-main">
+            ${section("At a glance", glance.length ? `<dl class="faction-glance">${glance.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}</dl>` : "", "faction-glance-section")}
+            ${section("Beliefs & folklore", faction.beliefs ? richText(faction.beliefs, campaign, "") : "")}
+            ${section("History", faction.history ? richText(faction.history, campaign, "") : "")}
+            ${section("Visual identity", visual)}
+          </div>
+          <aside class="faction-side">
+            ${section("Sponsorship", sponsorship, "faction-sponsor")}
+            ${section("Relations", relations.length ? `<ul class="faction-relations">${relations.map(([other, text]) => `
+              <li>${factionChip(other)}${text ? `<span>${richInline(text, campaign)}</span>` : ""}</li>`).join("")}</ul>` : "")}
+          </aside>
+        </div>
+        ${section("In the Archive", entries.length ? `
+          ${types.length > 1 ? `<div class="filter-bar" role="group" aria-label="Filter Archive entries">
+            <button type="button" class="filter-chip" data-faction-type="" aria-pressed="true">All</button>
+            ${types.map((type) => `<button type="button" class="filter-chip" data-faction-type="${escapeHtml(type)}" aria-pressed="false">${escapeHtml(archiveTypeLabel(type))}</button>`).join("")}
+          </div>` : ""}
+          <ul class="faction-entries">${entries.map(entryRow).join("")}</ul>
+          <a class="destination-link" href="archive.html?faction=${encodeURIComponent(faction.id)}">Browse in the Archive <span aria-hidden="true">→</span></a>`
+          : '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
+      </article>`;
+    root.querySelectorAll("[data-faction-type]").forEach((button) => button.addEventListener("click", () => {
+      root.querySelectorAll("[data-faction-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
+      root.querySelectorAll(".faction-entries li").forEach((item) => { item.hidden = Boolean(button.dataset.factionType) && item.dataset.entryType !== button.dataset.factionType; });
+    }));
+  };
+
+  const route = () => {
+    const faction = campaign.factionById.get(selectedHash());
+    if (faction) renderDetail(faction);
+    else renderList();
+  };
+  window.addEventListener("hashchange", () => {
+    route();
+    const header = document.querySelector(".site-header");
+    window.scrollTo({ top: Math.max(0, root.getBoundingClientRect().top + window.scrollY - (header?.offsetHeight || 0) - 16) });
+  });
+  route();
+};
+
+const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchive, marketplace: renderMarketplace, characters: renderCharacterRoster,
+  discoveries: renderDiscoveries, factions: renderFactions };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();

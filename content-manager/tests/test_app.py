@@ -313,7 +313,7 @@ class ContentStoreTests(unittest.TestCase):
         self.store.export_site()
         gate = read_json(self.export_dir / "data" / "archive" / "g-03.json")
         self.assertEqual(set(gate), {"id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt",
-                                     "eventDate", "image", "tags", "participantIds", "details"})
+                                     "eventDate", "image", "tags", "participantIds", "factionIds", "details"})
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount", "projectId"})
@@ -678,6 +678,65 @@ class ContentStoreTests(unittest.TestCase):
         self.store.export_site()
         exported = read_json(self.export_dir / "data" / "forms" / f"{form}.json")
         self.assertEqual(set(exported), {"id", "name", "tier", "words", "effect", "status", "projectId"})
+
+    # --- factions ---
+
+    def image(self, name: str) -> str:
+        data_url = "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode()
+        return self.store.save_media({"filename": f"{name}.png", "dataUrl": data_url, "kind": "image"})["path"]
+
+    def test_factions_export_public_relations_rules_lore_and_images(self) -> None:
+        rule = self.store.save_record("game", None, {"type": "rule", "category": "Recruitment Factions", "title": "Aurelian Empire",
+                                                      "published": True})["id"]
+        flag, homeland, clothing = self.image("flag"), self.image("homeland"), self.image("clothing")
+        aurelia = self.store.save_record("factions", None, {
+            "name": "Aurelian Empire", "tagline": "A maritime empire", "coreValues": ["Duty", "Order"], "ruleId": rule,
+            "extraName": "Properly Provisioned", "flag": flag, "homeland": homeland, "gallery": [], "clothing": [clothing],
+            "aliases": "Aurelia\nAurelian", "published": True})["id"]
+        hidden = self.store.save_record("factions", None, {"name": "Unrevealed League"})["id"]
+        vardic = self.store.save_record("factions", None, {"name": "Vardic Holds", "published": True, "relations": [
+            {"factionId": aurelia, "text": "Old naval rivalry."}, {"factionId": hidden, "text": "Secret."}]})["id"]
+        entry = self.store.save_record("archive", None, {"type": "folklore", "title": "The Crowned Sun", "published": True,
+                                                         "factionIds": [aurelia, hidden]})["id"]
+        self.assertEqual(self.record("archive", entry)["factionIds"], [aurelia, hidden])
+        self.assertEqual(self.record("factions", aurelia)["aliases"], ["Aurelia", "Aurelian"])
+
+        self.store.export_site()
+        data = self.export_dir / "data"
+        self.assertEqual(read_json(data / "factions" / "index.json"), [f"{aurelia}.json", f"{vardic}.json"], "unpublished factions stay out")
+        exported = read_json(data / "factions" / f"{aurelia}.json")
+        self.assertEqual((exported["ruleId"], exported["flag"], exported["clothing"]), (rule, flag, [clothing]))
+        for path in (flag, homeland, clothing):
+            self.assertEqual((self.export_dir / path).read_bytes(), PNG_BYTES)
+        self.assertEqual(read_json(data / "factions" / f"{vardic}.json")["relations"], [{"factionId": aurelia, "text": "Old naval rivalry."}])
+        self.assertEqual(read_json(data / "archive" / f"{entry}.json")["factionIds"], [aurelia])
+
+        # Unpublishing the rule drops the link; removing an image from a list deletes the stored file.
+        self.store.save_record("game", rule, {**self.record("game", rule), "published": False})
+        self.store.save_record("factions", aurelia, {**self.record("factions", aurelia), "clothing": []})
+        self.assertIsNone(self.store.media(clothing.removeprefix("data/images/")))
+        self.store.export_site()
+        self.assertIsNone(read_json(data / "factions" / f"{aurelia}.json")["ruleId"])
+
+    def test_factions_validate_relations_and_guard_deletes(self) -> None:
+        announcement = self.store.save_record("game", None, {"type": "announcement", "title": "News", "publishedAt": "2026-10-06"})["id"]
+        rule = self.store.save_record("game", None, {"type": "rule", "category": "Recruitment Factions", "title": "Vesper Republic"})["id"]
+        vesper = self.store.save_record("factions", None, {"name": "Vesper Republic", "ruleId": rule})["id"]
+        verna = self.store.save_record("factions", None, {"name": "Verna", "relations": [{"factionId": vesper, "text": "Neighbours."}]})["id"]
+        for data in ({"name": "Verna"}, {"name": "Loner", "relations": [{"factionId": "nowhere", "text": ""}]},
+                     {"name": "Twice", "relations": [{"factionId": vesper}, {"factionId": vesper}]},
+                     {"name": "News sponsor", "ruleId": announcement}, {"name": "Too many", "gallery": [f"data/images/{n}.png" for n in range(9)]}):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("factions", None, data)
+        with self.assertRaisesRegex(ManagerError, "itself"):
+            self.store.save_record("factions", verna, {"name": "Verna", "relations": [{"factionId": verna}]})
+        self.store.save_record("archive", None, {"type": "history", "title": "The Silencing of the Schools", "factionIds": [verna]})
+        with self.assertRaisesRegex(ManagerError, "Verna.*relations"):
+            self.store.delete_record("factions", vesper)
+        with self.assertRaisesRegex(ManagerError, "sponsorship rule"):
+            self.store.delete_record("game", rule)
+        with self.assertRaisesRegex(ManagerError, "Archive entry"):
+            self.store.delete_record("factions", verna)
 
     def test_projects_reference_functions_resources_domain_and_gate(self) -> None:
         gate = self.gate()

@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Job Board | Nowhere Expeditions</title>
-    <meta name="description" content="Current Job Board for the Nowhere Expeditions campaign." />
+    <title>Factions | Nowhere Expeditions</title>
+    <meta name="description" content="The countries, powers and sponsors of the Nowhere Expeditions world." />
     <link rel="stylesheet" href="styles.css" />
     <script src="vendor/markdown-it.min.js" defer></script>
     <script src="site.js" defer></script>
   </head>
-  <body data-page="jobs">
+  <body data-page="factions">
     <header class="site-header">
       <div class="wrapper topbar">
         <div class="brand" aria-label="Nowhere Expeditions home">
@@ -19,7 +19,7 @@
         <nav class="main-nav" aria-label="Main navigation">
           <a class="nav-link" href="index.html">Overview</a>
           <a class="nav-link" href="outpost.html">Outpost</a>
-          <a class="nav-link active" href="jobs.html">Job Board</a>
+          <a class="nav-link" href="jobs.html">Job Board</a>
           <a class="nav-link" href="factions.html">Factions</a>
           <a class="nav-link" href="archive.html">Archive</a>
           <a class="nav-link" href="discoveries.html">Discoveries</a>
@@ -31,13 +31,13 @@
     </header>
 
     <main class="page-shell wrapper">
-      <section aria-labelledby="jobs-head">
+      <section aria-labelledby="factions-head">
         <div class="section-header">
-          <span class="kicker">Notice Board</span>
-          <h1 id="jobs-head">Job Board</h1>
-          <p class="page-subtitle">Work posted at the Outpost: expeditions, recoveries, investigations, and other jobs looking for crew, plus the record of those already run.</p>
+          <span class="kicker">The Wider World</span>
+          <h1 id="factions-head">Factions</h1>
+          <p class="page-subtitle">The countries and powers Expeditioners come from and deal with. Pick one to see who they are, what they believe and what being sponsored by them means; the Archive holds the deeper history.</p>
         </div>
-        <div id="job-board" aria-live="polite"></div>
+        <div id="faction-root" aria-live="polite"></div>
       </section>
     </main>
 
@@ -45,7 +45,7 @@
       <div class="footer-community wrapper" id="footer-community" hidden></div>
       <div class="wrapper">
         <span>Nowhere Expeditions · © 2026 Josephkhland<span class="site-version" id="site-version" hidden></span></span>
-        <span>Job board • crew briefings • public opportunities</span>
+        <span>Factions • homelands • sponsors</span>
       </div>
     </footer>
   </body>

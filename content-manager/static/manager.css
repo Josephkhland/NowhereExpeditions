@@ -141,6 +141,14 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .portrait-controls { display: grid; gap: 8px; min-width: 0; }
 .portrait-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .portrait-actions .button { min-height: 33px; font-size: 11px; }
+.image-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.image-list:empty { display: none; }
+.image-list-item { display: grid; gap: 6px; width: 168px; }
+.image-list-item .portrait-preview { width: 168px; height: 96px; }
+.image-list-actions { display: flex; gap: 4px; }
+.image-list-actions .button { min-height: 28px; padding: 0 8px; font-size: 11px; }
+.checklist-row.relation-row { grid-template-columns: minmax(150px, 220px) minmax(0, 1fr) 28px; }
+.relation-row select { min-width: 0; min-height: 34px; border: 1px solid #cbd5ce; padding: 4px 6px; background: #fff; font: inherit; font-size: 12px; }
 .related-list { display: grid; gap: 4px; margin: 0; padding: 9px 9px 9px 26px; border: 1px solid var(--line); background: #fbfcfa; font-size: 12px; }
 .related-link { padding: 0; border: 0; color: var(--green); background: none; font-weight: 650; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
 .related-link:hover { color: #105e49; }

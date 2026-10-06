@@ -2,7 +2,7 @@
 
 A single-file summary of the whole project for people, tools and AI agents that need to catch up quickly: what the campaign is, how the repository is built, which tools exist, how the rules work, and what lore has been established so far.
 
-- **Snapshot:** 6 October 2026 (pre-launch). The first session is planned for **6 November 2026**.
+- **Snapshot:** 6 October 2026 (pre-launch; Factions added the same day). The first session is planned for **6 November 2026**.
 - **Player-facing only.** This file holds only what players can already see on the public site. It deliberately leaves out GM-only material: GM notes, Hidden Functions, harvesting issues, unpublished drafts and anything about the true nature of the Gates, Cores or ruins. The repository is public, so keep it that way.
 - **Sources of truth:** the content manager's database (`content-manager/content.db`, not in Git) for content, `instructions.md` for design principles, and the code itself. When this file disagrees with them, they win. Regenerate this file rather than editing facts by hand.
 
@@ -78,9 +78,10 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | Page | What it shows |
 | --- | --- |
 | `index.html`, the **Overview** | Hero carousel, the newest **pinned announcement** featured as a card, a three-step *Start here* (read Onboarding, create a character, find a job), the launch roadmap and countdown (in the visitor's local time), and section tiles. |
+| `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance, Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations, and the Archive entries that name the faction. On phones the essentials and sponsorship come first. |
 | `outpost.html`, the **Outpost Sheet** | The settlement as a Fate character: High Concept, Trouble, Aspects, six Capabilities with ratings and dice rolls, Stress, Consequences, the Facilities table (filterable by Capability) and ongoing Outpost Projects with Complications. |
 | `jobs.html`, the **Job Board** | Open listings (objective, briefing, schedule, crew size, who posted it), filterable by type, plus closed jobs linked to their Session Records. |
-| `archive.html`, the **Archive** | All lore as a wiki: Gate Records, Session Records, newspapers, history and folklore. Search, category filters, cross-links, "Referenced In" backlinks, and an **Explore connections** graph view. |
+| `archive.html`, the **Archive** | All lore as a wiki: Gate Records, Session Records, newspapers, history and folklore. Search, category filters, a **faction filter** (`archive.html?faction=<id>`), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view. |
 | `discoveries.html`, **Discoveries** | Four tabs: **Resources** (searchable catalogue), **Functions** (look up a Word, combine two, random Resource, a 30×30 interaction grid), **Domains**, and **Spell Forms**. |
 | `marketplace.html`, the **Marketplace** | Featured Gear carousel and the full price list (grid or list view), with prices in Coins, weights and availability. |
 | `characters.html`, **Characters** | Player characters and NPCs, profiles, Fate sheets (with clickable skill rolls), Personal Stash, Projects, and "Create new character". |
@@ -117,9 +118,10 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 
 | Collection | Represents | Notes |
 | --- | --- | --- |
+| **Factions** | Countries, powers and sponsors | Name, aliases, descriptor, identity, government, values, Gate attitude, beliefs and history summaries, visual notes, relations to other factions, the Recruitment Faction rule it links to plus a compact Extra, and images (flag, homeland, gallery, clothing). Archive entries name their factions (`factionIds`, many-to-many), and the faction page lists them automatically. Schema v9. |
 | **Characters** | PCs and NPCs | Optional Fate sheet, Personal Stash (Gear × quantity, "brought into action"), Coins, Downtime, Projects. |
 | **Jobs** | Job Board listings | Type, schedule, crew and participants, optional link to a Session Record. |
-| **Archive** | Lore entries | Types: gate-record, session-record, newspaper, history, folklore. Gate Records add a designation, status, Domains, environment, traits, hazards, locations and creatures. |
+| **Archive** | Lore entries | Types: gate-record, session-record, newspaper, history, folklore. Gate Records add a designation, status, Domains, environment, traits, hazards, locations and creatures. Any entry can name the factions it is about. |
 | **Gear** | Marketplace items | Category, price, sale price, weight, availability, featured flag. |
 | **Facilities** | What Endros has | Assigned to Capabilities, optionally built by a Project. |
 | **Projects** | Progress tracks | Personal, Public, Research, Marketplace, Facility, Recovery, Establish Supply or Spell Innovation. Each has Progress, Requirements (required Functions, Resources, Domain), Complications and a result. |
@@ -143,6 +145,7 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 - **Status:** sync status and a live site preview.
 - **Character sheets:** batch import of sheet files.
 - **Vocabulary editor:** Functions, interactions and Domains.
+- **Images:** a form can hold several image controls and image lists. Uploads larger than 1280px are scaled down and re-encoded as WebP in the browser, so published pages stay light.
 - **Learning Paths editor.**
 - **CM Tools** (`generators.js`): a **Resource generator** and a **Gate generator**. They draft Resources by Domain, with Functions chosen through the interaction table, field descriptions, Special Properties and harvesting issues. They also draft whole Gates: concept, Aspect, hazards, landmarks, creatures, a signature Function set, native Resources, and inferred ecology and technology. Everything they produce is an editable draft.
 
@@ -198,7 +201,7 @@ Somewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so
 
 ### Recruitment Factions
 
-Every character picks the faction that brought them to Endros. It grants a small **Extra** and roleplay hooks, but doesn't decide profession or Skills.
+Every character picks the faction that brought them to Endros. It grants a small **Extra** and roleplay hooks, but doesn't decide profession or Skills. **A Recruitment Faction means sponsor, not nationality.** The three below are published; five more are written but not yet published (see section 6, *Factions*).
 
 | Faction | Extra | Expectations |
 | --- | --- | --- |
@@ -424,9 +427,20 @@ The settlement's sheet, played as a shared Fate character:
 | **Downtime / Project Action / Progress** | Between-session time / one unit of work / filling a Project's track. |
 | **Recruitment Faction** | Who brought a character to Endros. |
 
-### Not yet canon: art references
+### Factions (written, not yet published)
 
-`artwork/` holds reference images for **six homelands**: the **Aurelian Empire**, **Kharad Compact**, **Tianzhao**, **Valdic Holds**, **Verna** and the **Vesper Republic** (clothing, environments, flags). No lore about them is published yet. *Verna* presumably relates to the University of Verna, but that isn't stated anywhere. Treat these names as reserved, not as established facts.
+Six world factions and five new Recruitment Faction rules are in the database, unpublished, awaiting the GM's review. Their content comes from the *Factions Site Integration Guide*. The artwork in `artwork/` (gitignored) supplies their flags, homelands and clothing references. The art files say `valdic-holds`, but the canonical name is **Vardic Holds**.
+
+| Faction | Identity | Recruitment Extra |
+| --- | --- | --- |
+| **Vardic Holds** | A loose federation of industrial northern jarldoms valuing craftsmanship, reputation, self-reliance and deeds worth remembering. Old Gods of the Holds (Fate, Making, Memory). | *Built to Endure:* once per session, a tie on a Crafts advantage to repair, reinforce, modify or improvise equipment counts as a success with a free invoke. |
+| **Aurelian Empire** | A powerful maritime empire of navy, bureaucracy, standardization and etiquette; power creates responsibility. Faith of the First Light, Aurelian Communion (the Crowned Sun). | *Properly Provisioned:* once per session, bring one Stash item into action without the Stress or Fate Point cost. |
+| **Vesper Republic** | A young revolutionary republic of citizenship, public argument and inquiry; resists monopolies over magical knowledge. Vesperian Communion (the Sacred Flame). | *Someone Knows Someone* (working design): once per session, a reasonable useful contact through the sponsor's societies. |
+| **Kharad Compact** | A league of mercantile city-states, banks, merchant houses and treaty networks prizing agreement, reputation, patient negotiation and honest measure. Covenant of the One. | *Established Credit* (working design): a Minor Obligation slot that lets someone cover a cost now, in exchange for a debt or favour. |
+| **Tianzhao Mandate** | An ancient bureaucratic civilization of harmony, long-term consequence and celestial order; first read the Gates through its Spirit and Celestial realms. | *Restorative Care:* once between expeditions, +1 Progress on a Recovery Project for your own Consequence. |
+| **Verna** | A small independent republic neighbouring Vesper, home of the University of Verna; shaped by scholars fleeing the Silencing of the Schools. | The Recruitment Faction is the **University of Verna** (published); being sponsored by it is not the same as being Vernan. |
+
+Religions cross faction lines: the Faith of the First Light is shared by Aurelia and Vesper, and minor First Light communities live in the Holds. Fringe beliefs are published as beliefs, never as facts.
 
 ---
 
@@ -449,7 +463,8 @@ No real Gates, Resources, spell Forms, Jobs, Gear or Projects have been publishe
 - **Undesigned spellcasting details:** see the list in section 5.
 - **Old wording in `instructions.md`:** it describes "an industrial Island built around enormous ancient floating ruins". The published canon describes Endros as floating platforms around ruins over a still ocean. Update `instructions.md` (and its "Island Sheet", "Expedition Board" and "Gate Archive" sections) to the current terms.
 - **Palava Bansz's spell list:** it uses D&D-style spells rather than Words and Forms.
-- **Homeland names:** they exist only as art references (section 6).
+- **Factions awaiting review:** the six faction records and five Recruitment Faction rules are unpublished. The Factions page shows an empty-state message until they are published. Two Extras (Vesper, Kharad) are marked working design.
+- **Archive tags (Phase 2 of the factions brief):** History and Folklore are still Archive types, not tags. Faction filtering works with the current types.
 - **Capability ratings:** they are all +0 except Infrastructure +1. This is the starting state, not a placeholder.
 
 ---

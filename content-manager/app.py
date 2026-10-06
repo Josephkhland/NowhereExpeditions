@@ -44,7 +44,7 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -195,6 +195,13 @@ def safe_filename(value: str, extension: str = ".json") -> str:
     if not slug:
         raise ManagerError("A record ID is required to create an export filename.")
     return f"{slug}{extension}"
+
+
+def image_paths(value: Any) -> list[str]:
+    """The image paths in an image field, which holds one path or a list of them."""
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str) and item]
+    return [value] if isinstance(value, str) and value else []
 
 
 def media_filename(path: Any) -> str | None:
@@ -525,6 +532,8 @@ def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
         "eventDate": clean_text(data, "eventDate"),
         "image": clean_text(data, "image") or None,
         "tags": clean_list(data, "tags"),
+        # The factions this entry is about. An entry can belong to several (a shared religion, a treaty).
+        "factionIds": clean_ids(data, "factionIds", "Factions"),
         # Only Session Records carry a crew; other types never store participants.
         "participantIds": clean_ids(data, "participantIds", "Participants") if entry_type == "session-record" else [],
         "details": clean_archive_details(entry_type, data.get("details")),
@@ -818,6 +827,62 @@ def clean_form(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+MAX_FACTION_IMAGES = 8
+
+
+def clean_image_list(data: dict[str, Any], key: str, label: str) -> list[str]:
+    """Several images in one field, in order, without repeats."""
+    images = list(dict.fromkeys(clean_list(data, key)))
+    if len(images) > MAX_FACTION_IMAGES:
+        raise ManagerError(f"{label}: at most {MAX_FACTION_IMAGES} images.")
+    return images
+
+
+def clean_faction(data: dict[str, Any]) -> dict[str, Any]:
+    """A power of the wider world: a country, league or institution Expeditioners come from and deal with. The page is
+    a map into the lore: short orientation here, the deeper history and folklore in Archive entries that name it."""
+    relations = data.get("relations") or []
+    if not isinstance(relations, list) or any(not isinstance(item, dict) for item in relations):
+        raise ManagerError("Relations must be a list of objects.")
+    cleaned_relations, seen = [], set()
+    for item in relations:
+        faction_id = slugify(str(item.get("factionId") or ""))
+        if not faction_id:
+            continue
+        if faction_id in seen:
+            raise ManagerError(f"The relation with “{faction_id}” is listed twice.")
+        seen.add(faction_id)
+        cleaned_relations.append({"factionId": faction_id, "text": clean_text(item, "text")})
+    return {
+        "name": clean_text(data, "name", "A faction name"),
+        "shortName": clean_text(data, "shortName"),
+        "aliases": clean_list(data, "aliases"),
+        "tagline": clean_text(data, "tagline"),
+        "summary": clean_text(data, "summary"),
+        "government": clean_text(data, "government"),
+        "knownFor": clean_text(data, "knownFor"),
+        "coreValues": clean_list(data, "coreValues"),
+        "gateAttitude": clean_text(data, "gateAttitude"),
+        "beliefs": clean_text(data, "beliefs"),
+        "history": clean_text(data, "history"),
+        "visualSummary": clean_text(data, "visualSummary"),
+        "palette": clean_text(data, "palette"),
+        "materials": clean_text(data, "materials"),
+        "relations": cleaned_relations,
+        # Sponsorship: the Recruitment Faction rule it links to, and a compact version of its Extra.
+        "ruleId": slugify(str(data.get("ruleId") or "")) or None,
+        "sponsorFraming": clean_text(data, "sponsorFraming"),
+        "extraName": clean_text(data, "extraName"),
+        "extraRule": clean_text(data, "extraRule"),
+        "expectations": clean_text(data, "expectations"),
+        "flag": clean_text(data, "flag") or None,
+        "homeland": clean_text(data, "homeland") or None,
+        "gallery": clean_image_list(data, "gallery", "Homeland gallery"),
+        "clothing": clean_image_list(data, "clothing", "Clothing references"),
+        "order": clean_int(data.get("order"), "Sort order", 1, 999, allow_none=True),
+    }
+
+
 def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
     """Out-of-character notes on the Game page: announcements and campaign rules."""
     post_type = clean_choice(data, "type", GAME_POST_TYPES, "rule")
@@ -877,6 +942,15 @@ def _gate_designation(record: dict[str, Any]) -> tuple[str, str] | None:
 
 # Order matters: records are imported in this order, so referenced collections come first.
 COLLECTIONS: dict[str, Collection] = {
+    "factions": Collection(
+        "factions", "Faction", ("name",), clean_faction, lambda record: str(record.get("name", "")),
+        unique=lambda record: ("name", record["name"]),
+        public_fields=("id", "name", "shortName", "aliases", "tagline", "summary", "government", "knownFor", "coreValues",
+                       "gateAttitude", "beliefs", "history", "visualSummary", "palette", "materials", "relations", "ruleId",
+                       "sponsorFraming", "extraName", "extraRule", "expectations", "flag", "homeland", "gallery", "clothing", "order"),
+        image_fields=("flag", "homeland", "gallery", "clothing"),
+        text_fields=("summary", "gateAttitude", "beliefs", "history", "visualSummary", "sponsorFraming", "extraRule", "expectations"),
+    ),
     "gear": Collection(
         "gear", "Gear", ("name",), clean_gear, lambda record: str(record.get("name", "")),
         refs=(("projectId", "project_id", "projects"),),
@@ -905,10 +979,11 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "archive": Collection(
         "archive_entries", "Archive entry", ("title",), clean_archive_entry, lambda record: str(record.get("title", "")),
-        links=(("participantIds", "archive_participants", "entry_id", "character_id", "characters"),),
+        links=(("participantIds", "archive_participants", "entry_id", "character_id", "characters"),
+               ("factionIds", "archive_factions", "entry_id", "faction_id", "factions")),
         unique=_gate_designation,
         public_fields=("id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt", "eventDate",
-                       "image", "tags", "participantIds", "details"),
+                       "image", "tags", "participantIds", "factionIds", "details"),
         image_fields=("image",), text_fields=("summary", "content"),
     ),
     "jobs": Collection(
@@ -942,7 +1017,7 @@ COLLECTIONS: dict[str, Collection] = {
         image_fields=("image",), text_fields=("summary", "details"),
     ),
 }
-PAGE_COLLECTIONS = ("gear", "characters", "projects", "archive", "jobs", "resources", "forms")
+PAGE_COLLECTIONS = ("factions", "gear", "characters", "projects", "archive", "jobs", "resources", "forms")
 GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image")
 
 
@@ -1083,6 +1158,16 @@ class ContentStore:
                     resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE RESTRICT,
                     position INTEGER NOT NULL,
                     PRIMARY KEY (project_id, resource_id)
+                );
+                CREATE TABLE IF NOT EXISTS factions (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS archive_factions (
+                    entry_id TEXT NOT NULL REFERENCES archive_entries(id) ON DELETE CASCADE,
+                    faction_id TEXT NOT NULL REFERENCES factions(id) ON DELETE RESTRICT,
+                    position INTEGER NOT NULL,
+                    PRIMARY KEY (entry_id, faction_id)
                 );
                 CREATE INDEX IF NOT EXISTS archive_type ON archive_entries(type);
                 CREATE INDEX IF NOT EXISTS jobs_session_record ON jobs(session_record_id);
@@ -1433,6 +1518,13 @@ class ContentStore:
         for capability in (json.loads(row["data"]).get("capabilities") or []) if row else []:
             if any(asset == {"type": kind, "id": record_id} for asset in outpost_assets(capability)):
                 blockers.append(f"Outpost capability “{capability.get('name') or 'Unnamed'}” (contributing assets)")
+        if name in ("factions", "game"):
+            for row in connection.execute("SELECT id, data FROM factions"):
+                faction = json.loads(row["data"])
+                if name == "factions" and any(item.get("factionId") == record_id for item in faction.get("relations") or []):
+                    blockers.append(f"Faction “{faction.get('name') or row['id']}” (relations)")
+                if name == "game" and faction.get("ruleId") == record_id:
+                    blockers.append(f"Faction “{faction.get('name') or row['id']}” (sponsorship rule)")
         if name == "gear":
             for row in connection.execute(
                 "SELECT c.id, c.data FROM character_stash s JOIN characters c ON c.id = s.character_id WHERE s.gear_id = ?",
@@ -1447,7 +1539,7 @@ class ContentStore:
             return
         for spec_name, spec in COLLECTIONS.items():
             for record in self._records(connection, spec_name) if spec.image_fields else []:
-                if any(media_filename(record.get(field)) == filename for field in spec.image_fields):
+                if any(media_filename(path) == filename for field in spec.image_fields for path in image_paths(record.get(field))):
                     return
         connection.execute("DELETE FROM media WHERE filename = ?", (filename,))
 
@@ -1516,6 +1608,16 @@ class ContentStore:
             if name == "archive" and existing and existing.get("type") == "session-record" and clean["type"] != "session-record":
                 for row in connection.execute("SELECT id FROM jobs WHERE session_record_id = ?", (chosen_id,)):
                     raise ManagerError(f"Job “{row['id']}” uses this entry as its Session Record; detach it before changing the type.")
+            if name == "factions":
+                for relation in clean["relations"]:
+                    if relation["factionId"] == chosen_id:
+                        raise ManagerError("A faction cannot have a relation with itself.")
+                    if not connection.execute("SELECT 1 FROM factions WHERE id = ?", (relation["factionId"],)).fetchone():
+                        raise ManagerError(f"Unknown faction in relations: {relation['factionId']}")
+                if clean.get("ruleId"):
+                    row = connection.execute("SELECT data FROM game_posts WHERE id = ?", (clean["ruleId"],)).fetchone()
+                    if not row or json.loads(row["data"]).get("type") != "rule":
+                        raise ManagerError(f"The sponsorship rule must be an existing rule: {clean['ruleId']}")
             for item in clean.get("stash") or [] if name == "characters" else []:
                 if not connection.execute("SELECT 1 FROM gear WHERE id = ?", (item["gearId"],)).fetchone():
                     raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
@@ -1525,8 +1627,8 @@ class ContentStore:
             record = {**clean, "id": chosen_id}
             self._write_record(connection, name, chosen_id, record, insert=existing is None)
             for field in spec.image_fields if existing else ():
-                if existing.get(field) != clean.get(field):
-                    self._prune_media(connection, existing.get(field))
+                for path in set(image_paths(existing.get(field))) - set(image_paths(clean.get(field))):
+                    self._prune_media(connection, path)
         return {"id": chosen_id}
 
     # --- Learning paths: Onboarding first, then optional paths that each teach one area -------------
@@ -1606,7 +1708,8 @@ class ContentStore:
                 )
             connection.execute(f"DELETE FROM {spec.table} WHERE id = ?", (record_id,))
             for field in spec.image_fields:
-                self._prune_media(connection, existing.get(field))
+                for path in image_paths(existing.get(field)):
+                    self._prune_media(connection, path)
 
     def save_media(self, body: dict[str, Any]) -> dict[str, str]:
         match = re.fullmatch(r"data:([a-z/+]+);base64,(.+)", str(body.get("dataUrl") or ""), re.S)
@@ -1679,9 +1782,9 @@ class ContentStore:
             # Gear and characters point at projects, which point back at characters: check references at commit.
             connection.execute("BEGIN")  # the pragma lasts until this transaction ends
             connection.execute("PRAGMA defer_foreign_keys = ON")
-            for table in ("character_stash", "job_participants", "archive_participants", "project_characters", "project_resources",
-                          "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects", "characters", "media",
-                          "outpost_state", "game_posts"):
+            for table in ("character_stash", "job_participants", "archive_participants", "archive_factions", "project_characters",
+                          "project_resources", "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects",
+                          "characters", "factions", "media", "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -1988,15 +2091,28 @@ class ContentStore:
             spec = COLLECTIONS[name]
             record = dict(record)
             for field in spec.image_fields:
-                filename = media_filename(record.get(field))
-                media = self.media(filename) if filename else None
-                if media:
-                    output[str(record[field]).removeprefix("data/")] = media[1]
-                elif filename:
-                    record[field] = None
+                kept = []
+                for path in image_paths(record.get(field)):
+                    filename = media_filename(path)
+                    media = self.media(filename) if filename else None
+                    if media:
+                        output[path.removeprefix("data/")] = media[1]
+                    if media or not filename:
+                        kept.append(path)
+                record[field] = kept if isinstance(record.get(field), list) else (kept[0] if kept else None)
             for field in spec.text_fields:
                 record[field] = scrub_archive_links(record.get(field) or "", public_archive)
             return record
+
+        public_rules = {post_id for post_id, post in published["game"].items() if post.get("type") == "rule"}
+        for faction in published["factions"].values():
+            faction = public_record("factions", faction)
+            exported["factions"].append({
+                **faction,
+                "relations": [{**item, "text": scrub_archive_links(item.get("text") or "", public_archive)}
+                              for item in faction.get("relations") or [] if item["factionId"] in published["factions"]],
+                "ruleId": faction.get("ruleId") if faction.get("ruleId") in public_rules else None,
+            })
 
         public_project = lambda project_id: project_id if project_id in published["projects"] else None
         exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId"))}
@@ -2033,6 +2149,7 @@ class ContentStore:
             entry = public_record("archive", entry)
             entry["details"] = {key: value for key, value in (entry.get("details") or {}).items() if key != "gmNotes"}
             entry["participantIds"] = [item for item in entry.get("participantIds", []) if item in published["characters"]]
+            entry["factionIds"] = [item for item in entry.get("factionIds", []) if item in published["factions"]]
             exported["archive"].append(entry)
 
         for job in published["jobs"].values():
@@ -2094,7 +2211,6 @@ class ContentStore:
                 credit["logo"] = None
         output["site.json"] = json_bytes(site)
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
-        public_rules = {post["id"] for post in game if post.get("type") != "announcement"}
         output["learning-paths.json"] = json_bytes([{**path, "ruleIds": [rule_id for rule_id in path["ruleIds"] if rule_id in public_rules]}
                                                     for path in self.learning_paths()])
         output["vocabulary.json"] = json_bytes({"functionGroups": self.function_vocabulary(), "interactions": self.function_interactions(),
