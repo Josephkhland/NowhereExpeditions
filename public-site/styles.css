@@ -2743,14 +2743,14 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
   .has-nav-toggle .search-toggle { margin-left: 0; }
 }
 
-/* ---------- Header: compact menu on desktop, folded below 1180px ---------- */
+/* ---------- Header: compact menu on desktop, folded at 1100px and below ---------- */
 .brand { white-space: nowrap; }
 .nav-link { padding: 0.6rem 0.7rem; }
 .main-nav { order: 1; flex-wrap: nowrap; }
 .search-toggle { order: 2; margin-left: 0.4rem; }
 .topbar { gap: 1rem; }
 
-@media (max-width: 1180px) {
+@media (max-width: 1100px) {
   /* The header folds to one row: brand and a Menu button that opens the links below it. */
   .has-nav-toggle .topbar {
     flex-direction: row;
@@ -2813,7 +2813,7 @@ tr[id^="form-"] { scroll-margin-top: 140px; }
 }
 
 /* One line per menu item on desktop. */
-@media (min-width: 1181px) {
+@media (min-width: 1101px) {
   .main-nav { gap: 0.25rem; }
   .nav-link { padding: 0.55rem 0.55rem; font-size: 0.7rem; letter-spacing: 0.06em; white-space: nowrap; }
   .nav-meta { margin-left: 0.6rem; }
@@ -2943,6 +2943,34 @@ a.rule-step:hover { text-decoration: underline; }
   .faction-hero.has-art::after { background: linear-gradient(0deg, rgba(13, 21, 23, 0.97) 35%, rgba(13, 21, 23, 0.35) 100%); }
   .faction-section { padding: 1rem; }
   .faction-glance div { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Header: the Encyclopedia dropdown (Factions, Archive, Discoveries) ---------- */
+.nav-dropdown { position: relative; display: flex; }
+.nav-dropdown-toggle { display: inline-flex; align-items: center; gap: 0.45rem; background: transparent; font: inherit; font-size: 0.72rem; cursor: pointer; }
+.nav-dropdown-caret { width: 0.45rem; height: 0.45rem; margin-top: -0.2rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform 0.2s ease; }
+.nav-dropdown.is-open .nav-dropdown-caret { margin-top: 0.15rem; transform: rotate(225deg); }
+.nav-dropdown.is-open .nav-dropdown-toggle { color: var(--text); border-color: var(--line-strong); background: rgba(122, 215, 209, 0.05); }
+.nav-dropdown-panel { position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 60; display: grid; gap: 0.2rem; width: 20rem; padding: 0.45rem; border: 1px solid var(--line-strong); background: var(--bg-alt); box-shadow: 0 18px 40px var(--shadow); }
+.nav-dropdown-panel[hidden] { display: none; }
+.nav-dropdown-item { display: grid; gap: 0.15rem; padding: 0.65rem 0.75rem; border-left: 2px solid transparent; color: var(--text); text-decoration: none; }
+.nav-dropdown-item strong { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.nav-dropdown-item span { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+.nav-dropdown-item:hover, .nav-dropdown-item:focus-visible { background: rgba(122, 215, 209, 0.07); border-left-color: var(--accent); }
+.nav-dropdown-item.active { border-left-color: var(--accent-2); background: rgba(224, 168, 93, 0.07); }
+
+/* Folded header (the Menu button): the three pages sit open under an "Encyclopedia" heading. */
+@media (max-width: 1100px) {
+  .has-nav-toggle .nav-dropdown { display: block; margin: 0.3rem 0; padding: 0.3rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .has-nav-toggle .nav-dropdown-toggle,
+  .has-nav-toggle .nav-dropdown-toggle.active { width: 100%; padding: 0.45rem 0.8rem 0.15rem; border: 0; background: none; color: var(--accent); font-size: 0.64rem; letter-spacing: 0.14em; pointer-events: none; }
+  .has-nav-toggle .nav-dropdown-caret { display: none; }
+  .has-nav-toggle .nav-dropdown-panel { position: static; width: auto; gap: 0.15rem; padding: 0; border: 0; background: none; box-shadow: none; }
+  .has-nav-toggle .nav-dropdown-item { padding: 0.75rem 0.8rem 0.75rem 1.4rem; }
+  .has-nav-toggle .nav-dropdown-item strong { color: var(--muted); font-size: 0.78rem; font-weight: 400; }
+  .has-nav-toggle .nav-dropdown-item.active strong,
+  .has-nav-toggle .nav-dropdown-item:hover strong { color: var(--text); }
+  .has-nav-toggle .nav-dropdown-item span { display: none; }
 }
 
 /* ---------- Phones ---------- */

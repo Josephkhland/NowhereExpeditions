@@ -2175,6 +2175,67 @@ const setActiveNav = () => {
   });
 };
 
+// Factions, Archive and Discoveries share one "Encyclopedia" entry in the header: a click-to-open dropdown on wide
+// screens, a labelled group inside the Menu on narrow ones. Without JavaScript the three plain links remain.
+// Must match the breakpoint where styles.css folds the header behind the Menu button.
+const HEADER_FOLD_QUERY = "(max-width: 1100px)";
+const ENCYCLOPEDIA_PAGES = [
+  ["factions.html", "Factions", "The powers of the world, and who might sponsor you"],
+  ["archive.html", "Archive", "Gates, session records, history and folklore"],
+  ["discoveries.html", "Discoveries", "Resources, Functions, Domains and spell Forms"],
+];
+
+const setupEncyclopediaMenu = () => {
+  const nav = document.querySelector(".site-header .main-nav");
+  if (!nav) return;
+  const links = ENCYCLOPEDIA_PAGES.map(([href]) => nav.querySelector(`.nav-link[href="${href}"]`)).filter(Boolean);
+  if (!links.length) return;
+  const activeHref = links.find((link) => link.classList.contains("active"))?.getAttribute("href");
+
+  const group = document.createElement("div");
+  group.className = `nav-dropdown${activeHref ? " is-active" : ""}`;
+  group.innerHTML = `
+    <button type="button" class="nav-link nav-dropdown-toggle${activeHref ? " active" : ""}" aria-expanded="false" aria-controls="nav-encyclopedia">
+      Encyclopedia<span class="nav-dropdown-caret" aria-hidden="true"></span>
+    </button>
+    <div class="nav-dropdown-panel" id="nav-encyclopedia" hidden>
+      ${ENCYCLOPEDIA_PAGES.map(([href, label, text]) => `
+        <a class="nav-dropdown-item${href === activeHref ? " active" : ""}" href="${href}" ${href === activeHref ? 'aria-current="page"' : ""}>
+          <strong>${label}</strong><span>${text}</span>
+        </a>`).join("")}
+    </div>`;
+  links[0].before(group);
+  links.forEach((link) => link.remove());
+
+  const toggle = group.querySelector(".nav-dropdown-toggle");
+  const panel = group.querySelector(".nav-dropdown-panel");
+  const setOpen = (open) => {
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    group.classList.toggle("is-open", open);
+  };
+  const folded = window.matchMedia(HEADER_FOLD_QUERY);
+  const close = () => { if (!folded.matches) setOpen(false); };
+  const applyMode = () => {
+    setOpen(folded.matches);
+    if (folded.matches) toggle.setAttribute("tabindex", "-1");
+    else toggle.removeAttribute("tabindex");
+  };
+  folded.addEventListener("change", applyMode);
+  applyMode();
+  toggle.addEventListener("click", () => { if (!folded.matches) setOpen(panel.hidden); });
+  document.addEventListener("click", (event) => { if (!group.contains(event.target)) close(); });
+  // Keyboard users: Escape closes and returns to the button; tabbing out of the menu closes it.
+  group.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !panel.hidden && !folded.matches) {
+      event.stopPropagation();
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+  group.addEventListener("focusout", (event) => { if (!group.contains(event.relatedTarget)) close(); });
+};
+
 // On narrow screens the links fold behind a Menu button, so the sticky header stays one short row.
 // Without JavaScript the header keeps its full, wrapped layout.
 const setupMobileNav = () => {
@@ -2183,7 +2244,7 @@ const setupMobileNav = () => {
   const nav = header?.querySelector(".main-nav");
   if (!topbar || !nav) return;
   nav.id ||= "main-nav";
-  const current = nav.querySelector(".nav-link.active")?.textContent.trim();
+  const current = (nav.querySelector(".nav-dropdown-item.active strong") || nav.querySelector(".nav-link.active"))?.textContent.trim();
   const button = document.createElement("button");
   button.type = "button";
   button.className = "nav-toggle";
@@ -2758,6 +2819,7 @@ const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: render
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();
+  setupEncyclopediaMenu();
   setupMobileNav();
   setupSiteSearch();
   renderFooterMap();

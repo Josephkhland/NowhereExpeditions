@@ -91,7 +91,7 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 
 **Site-wide features:**
 - **Search:** Ctrl+K, `/` or the Search button searches rules, Gates, Resources, characters and pages.
-- **Header and footer:** a sticky header that folds into a Menu button on narrow screens, and a footer site map.
+- **Header and footer:** a sticky header whose **Encyclopedia** dropdown groups Factions, Archive and Discoveries (click to open; on screens 1,100px wide or less the header folds into a Menu button and the three appear under an Encyclopedia heading), and a footer site map.
 - **Dice:** a Fate dice roller with roll history (`dice.js`, kept in the browser only).
 - **Markdown and links:** authored text supports Markdown (via `vendor/markdown-it`) and wiki links like `[[archive-id]]`.
 - **Deep links:** every record has a stable URL, such as `jobs.html#<id>`, `archive.html#<id>`, `characters.html#<id>#sheet`, `discoveries.html#function-Heat` or `game.html#post-<id>`.
