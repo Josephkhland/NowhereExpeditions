@@ -912,10 +912,15 @@ const markdown = (() => {
     tokens[index].tag = tokens[index - 2]?.tag || tokens[index].tag;
     return self.renderToken(tokens, index, options);
   };
+  // ![alt](src "caption") shows the caption under the image, so lore can say what to notice in a picture.
   const image = md.renderer.rules.image || renderDefault;
   md.renderer.rules.image = (tokens, index, options, env, self) => {
-    tokens[index].attrSet("loading", "lazy");
-    return image(tokens, index, options, env, self);
+    const token = tokens[index];
+    token.attrSet("loading", "lazy");
+    const caption = token.attrGet("title");
+    if (!caption) return image(tokens, index, options, env, self);
+    token.attrs = token.attrs.filter(([name]) => name !== "title");
+    return `<span class="rich-figure">${image(tokens, index, options, env, self)}<span class="rich-caption">${md.utils.escapeHtml(caption)}</span></span>`;
   };
   md.renderer.rules.table_open = () => '<div class="rich-table"><table>';
   md.renderer.rules.table_close = () => "</table></div>";

@@ -2909,6 +2909,12 @@ a.rule-step:hover { text-decoration: underline; }
 .entry-factions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; margin: 0.5rem 0 0; }
 .entry-factions .muted { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .archive-faction-filter { appearance: auto; }
+/* Captioned images in authored text: ![alt](src "caption"). */
+.rich-text img { max-width: 100%; height: auto; }
+.rich-figure { display: block; margin: 1.2rem 0; }
+.rich-figure img { display: block; width: 100%; border: 1px solid var(--line); }
+.rich-caption { display: block; margin-top: 0.45rem; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+
 /* Lore topics: a second filter row, and the topics of an open entry. */
 .topic-bar { align-items: center; margin-top: -0.4rem; }
 .topic-bar-label { margin-right: 0.3rem; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
