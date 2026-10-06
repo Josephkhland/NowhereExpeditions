@@ -2276,7 +2276,7 @@ function renderSiteEditor() {
         <div class="outpost-fields">
           <label class="publish-toggle field full"><input type="checkbox" name="showLaunch" ${site.showLaunch ? "checked" : ""} /><span><strong>Show the launch panel on the Overview</strong><span class="helper">It also hides itself once the launch time has passed.</span></span></label>
           ${field("Launch time", "launchAt", site.launchAt || "", { placeholder: "2026-11-06T20:00+02:00", help: "Date, time, and UTC offset. Athens is +02:00 in winter (from 25 October) and +03:00 in summer." })}
-          ${field("Time zone name", "launchLabel", site.launchLabel || "", { placeholder: "Athens time", help: "Shown next to the time; visitors also see it in their own time zone." })}
+          ${field("Time zone name", "launchLabel", site.launchLabel || "", { placeholder: "Athens time", help: "Visitors see the launch in their own time zone; this name is shown with the original time only to visitors in a different zone." })}
           ${field("Heading", "launchTitle", site.launchTitle || "", { full: true })}
           ${textarea("Introduction", "launchSummary", site.launchSummary || "", { full: true, rows: 3 })}
         </div>

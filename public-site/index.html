@@ -6,6 +6,7 @@
     <title>Nowhere Expeditions</title>
     <meta name="description" content="Public campaign site for the Nowhere Expeditions West Marches RPG campaign." />
     <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/markdown-it.min.js" defer></script>
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -72,6 +73,8 @@
         </div>
       </section>
 
+      <div id="announcement-banner" class="announcement-banner wrapper" hidden></div>
+
       <section class="start-here wrapper" aria-labelledby="start-here-title">
         <div class="start-here-head">
           <span class="kicker">New to the campaign?</span>
@@ -87,8 +90,6 @@
         </ol>
       </section>
       <section id="launch-panel" class="launch-panel wrapper" aria-labelledby="launch-title" hidden></section>
-
-      <div id="announcement-banner" class="announcement-banner wrapper" hidden></div>
 
       <nav class="section-tiles wrapper" aria-label="Campaign sections">
         <a href="outpost.html"><strong>Outpost</strong><span>The settlement: its capabilities, facilities, projects and troubles.</span></a>

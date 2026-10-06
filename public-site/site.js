@@ -637,20 +637,27 @@ const renderGame = async () => {
   route();
 };
 
-// The Overview shows the newest pinned announcement as a single line.
+// The Overview features the newest pinned announcement: its title, date and opening paragraph, with a way to the
+// full post.
 const renderAnnouncementBanner = async () => {
   const banner = document.getElementById("announcement-banner");
   if (!banner) return;
   try {
     const pinned = visibleAnnouncements(await fetchGame()).find((post) => post.pinned);
     if (!pinned) return;
+    const href = `game.html#post-${encodeURIComponent(pinned.id)}`;
+    const lede = String(pinned.summary || "").split(/\n\s*\n/).find((part) => part.trim()) || "";
     banner.innerHTML = `
-      <a class="announcement-banner-link" href="game.html#post-${encodeURIComponent(pinned.id)}">
-        <span class="kicker">Announcement</span>
-        <strong>${escapeHtml(pinned.title)}</strong>
-        <span class="muted">${escapeHtml(formatDate(pinned.publishedAt))}</span>
-        <span class="announcement-banner-arrow" aria-hidden="true">→</span>
-      </a>`;
+      <article class="announcement-feature${pinned.image ? " has-art" : ""}" aria-labelledby="announcement-feature-title">
+        ${pinned.image ? `<img class="announcement-feature-art" src="${escapeHtml(pinned.image)}" alt="" loading="lazy" onerror="this.closest('.has-art')?.classList.remove('has-art'); this.remove()" />` : ""}
+        <div class="announcement-feature-body">
+          <p class="announcement-feature-meta"><span class="announcement-feature-flag">Pinned announcement</span>
+            ${pinned.publishedAt ? `<span>${escapeHtml(formatDate(pinned.publishedAt))}</span>` : ""}</p>
+          <h2 id="announcement-feature-title"><a href="${href}">${escapeHtml(pinned.title)}</a></h2>
+          ${lede ? `<p class="announcement-feature-lede">${richInline(lede, { archiveById: new Map() })}</p>` : ""}
+          <a class="announcement-feature-cta" href="${href}">Read the announcement <span aria-hidden="true">&#8594;</span></a>
+        </div>
+      </article>`;
     banner.hidden = false;
   } catch (error) {
     console.warn("No announcements available.", error);
@@ -746,7 +753,8 @@ const renderLaunchPanel = async () => {
   const steps = site.roadmap || [];
   const done = steps.filter((step) => step.status === "done").length;
   const launchYear = Number(site.launchAt.slice(0, 4));
-  const visitorTime = launch.toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+  // The launch is shown in the visitor's own time zone; the GM's time zone only when it differs.
+  const visitorTime = `${launch.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, ${launch.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}`;
   const sameOffset = new Date(launch).getTimezoneOffset() === -Number((/([+-]\d{2}):(\d{2})$/.exec(site.launchAt) || [0, "+00", "00"]).slice(1, 3).reduce((hours, minutes) => Number(hours) * 60 + Math.sign(Number(hours) || 1) * Number(minutes)));
   const discord = safeUrl(site.discordUrl);
   panel.innerHTML = `
@@ -767,8 +775,8 @@ const renderLaunchPanel = async () => {
     }).join("")}</ol>` : ""}
     <div class="launch-countdown">
       <p class="launch-when"><span class="kicker">Countdown to the first session</span>
-        <span><strong>${escapeHtml(launchWallClock(site.launchAt))}</strong>${site.launchLabel ? ` ${escapeHtml(site.launchLabel)}` : ""}</span>
-        ${sameOffset ? "" : `<span class="muted">Your time: ${escapeHtml(visitorTime)}</span>`}</p>
+        <strong><time datetime="${escapeHtml(launch.toISOString())}">${escapeHtml(visitorTime)}</time></strong>
+        <span class="muted">In your local time${sameOffset ? "" : ` · ${escapeHtml(launchWallClock(site.launchAt))}${site.launchLabel ? ` ${escapeHtml(site.launchLabel)}` : ""}`}</span></p>
       <div class="countdown" role="timer" aria-label="Time until launch">
         ${["days", "hours", "minutes", "seconds"].map((unit) => `<div><span class="countdown-value" data-unit="${unit}">--</span><span class="countdown-label">${unit}</span></div>`).join("")}
       </div>
@@ -1521,6 +1529,7 @@ const renderArchive = async () => {
         ...references.entries.map((other) => `<li>${archiveLink(other)} <span class="muted">${escapeHtml(archiveTypeLabel(other.type))}</span></li>`)
       ];
       detail.innerHTML = `
+        <a class="back-link archive-back" href="#">← All records</a>
         <article class="detail-surface archive-entry archive-${escapeHtml(entry.type)}">
           <div class="detail-heading">
             <div>
@@ -1551,6 +1560,8 @@ const renderArchive = async () => {
       // A linked entry always opens, even when the current filter hides it from the list.
       const linked = campaign.archiveById.get(selectedHash());
       const selected = linked || filtered[0];
+      // Phones show either the list or the opened entry, never both stacked.
+      document.getElementById("archive-browse").classList.toggle("is-reading", Boolean(linked));
       list.innerHTML = filtered.length ? filtered.map((entry) => `
         <a class="entry-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" ${entry === selected ? 'aria-current="true"' : ""}>
           <span class="entry-name">${escapeHtml(entry.title)}</span>
@@ -1589,8 +1600,8 @@ const renderArchive = async () => {
     };
     window.addEventListener("hashchange", () => {
       route();
-      // On narrow screens the entry sits below the list.
-      if (!window.location.hash.startsWith("#explore/") && window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-detail").scrollIntoView({ block: "start" });
+      // On narrow screens the list and the entry swap places, so start from the top of the Archive.
+      if (!window.location.hash.startsWith("#explore/") && window.matchMedia("(max-width: 800px)").matches) document.getElementById("archive-browse").scrollIntoView({ block: "start" });
     });
     let resizeTimer;
     window.addEventListener("resize", () => {
@@ -1989,7 +2000,7 @@ const renderCharacterRoster = async () => {
           ${character.sheet ? `<div id="panel-sheet" role="tabpanel" aria-labelledby="tab-sheet">
             <div class="sheet-download">
               <a class="destination-link" href="sheet.html?id=${encodeURIComponent(character.id)}" target="_blank" rel="noopener">Open editable sheet <span aria-hidden="true">↗</span></a>
-              <p class="muted">Opens in a new tab. Edit during play; your changes stay in this browser. Afterwards press <strong>Save file</strong> there and send the file to the GM. Click a skill to roll it.</p>
+              <p class="muted">Opens in a new tab. Edit during play; your changes stay in this browser. Afterwards press <strong>Save file</strong> there and send the file to the GM. Click or tap a skill to roll it.</p>
             </div>
             ${renderFateSheet(character.sheet, character.name)}
             ${stash}
@@ -2277,7 +2288,7 @@ const renderDiscoveries = async () => {
     const strongest = (left, right) => interactionsOf(vocabulary, left, right);
     return `
       <h2>Interaction grid</h2>
-      <p class="muted">Every Word against every other. Click a square to open that pair in Combine.</p>
+      <p class="muted">Every Word against every other. Click or tap a square to open that pair in Combine.</p>
       <p class="grid-legend"><span class="grid-cell is-synergy"></span> Synergy <span class="grid-cell is-opposition"></span> Opposition <span class="grid-cell is-instability"></span> Instability <span class="grid-cell is-mixed"></span> Synergy and a risk</p>
       <div class="grid-scroll"><table class="interaction-grid"><thead><tr><th></th>${wordNames.map((name) => `<th scope="col"><span>${escapeHtml(name)}</span></th>`).join("")}</tr></thead>
         <tbody>${wordNames.map((row) => `<tr><th scope="row">${escapeHtml(row)}</th>${wordNames.map((column) => {
@@ -2448,12 +2459,16 @@ async function openSiteSearch() {
     dialog.id = "site-search";
     dialog.className = "site-search";
     dialog.innerHTML = `<div class="site-search-panel" role="dialog" aria-label="Search the site">
-      <input type="search" class="search-input" id="site-search-input" placeholder="Search rules, Gates, Resources, characters…" autocomplete="off" aria-label="Search the site" />
+      <div class="site-search-bar">
+        <input type="search" class="search-input" id="site-search-input" placeholder="Search rules, Gates, Resources, characters…" autocomplete="off" aria-label="Search the site" />
+        <button type="button" class="site-search-close" aria-label="Close search">&#10005;</button>
+      </div>
       <ul class="site-search-results" id="site-search-results" role="listbox"></ul>
       <p class="muted site-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></div>`;
     document.body.append(dialog);
     const input = dialog.querySelector("input");
     dialog.addEventListener("click", (event) => { if (event.target === dialog) closeSiteSearch(); });
+    dialog.querySelector(".site-search-close").addEventListener("click", closeSiteSearch);
     input.addEventListener("input", () => { siteSearch.active = 0; renderSiteSearch(input.value); });
     input.addEventListener("keydown", (event) => {
       if (event.key === "ArrowDown") { event.preventDefault(); siteSearch.active = Math.min(siteSearch.results.length - 1, siteSearch.active + 1); renderSiteSearch(); }
