@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "data/images/aurelian-empire-homeland-45e5f79b.jpg",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Aurelia",
     "Crown",
@@ -34,5 +34,8 @@
   "factionIds": [
     "aurelian-empire"
   ],
-  "details": {}
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
 }

@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "the One",
     "Most High",
@@ -38,5 +38,8 @@
   "factionIds": [
     "kharad-compact"
   ],
-  "details": {}
+  "details": {
+    "kind": "faith",
+    "startStep": null
+  }
 }

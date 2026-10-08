@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "data/images/vardic-holds-homeland-83dbd42f.jpg",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Vards",
     "Hold",
@@ -32,5 +32,8 @@
   "factionIds": [
     "vardic-holds"
   ],
-  "details": {}
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
 }

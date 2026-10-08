@@ -1,0 +1,14 @@
+{
+  "id": "anselm-hartree",
+  "name": "Anselm Hartree",
+  "type": "npc",
+  "status": "active",
+  "portrait": null,
+  "summary": "Senior Evaluator of the Gate Evaluation Committee. Vernan, University-trained, and one of the Committee's first evaluators, he stayed with it when it became independent. After the quarantine of Gate Four he drafted the Gate Evaluation Doctrine, and he still gives the first briefing to new Expeditioners whenever he can.\n\nPrecise, patient and politely immovable. \"Evidence, not proof\" is the phrase most associated with him; Expeditioners say it back to him, and he says he is glad someone was listening.",
+  "playerName": "",
+  "sheet": null,
+  "stash": [],
+  "coins": 0,
+  "downtime": 0,
+  "carryLimit": 6
+}

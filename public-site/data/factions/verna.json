@@ -53,5 +53,12 @@
   "clothing": [
     "data/images/verna-clothing-253dedfd.jpg"
   ],
-  "order": 6
+  "order": 6,
+  "readingPath": [
+    "verna-and-the-university",
+    "republic-of-verna",
+    "silencing-of-the-schools",
+    "university-of-verna",
+    "why-we-call-them-the-valeoran-ruins"
+  ]
 }

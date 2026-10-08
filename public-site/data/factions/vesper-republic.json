@@ -56,5 +56,12 @@
   "clothing": [
     "data/images/vesper-republic-clothing-e239bbb2.jpg"
   ],
-  "order": 3
+  "order": 3,
+  "readingPath": [
+    "the-vesper-republic",
+    "posters-glass-and-argument",
+    "faith-of-the-first-light",
+    "sacred-flame",
+    "stories-before-the-republic"
+  ]
 }

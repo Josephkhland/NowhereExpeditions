@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "assets/images/overview-island.png",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Valeor",
     "Maera",
@@ -32,5 +32,8 @@
   "factionIds": [
     "verna"
   ],
-  "details": {}
+  "details": {
+    "kind": "folklore",
+    "startStep": 1
+  }
 }

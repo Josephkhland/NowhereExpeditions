@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "cinnabar",
     "jade",
@@ -31,5 +31,8 @@
   "factionIds": [
     "tianzhao-mandate"
   ],
-  "details": {}
+  "details": {
+    "kind": "society",
+    "startStep": null
+  }
 }

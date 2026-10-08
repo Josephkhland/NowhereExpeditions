@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "clothing",
     "maker's mark",
@@ -28,5 +28,8 @@
   "factionIds": [
     "vardic-holds"
   ],
-  "details": {}
+  "details": {
+    "kind": "society",
+    "startStep": null
+  }
 }

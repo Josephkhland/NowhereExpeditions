@@ -56,5 +56,6 @@
   "clothing": [
     "data/images/vardic-holds-clothing-6e438b13.jpg"
   ],
-  "order": 1
+  "order": 1,
+  "readingPath": []
 }

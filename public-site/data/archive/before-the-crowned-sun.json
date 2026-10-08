@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "sailor superstition",
     "whistling",
@@ -26,5 +26,8 @@
   "factionIds": [
     "aurelian-empire"
   ],
-  "details": {}
+  "details": {
+    "kind": "folklore",
+    "startStep": null
+  }
 }
