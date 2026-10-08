@@ -1,0 +1,24 @@
+{
+  "id": "mirefilm",
+  "name": "Mirefilm",
+  "sourceType": "flora",
+  "description": "Yellow biological film, microbial as much as plant, capable of degrading a wide range of materials.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Corrode",
+    "Adapt"
+  ],
+  "specialProperty": "Laboratory cultures alter their behaviour after repeated exposure to resistant substances.",
+  "availability": "sample",
+  "supply": "Under quarantine with all G-04 material.",
+  "gateId": "yellow-mire",
+  "projectId": null,
+  "image": "data/images/mirefilm-icon-64195526.webp",
+  "imageCrop": {
+    "x": 82.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

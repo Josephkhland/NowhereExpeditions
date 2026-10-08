@@ -1,0 +1,24 @@
+{
+  "id": "lantern-pollen",
+  "name": "Lantern Pollen",
+  "sourceType": "flora",
+  "description": "Fine pollen that emits light in response to increased carbon dioxide concentration. Currently used experimentally in atmospheric warning systems.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Glow",
+    "React"
+  ],
+  "specialProperty": "",
+  "availability": "limited",
+  "supply": "",
+  "gateId": "green-vault",
+  "projectId": null,
+  "image": "data/images/lantern-pollen-icon-9578532a.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

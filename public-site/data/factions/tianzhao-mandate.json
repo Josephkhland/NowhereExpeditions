@@ -7,7 +7,7 @@
     "Mandate"
   ],
   "tagline": "Ancient bureaucratic civilization",
-  "summary": "An ancient bureaucratic civilization whose politics and culture are shaped by harmony, long-term consequence, celestial order and practical engagement with supernatural forces.",
+  "summary": "An ancient bureaucratic civilization whose politics and culture are shaped by harmony, long-term consequence, celestial order and a practical, administrative approach to the spirits it believes in.",
   "government": "Ancient bureaucracy",
   "knownFor": "",
   "coreValues": [
@@ -23,8 +23,24 @@
   "materials": "Lacquer, porcelain, paper seals, jade",
   "relations": [
     {
+      "factionId": "aurelian-empire",
+      "text": "A polite rivalry over ports, access and influence; tea is leverage."
+    },
+    {
+      "factionId": "kharad-compact",
+      "text": "An old trading partner that accepts Tianzhao's restrictions while the trade stays worthwhile."
+    },
+    {
       "factionId": "vardic-holds",
       "text": "Mutual respect for craft; disagreement over metaphysical caution."
+    },
+    {
+      "factionId": "vesper-republic",
+      "text": "Admires its science, not its constant agitation; older officials still say 'Solenne'."
+    },
+    {
+      "factionId": "verna",
+      "text": "Strong scholarly respect; Verna wants Tianzhao's archives, and access is granted sparingly."
     }
   ],
   "ruleId": "faction-tianzhao-mandate",

@@ -1,0 +1,23 @@
+{
+  "id": "white-thread",
+  "name": "White Thread",
+  "sourceType": "flora",
+  "description": "Hair-thin branching structures recovered beneath clear ice. Initially classified as mineral fibres; later inspection suggested cellular organization. Whether it is flora at all remains disputed.",
+  "domains": [
+    "frozen"
+  ],
+  "functions": [
+    "Reinforce"
+  ],
+  "specialProperty": "",
+  "availability": "sample",
+  "supply": "The source was lost with Gate One.",
+  "gateId": "white-expanse",
+  "projectId": null,
+  "image": "data/images/white-thread-icon-ca7dec38.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.1
+  }
+}

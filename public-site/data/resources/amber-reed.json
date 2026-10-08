@@ -1,0 +1,23 @@
+{
+  "id": "amber-reed",
+  "name": "Amber Reed",
+  "sourceType": "flora",
+  "description": "Hollow reed containing multiple layers of exceptionally fine membranes.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Filter"
+  ],
+  "specialProperty": "Although it grows in contaminated water, the fluid inside healthy specimens is remarkably clean.",
+  "availability": "sample",
+  "supply": "Under quarantine with all G-04 material.",
+  "gateId": "yellow-mire",
+  "projectId": null,
+  "image": "data/images/amber-reed-icon-6de9b8b6.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.15
+  }
+}

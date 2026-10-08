@@ -1,0 +1,21 @@
+{
+  "id": "vesperian-copper",
+  "name": "Vesperian Copper",
+  "sourceType": "ground",
+  "description": "High-purity industrial copper produced in enormous quantities for Vesper's electrical networks, public transit, laboratories and experimental machinery. Vesperian copper wire is common enough to be unremarkable anywhere modern electrical infrastructure exists.",
+  "domains": [
+    "vesper-republic"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/vesperian-copper-icon-d93e98c2.webp",
+  "imageCrop": {
+    "x": 62.0,
+    "y": 0,
+    "zoom": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "raincap-gel",
+  "name": "Raincap Gel",
+  "sourceType": "flora",
+  "description": "Translucent gel harvested from large shelf fungi. Absorbs and retains significant quantities of liquid.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Absorb",
+    "Store"
+  ],
+  "specialProperty": "Untreated samples remain biologically active.",
+  "availability": "available",
+  "supply": "",
+  "gateId": "green-vault",
+  "projectId": null,
+  "image": "data/images/raincap-gel-icon-973a4ce1.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

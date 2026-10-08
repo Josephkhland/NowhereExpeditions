@@ -1,0 +1,24 @@
+{
+  "id": "redbark",
+  "name": "Redbark",
+  "sourceType": "flora",
+  "description": "Dense outer tissue harvested from mature trees.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Regenerate",
+    "Reinforce"
+  ],
+  "specialProperty": "Minor cuts in fresh Redbark slowly close when it is kept in humid conditions.",
+  "availability": "limited",
+  "supply": "",
+  "gateId": "red-forest",
+  "projectId": null,
+  "image": "data/images/redbark-icon-59ae062f.webp",
+  "imageCrop": {
+    "x": 54.0,
+    "y": 0,
+    "zoom": 1.15
+  }
+}

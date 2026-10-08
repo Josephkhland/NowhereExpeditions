@@ -138,7 +138,7 @@
     {
       "id": "gate-evaluation-committee",
       "name": "Gate Evaluation Committee",
-      "summary": "Evaluates newly discovered Gates, maintains classifications and records, and provides recommendations regarding exploration and containment.",
+      "summary": "Founded by the University of Verna, now an independent body with members from all the factions. Evaluates newly discovered Gates, maintains classifications and records, clears expeditions and rules on exploration and containment.",
       "details": "",
       "projectId": null,
       "capabilities": [

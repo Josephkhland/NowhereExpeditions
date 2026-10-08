@@ -1,0 +1,21 @@
+{
+  "id": "signal-moth-silk",
+  "name": "Signal-Moth Silk",
+  "sourceType": "fauna",
+  "description": "Fine silk produced by a domesticated moth widely cultivated for lightweight textiles, instrument thread and specialty electrical insulation. Vesperian laboratories particularly value its consistency at very small diameters.",
+  "domains": [
+    "vesper-republic"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/signal-moth-silk-icon-f1bbf676.webp",
+  "imageCrop": {
+    "x": 47.0,
+    "y": 26.0,
+    "zoom": 1.15
+  }
+}

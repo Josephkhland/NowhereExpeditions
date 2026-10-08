@@ -1,0 +1,21 @@
+{
+  "id": "tianzhao-tea-leaves",
+  "name": "Tianzhao Tea Leaves",
+  "sourceType": "flora",
+  "description": "Tea cultivated throughout the Mandate in hundreds of regional varieties. Quality varies enormously, but processed leaves are among Tianzhao's most important cultural and commercial exports. Aurelian demand alone supports enormous plantations and shipping networks.",
+  "domains": [
+    "tianzhao-mandate"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/tianzhao-tea-leaves-icon-1557dfb4.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

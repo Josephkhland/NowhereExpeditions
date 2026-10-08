@@ -1,0 +1,59 @@
+{
+  "id": "white-expanse",
+  "type": "gate-record",
+  "title": "The White Expanse",
+  "subtitle": "",
+  "summary": "A still, frozen plain under a pearl-white sky, and the Gate that taught Endros what a Core does. Its Core was carried out; the Gate closed behind it.",
+  "content": "Gate One was the first confirmed Gate to form among the Valeoran Ruins. Beyond the threshold lay an open frozen landscape of white mineral plains, translucent ice fields and shallow basins beneath a pale sky. The environment proved cold but otherwise relatively survivable, and no large hostile fauna were confirmed.\n\nThe first object now classified as a **Core** was discovered several expeditions into the survey. At the time, nobody understood its significance. A recovery crew deliberately transported the sphere toward the Gate using improvised sledges, lifting equipment and sections of portable track. When the sphere crossed the threshold, Gate One immediately began destabilizing. The remaining crew evacuated, and the Gate collapsed shortly afterward.\n\nThis event remains the foundation of modern Core theory. See [[the-first-four-gates|Four Gates, Four Lessons]].\n\nEverything left beyond the threshold, including the unsurveyed parts of the Core Basin and the Eastern Needle Fields, was lost with the Gate. The Resources recovered before the collapse are the only supply there will ever be.\n\nNot everything brought back was a Resource. Two of the most consequential artifacts of the Gate era came out of Gate One before it closed: the device behind the Kharad Compact's [[the-kharad-compact|Glass Compass Crash]], and the spatial artifact whose restricted research Dr. Celeste Marin later leaked (see [[the-vesper-republic|The Vesper Republic]]). Neither can ever be compared with anything else from its source.\n\n> **Report G-01-17: Core Recovery Incident**\n>\n> *At approximately 14:22 Outpost time, Recovery Crew One successfully transported the unidentified spherical object across the Gate One threshold.*\n>\n> *Witnesses reported immediate movement in the surrounding Valeoran structure. The Gate aperture began contracting within seconds.*\n>\n> *Personnel remaining beyond the threshold were ordered to abandon all equipment and return immediately. The final expedition member cleared the Gate shortly before aperture failure.*\n>\n> *No casualties were recorded.*\n>\n> *Lost equipment included survey sledges, guide cable, drilling equipment, instrument stations and multiple sample containers.*\n>\n> *The recovered spherical object was transferred to secured storage.*\n>\n> *Effective immediately, no similar object encountered beyond a Gate is to be moved without explicit authorization.*\n\n## Archive Holdings\n\nReports on file for this Gate (not all are transcribed in the public Archive):\n\n- G-01 Initial Survey\n- G-01 Core Recovery Incident (above)\n- G-01 Post-Collapse Analysis",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": "data/images/g-01-white-expanse-poster-4d168890.webp",
+  "imageCaption": "The White Expanse as its crews described it, before the collapse: white mineral plains, transparent ice and needle-like crystal formations under a sunless, pearl-white sky. A survey camp and its sledge sit above the fractured ice; in the distance, tall spires ring a broad basin.",
+  "tags": [
+    "Gate One",
+    "G-01",
+    "Core",
+    "Core Basin",
+    "Singing Fracture",
+    "Paleglass",
+    "Whisper Ice",
+    "White Thread",
+    "Recovery Crew One",
+    "collapse"
+  ],
+  "topics": [],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "designation": "G-01",
+    "gateStatus": "collapsed",
+    "discoveredAt": "",
+    "environment": "Temperature: approximately −18°C to −7°C\nHumidity: very low\nAtmosphere: breathable\nWind: usually weak or absent\nPrecipitation: none recorded\nVisibility: exceptionally high\nThe landscape was dominated by pale stone, frost, transparent ice and needle-like mineral formations. No visible sun was observed: the sky produced a uniform pearl-white illumination, and shadows were faint and diffuse. No expedition ever recorded snowfall, rain or cloud movement.",
+    "knownTraits": [
+      "Exceptional Acoustics: sound travelled significantly farther than expected. Crews reported hearing machinery, voices and impacts from well beyond normal audible range. Never fully explained.",
+      "Resonant Ice Fractures: strong impacts sometimes produced cracks at distant points rather than immediately around the source.",
+      "Extreme Exposure: the calm weather led several crews to underestimate the danger of prolonged cold."
+    ],
+    "knownHazards": [
+      "Prolonged cold, made more dangerous by calm, deceptively mild-seeming weather.",
+      "Ice fractures that open away from the point of impact."
+    ],
+    "knownLocations": [
+      "Threshold Plain: flat terrain immediately beyond the original Gate. Most early camps were established here.",
+      "The Singing Fracture: a deep crevasse from which Expeditioners repeatedly reported faint low tones. No source was identified.",
+      "Core Basin: a broad circular depression ringed by tall white mineral spires, where the Core floated above the centre. Not fully surveyed before the collapse.",
+      "Eastern Needle Fields: a large concentration of narrow crystalline structures. Only partially mapped.",
+      "All locations: LOST WITH GATE."
+    ],
+    "domains": [
+      "frozen"
+    ],
+    "knownCreatures": [
+      "No large hostile fauna confirmed."
+    ],
+    "core": "recovered",
+    "access": "Impossible",
+    "significance": "First confirmed Gate. First Core recovery. First Gate collapse."
+  }
+}

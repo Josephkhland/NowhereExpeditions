@@ -23,11 +23,32 @@
   "visualSummary": "Cities of pale stone, turquoise, copper, patterned textiles, formal masks and dense commercial architecture.",
   "palette": "Pale stone, turquoise, copper",
   "materials": "",
-  "relations": [],
+  "relations": [
+    {
+      "factionId": "aurelian-empire",
+      "text": "Deeply interdependent: finance and insurance for imperial markets and naval protection."
+    },
+    {
+      "factionId": "vardic-holds",
+      "text": "Warm, practical trade; Kharadis find the Vardic distrust of debt sensible, if unsophisticated."
+    },
+    {
+      "factionId": "vesper-republic",
+      "text": "An important customer and a loud critic."
+    },
+    {
+      "factionId": "tianzhao-mandate",
+      "text": "One of the oldest great trade relationships: patient negotiation on both sides."
+    },
+    {
+      "factionId": "verna",
+      "text": "Distant, complicated and functional, for reasons that go back to the Silencing of the Schools."
+    }
+  ],
   "ruleId": "faction-kharad-compact",
   "sponsorFraming": "",
   "extraName": "Established Credit",
-  "extraRule": "A **Minor Obligation** slot that can absorb Coins-related stress or costs: someone covers the cost now, and you record the debt, favour or contract until it is settled.",
+  "extraRule": "An extra Mild Consequence slot, **Minor Obligation**: instead of paying up to 2 Coins, someone covers the cost and you record the debt. You clear it by completing a Project and offering its result to the Kharad Compact.",
   "expectations": "Kharadi sponsors may expect their people to:\n\n- honour every agreement they make;\n- deal in honest measure;\n- settle their obligations, on time or by negotiation;\n- protect their sponsor's reputation, and their own.",
   "flag": "data/images/kharad-compact-flag-c402892f.jpg",
   "homeland": "data/images/kharad-compact-homeland-7134d104.jpg",

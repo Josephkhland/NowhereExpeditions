@@ -1,0 +1,21 @@
+{
+  "id": "celestial-silk",
+  "name": "Celestial Silk",
+  "sourceType": "fauna",
+  "description": "High-grade silkworm fibre produced under carefully regulated cultivation and processing standards. Used for clothing, fine cordage, medical thread, ritual goods and precision manufacturing. The name is commercial, not supernatural.",
+  "domains": [
+    "tianzhao-mandate"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/celestial-silk-icon-daf7927a.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

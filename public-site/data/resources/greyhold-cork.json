@@ -1,0 +1,21 @@
+{
+  "id": "greyhold-cork",
+  "name": "Greyhold Cork",
+  "sourceType": "flora",
+  "description": "Industrial cork harvested from plantations supplying shipping, laboratories and military logistics. Used for packing, seals, insulation, bottle stoppers, vibration protection and equipment transport. Large quantities are stocked anywhere Imperial shipping operates.",
+  "domains": [
+    "aurelian-empire"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/greyhold-cork-icon-c6605c0b.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1
+  }
+}

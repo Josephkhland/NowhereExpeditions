@@ -1,0 +1,21 @@
+{
+  "id": "imperial-kaolin",
+  "name": "Imperial Kaolin",
+  "sourceType": "ground",
+  "description": "Fine pale clay used in Tianzhao porcelain production. Mining districts supplying Imperial kilns have operated for centuries, and highly standardised grades are traded throughout the Mandate.",
+  "domains": [
+    "tianzhao-mandate"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/imperial-kaolin-icon-8caa49f5.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 7.0,
+    "zoom": 1
+  }
+}
