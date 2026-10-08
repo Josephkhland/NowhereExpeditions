@@ -190,7 +190,8 @@ class ContentStoreTests(unittest.TestCase):
             with self.subTest(entry_type=entry_type):
                 entry = self.store.save_record("archive", None, {"type": entry_type, "title": f"A {entry_type}",
                                                                  "details": GATE_DETAILS, "published": True})["id"]
-                self.assertEqual(self.record("archive", entry)["details"], {}, "Gate metadata is not kept on other types")
+                self.assertEqual(self.record("archive", entry)["details"], {"gateIds": []} if entry_type == "newspaper" else {},
+                                 "Gate metadata is not kept on other types; a bulletin can only name its Gates")
         job = self.store.save_record("jobs", None, {
             "title": "Return to the Sunken Archive", "designation": "017-C", "type": "expedition", "status": "open",
             "scheduledAt": "2026-10-03T19:00", "organizerId": varga, "participantIds": [oren, mara, oren],
@@ -228,6 +229,10 @@ class ContentStoreTests(unittest.TestCase):
             self.store.save_record("jobs", None, {"title": "X", "crewMin": 5, "crewMax": 2})
         with self.assertRaisesRegex(ManagerError, "gateStatus must be one of"):
             self.store.save_record("archive", None, {"type": "gate-record", "title": "X", "details": {"designation": "G-1", "gateStatus": "haunted"}})
+        for status in ("restricted", "quarantined"):
+            gate = self.store.save_record("archive", None, {"type": "gate-record", "title": f"Gate {status}", "details": {"designation": f"G-{status}", "gateStatus": status}})
+            saved = next(item for item in self.store.state()["archive"] if item["id"] == gate["id"])
+            self.assertEqual(saved["details"]["gateStatus"], status)
         with self.assertRaisesRegex(ManagerError, "already uses the Gate designation"):
             self.store.save_record("archive", None, {"type": "gate-record", "title": "Dup", "details": {"designation": "g_03"}})
         with self.assertRaisesRegex(ManagerError, "type must be one of"):
@@ -313,7 +318,7 @@ class ContentStoreTests(unittest.TestCase):
         self.store.export_site()
         gate = read_json(self.export_dir / "data" / "archive" / "g-03.json")
         self.assertEqual(set(gate), {"id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt",
-                                     "eventDate", "image", "tags", "topics", "participantIds", "factionIds", "details"})
+                                     "eventDate", "image", "imageCaption", "tags", "topics", "participantIds", "factionIds", "details"})
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
                           "featured", "promoLabel", "discount", "projectId"})
@@ -612,7 +617,7 @@ class ContentStoreTests(unittest.TestCase):
             self.store.save_record("resources", None, {"name": "Dune salt", "domains": ["arid"]})
         self.store.export_site()
         exported = read_json(self.export_dir / "data" / "vocabulary.json")["domains"]
-        self.assertIn({"key": "frozen", "name": "Glacial", "colour": "#9fdcec", "description": saved[4]["description"]}, exported)
+        self.assertIn({"key": "frozen", "name": "Glacial", "colour": "#9fdcec", "description": saved[4]["description"], "kind": "environment"}, exported)
         for bad in ([], [{"name": "A"}, {"name": "a"}], [{"name": "A", "colour": "red"}]):
             with self.assertRaises(ManagerError):
                 self.store.save_domain_vocabulary(bad)
@@ -1181,6 +1186,177 @@ class ContentStoreTests(unittest.TestCase):
             rule = send("/api/game", {"data": {"type": "rule", "title": "Choose a route", "category": "Jobs", "published": True}})["id"]
             send("/api/export", {})
             self.assertIn(rule, [item["id"] for item in read_json(self.export_dir / "data" / "game.json")])
+        finally:
+            stop()
+
+    def test_origin_domains_describe_trade_goods_not_gates(self) -> None:
+        domains = self.store.domain_vocabulary()
+        self.assertTrue(all(domain["kind"] == "environment" for domain in domains), "Domains saved before kinds are environments")
+        self.store.save_domain_vocabulary([*domains, {"name": "Vardic Holds", "colour": "#a08c7a", "description": "Origin.", "kind": "origin"}])
+        self.assertEqual(self.store.domain_vocabulary()[-1]["key"], "vardic-holds")
+        vocabulary = self.store.state()["vocabulary"]
+        self.assertIn("vardic-holds", vocabulary["domains"])
+        self.assertNotIn("vardic-holds", vocabulary["environmentDomains"])
+        iron = self.store.save_record("resources", None, {"name": "Bloom Iron", "domains": ["vardic-holds"], "availability": "available",
+                                                          "hiddenFunctions": ["Reinforce"], "published": True})["id"]
+        self.assertEqual(self.record("resources", iron)["domains"], ["vardic-holds"])
+        with self.assertRaisesRegex(ManagerError, "origin, not a Gate environment"):
+            self.store.save_record("archive", None, {"type": "gate-record", "title": "Forge", "details": {"designation": "G-90", "domains": ["vardic-holds"]}})
+        self.store.save_record("archive", None, {"type": "gate-record", "title": "Forge", "details": {"designation": "G-90", "domains": ["volcanic"]}})
+        with self.assertRaisesRegex(ManagerError, "must stay an environment"):
+            self.store.save_domain_vocabulary([{**domain, "kind": "origin"} if domain["key"] == "volcanic" else domain
+                                               for domain in self.store.domain_vocabulary()])
+        self.store.sync_site_data()
+        exported = read_json(self.data_dir / "resources" / f"{iron}.json")
+        self.assertEqual(exported["domains"], ["vardic-holds"])
+        self.assertNotIn("hiddenFunctions", exported)
+        self.assertEqual(read_json(self.data_dir / "vocabulary.json")["domains"][-1]["kind"], "origin")
+
+    def test_resource_icons_and_gate_posters_are_published_images(self) -> None:
+        icon = self.store.save_media({"dataUrl": "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode(), "filename": "Paleglass.png", "kind": "image"})["path"]
+        poster = self.store.save_media({"dataUrl": "data:image/png;base64," + base64.b64encode(PNG_BYTES).decode(), "filename": "g-03-poster.png", "kind": "image"})["path"]
+        resource = self.store.save_record("resources", None, {"name": "Paleglass", "gateId": "g-03", "image": icon, "published": True})["id"]
+        self.store.save_record("archive", "g-03", {**self.record("archive", "g-03"), "image": poster, "imageCaption": "Crimson leaves; light in the station."})
+        self.store.sync_site_data()
+        self.assertEqual(read_json(self.data_dir / "resources" / f"{resource}.json")["image"], icon)
+        self.assertEqual(read_json(self.data_dir / "resources" / f"{resource}.json")["imageCrop"], {"x": 0, "y": 0, "size": 100, "ratio": 1})
+        framed = self.store.save_record("resources", resource, {**self.record("resources", resource),
+                                                               "imageCrop": {"x": -10, "y": 900, "size": 400, "ratio": 1.25}})["id"]
+        self.assertEqual(self.record("resources", framed)["imageCrop"], {"x": -10, "y": 500, "size": 150, "ratio": 1.25}, "the square is kept within its limits")
+        legacy = self.store.save_record("resources", resource, {**self.record("resources", resource), "imageCrop": {"x": 50, "y": 50, "zoom": 2}})["id"]
+        self.assertEqual(self.record("resources", legacy)["imageCrop"], {"x": 25, "y": 25, "size": 50, "ratio": 1}, "old zoom framings become a centred square")
+        with self.assertRaisesRegex(ManagerError, "Icon framing"):
+            self.store.save_record("resources", resource, {**self.record("resources", resource), "imageCrop": {"size": "big"}})
+        gate = read_json(self.data_dir / "archive" / "g-03.json")
+        self.assertEqual((gate["image"], gate["imageCaption"]), (poster, "Crimson leaves; light in the station."))
+        self.assertTrue((self.site_dir / icon).exists())
+        self.assertTrue((self.site_dir / poster).exists())
+
+    def test_gate_pages_fields_and_links(self) -> None:
+        gate = self.record("archive", "g-03")
+        self.store.save_record("archive", "g-03", {**gate, "details": {**gate["details"], "core": "located", "access": "Clearance required",
+            "significance": "A singing corridor.", "hotspots": [{"x": 1, "y": 1}]}})
+        details = self.record("archive", "g-03")["details"]
+        self.assertEqual((details["core"], details["access"], details["significance"]), ("located", "Clearance required", "A singing corridor."))
+        self.assertNotIn("hotspots", details, "poster hotspots were removed")
+        with self.assertRaisesRegex(ManagerError, "core must be one of"):
+            self.store.save_record("archive", "g-03", {**gate, "details": {**gate["details"], "core": "melted"}})
+        report = self.record("archive", "gate-note")
+        self.store.save_record("archive", "gate-note", {**report, "details": {**report["details"], "gateIds": ["g-03"]}})
+        with self.assertRaisesRegex(ManagerError, "is not a Gate"):
+            self.store.save_record("archive", "gate-note", {**report, "details": {**report["details"], "gateIds": ["route-note"]}})
+        job = self.record("jobs", "e-17")
+        self.store.save_record("jobs", "e-17", {**job, "gateId": "g-03"})
+        with self.assertRaisesRegex(ManagerError, "gate-record"):
+            self.store.save_record("jobs", "e-17", {**job, "gateId": "route-note"})
+        with self.assertRaisesRegex(ManagerError, "Gates|gateId"):
+            self.store.delete_record("archive", "g-03")
+        self.store.sync_site_data()
+        self.assertEqual(read_json(self.data_dir / "archive" / "g-03.json")["details"]["core"], "located")
+        self.assertEqual(read_json(self.data_dir / "archive" / "gate-note.json")["details"]["gateIds"], ["g-03"])
+        self.assertEqual(read_json(self.data_dir / "jobs" / "e-17.json")["gateId"], "g-03")
+        self.store.save_record("archive", "g-03", {**self.record("archive", "g-03"), "published": False})
+        self.store.sync_site_data()
+        self.assertEqual(read_json(self.data_dir / "archive" / "gate-note.json")["details"]["gateIds"], [])
+        self.assertIsNone(read_json(self.data_dir / "jobs" / "e-17.json")["gateId"])
+
+    # --- continuity issues ---
+
+    def gate_issue(self, **fields) -> dict:
+        return {"title": "Two choirs", "severity": "major", "category": "contradiction", "summary": "They disagree.",
+                "sides": [{"label": "Gate", "collection": "archive", "recordId": "g-03", "field": "content", "excerpt": "Harmonic"},
+                          {"label": "Environment", "collection": "archive", "recordId": "g-03", "field": "details.environment",
+                           "excerpt": "drowned corridor"},
+                          {"label": "Packet", "excerpt": "The GM's packet says it is dry."}], **fields}
+
+    def issue(self, issue_id: str) -> dict:
+        return next(item for item in self.store.state()["issues"] if item["id"] == issue_id)
+
+    def test_issue_sides_are_anchored_to_record_text(self) -> None:
+        issue_id = self.store.save_issue(None, self.gate_issue())["id"]
+        self.assertEqual(issue_id, "two-choirs")
+        issue = self.issue(issue_id)
+        self.assertEqual(issue["status"], "open")
+        self.assertEqual([side["anchor"]["state"] for side in issue["sides"]], ["ok", "ok", "note"])
+        self.assertEqual(issue["sides"][1]["anchor"]["before"], "A ")
+        self.assertEqual(issue["sides"][1]["anchor"]["after"], ".")
+        self.assertEqual(self.store.save_issue(None, self.gate_issue())["id"], "two-choirs-2")
+        with self.assertRaisesRegex(ManagerError, "not found in that field"):
+            self.store.save_issue(None, self.gate_issue(sides=[{"collection": "archive", "recordId": "g-03", "field": "content", "excerpt": "Nope"}]))
+        with self.assertRaisesRegex(ManagerError, "not a text field"):
+            self.store.save_issue(None, self.gate_issue(sides=[{"collection": "archive", "recordId": "g-03", "field": "details", "excerpt": "x"}]))
+        with self.assertRaisesRegex(ManagerError, "no archive entry"):
+            self.store.save_issue(None, self.gate_issue(sides=[{"collection": "archive", "recordId": "nope", "field": "content", "excerpt": "x"}]))
+        # Editing the record outside the issue leaves the side stale, which the manager shows.
+        self.store.save_record("archive", "g-03", {**self.record("archive", "g-03"), "content": "Silence."})
+        self.assertEqual(self.issue(issue_id)["sides"][0]["anchor"]["state"], "stale")
+
+    def test_resolving_with_edits_rewrites_the_records_and_can_be_undone(self) -> None:
+        issue_id = self.store.save_issue(None, self.gate_issue())["id"]
+        result = self.store.resolve_issue(issue_id, {"kind": "edited", "note": "Agreed on dry.", "edits": [
+            {"side": 0, "replacement": "Dry"}, {"side": 1, "replacement": "dry corridor"}, {"side": 2, "replacement": "The GM's packet says it is dry."}]})
+        self.assertEqual(result, {"id": issue_id, "status": "resolved", "edited": 2})
+        gate = self.record("archive", "g-03")
+        self.assertEqual(gate["content"], "Dry patterns.")
+        self.assertEqual(gate["details"]["environment"], "A dry corridor.")
+        self.assertTrue(gate["published"])
+        issue = self.issue(issue_id)
+        self.assertEqual(issue["status"], "resolved")
+        self.assertEqual(issue["resolution"]["note"], "Agreed on dry.")
+        self.assertEqual([(edit["before"], edit["after"]) for edit in issue["resolution"]["edits"]],
+                         [("Harmonic", "Dry"), ("drowned corridor", "dry corridor")])
+        self.assertEqual([side["anchor"]["state"] for side in issue["sides"]], ["ok", "ok", "note"])
+        self.assertEqual(self.store.reopen_issue(issue_id, {"undo": True})["undone"], 2)
+        gate = self.record("archive", "g-03")
+        self.assertEqual((gate["content"], gate["details"]["environment"]), ("Harmonic patterns.", "A drowned corridor."))
+        issue = self.issue(issue_id)
+        self.assertEqual((issue["status"], issue["resolution"]), ("open", None))
+        self.assertEqual([event["kind"] for event in issue["history"]], ["edited", "reopened"])
+
+    def test_resolving_checks_every_edit_before_saving_any(self) -> None:
+        issue_id = self.store.save_issue(None, self.gate_issue())["id"]
+        gate = self.record("archive", "g-03")
+        self.store.save_record("archive", "g-03", {**gate, "details": {**gate["details"], "environment": "Changed meanwhile."}})
+        with self.assertRaisesRegex(ManagerError, "Environment: the text to replace was not found"):
+            self.store.resolve_issue(issue_id, {"kind": "edited", "edits": [{"side": 0, "replacement": "Dry"}, {"side": 1, "replacement": "dry"}]})
+        self.assertEqual(self.record("archive", "g-03")["content"], "Harmonic patterns.")
+        self.assertEqual(self.issue(issue_id)["status"], "open")
+        with self.assertRaisesRegex(ManagerError, "Nothing was changed"):
+            self.store.resolve_issue(issue_id, {"kind": "edited", "edits": [{"side": 0, "replacement": "Harmonic"}]})
+        with self.assertRaisesRegex(ManagerError, "cannot be edited here"):
+            self.store.resolve_issue(issue_id, {"kind": "edited", "edits": [{"side": 2, "replacement": "Other"}]})
+        with self.assertRaisesRegex(ManagerError, "only applied when resolving with edits"):
+            self.store.resolve_issue(issue_id, {"kind": "intentional", "edits": [{"side": 0, "replacement": "Dry"}]})
+        self.assertEqual(self.store.resolve_issue(issue_id, {"kind": "intentional", "note": "Both true."})["status"], "resolved")
+        self.assertEqual(self.issue(issue_id)["resolution"]["kind"], "intentional")
+        self.store.reopen_issue(issue_id, {})
+        self.assertEqual(self.store.resolve_issue(issue_id, {"kind": "deferred"})["status"], "deferred")
+        self.assertIsNone(self.issue(issue_id)["resolution"])
+
+    def test_issues_stay_out_of_the_site_and_survive_import(self) -> None:
+        issue_id = self.store.save_issue(None, self.gate_issue())["id"]
+        self.store.sync_site_data()
+        self.assertFalse(any("Two choirs" in path.read_text(encoding="utf-8") for path in self.data_dir.rglob("*.json")))
+        self.store.import_site()
+        self.assertEqual(self.issue(issue_id)["title"], "Two choirs")
+        self.store.delete_issue(issue_id)
+        self.assertEqual(self.store.state()["issues"], [])
+
+    def test_issue_routes(self) -> None:
+        send, stop = self.serve()
+        try:
+            before = self.store.sync_status()
+            issue_id = send("/api/issues", {"data": self.gate_issue()})["id"]
+            self.assertEqual(self.store.sync_status(), before)  # bookkeeping is not a site change
+            send(f"/api/issues/{issue_id}", {"data": {**self.gate_issue(), "title": "Renamed"}}, "PUT")
+            self.assertEqual(self.issue(issue_id)["title"], "Renamed")
+            self.assertEqual(send(f"/api/issues/{issue_id}/resolve", {"kind": "edited", "edits": [{"side": 0, "replacement": "Dry"}]})["edited"], 1)
+            self.assertEqual(send(f"/api/issues/{issue_id}/reopen", {"undo": True})["undone"], 1)
+            with self.assertRaises(HTTPError) as caught:
+                send("/api/issues", {"data": {"title": ""}})
+            self.assertEqual(caught.exception.code, 400)
+            send(f"/api/issues/{issue_id}", method="DELETE")
+            self.assertEqual(self.store.state()["issues"], [])
         finally:
             stop()
 

@@ -21,3 +21,6 @@ desktop.ini
 
 # Written by the deploy workflow (.github/scripts/release_version.py); never committed.
 public-site/version.json
+
+# Lore entry drafts (nowhere-lore-writer skill); the content manager database is the source of truth.
+lore/

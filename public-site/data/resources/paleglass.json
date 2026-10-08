@@ -1,0 +1,24 @@
+{
+  "id": "paleglass",
+  "name": "Paleglass",
+  "sourceType": "ground",
+  "description": "A milky translucent mineral recovered from beneath several ice shelves.",
+  "domains": [
+    "frozen"
+  ],
+  "functions": [
+    "Dampen",
+    "Store"
+  ],
+  "specialProperty": "Changes temperature exceptionally slowly and strongly resists sudden thermal variation.",
+  "availability": "limited",
+  "supply": "No further supply can be obtained: the source was lost when Gate One collapsed. Remaining stocks only.",
+  "gateId": "white-expanse",
+  "projectId": null,
+  "image": "data/images/paleglass-icon-52c90d42.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.1
+  }
+}

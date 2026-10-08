@@ -1,0 +1,69 @@
+{
+  "id": "green-vault",
+  "type": "gate-record",
+  "title": "The Green Vault",
+  "subtitle": "",
+  "summary": "A warm, humid ecosystem inside what looks like an artificial structure. Its Core was found and deliberately left in place, and the Gate has stayed open ever since, with a University laboratory living beside it.",
+  "content": "The Green Vault is an enormous enclosed ecosystem apparently contained within an artificial structure. It is warm, humid and biologically dense. No exterior has been located. Large structural ribs span overhead, supporting or intersecting extensive hanging vegetation, fungal shelves and root systems.\n\nAfter the Core was located, researchers deliberately chose not to remove it. A permanent forward laboratory was built nearby, and Gate Two has remained stable ever since. It is the strongest evidence for the current hypothesis that **a Gate remains open while its Core remains beyond the threshold**. See [[the-first-four-gates|Four Gates, Four Lessons]].\n\nThe laboratory is the [[university-of-verna|University of Verna]]'s **Verna Forward Laboratory**, known to everyone as **the Greenhouse**. Its main difficulty has never been attack. It has been upkeep: the Vault grows over anything that stands still.\n\nThe black metallic fragment that broke Edda Skorn's hammer came back with an early Green Vault expedition (see [[the-vardic-holds|The Vardic Holds]]).\n\n## Common Specimens\n\nMaterials Expeditioners often bring back that are not currently classified as useful Resources:\n\n- **Green Shell Fragment**: from climbing herbivores. Durable, but no confirmed anomalous Function.\n- **Black Root Sap**: highly adhesive when fresh. Chemically interesting, not considered exceptional.\n- **Glasswing Husk**: a transparent insect casing. Frequently collected by new Expeditioners; low research priority.\n- **Blue Pool Water**: full of microorganisms. No confirmed anomalous Function.\n\n> **Report G-02-63: Six-Month Forward Lab Review**\n>\n> *Permanent occupation remains viable.*\n>\n> *Primary difficulty continues to be maintenance rather than immediate threat. Vegetation has entered electrical conduits on eleven recorded occasions. Raincap growth has been discovered inside ventilation systems despite filtration.*\n>\n> *Crew morale remains acceptable.*\n>\n> *The Core has shown no measurable movement. The Gate aperture remains stable.*\n>\n> *Recommendation: Continue occupation. Do not disturb Core. Expand survey of Lower Channels.*\n\n## Archive Holdings\n\nReports on file for this Gate (not all are transcribed in the public Archive):\n\n- G-02 Initial Ecological Survey\n- G-02 Core Non-Removal Recommendation\n- G-02 Six-Month Forward Laboratory Review (above)\n- G-02 Lower Channels Survey: INCOMPLETE",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": "data/images/g-02-green-vault-poster-2045499e.webp",
+  "imageCaption": "The Green Vault: hanging vegetation, fungal shelves and giant leaf basins brimming with condensation, under the great structural ribs that span the whole ecosystem. Lantern-lit walkways and rope bridges thread through the mist, and at the heart of the ribs glows the shimmer crews associate with the Core.",
+  "tags": [
+    "Gate Two",
+    "G-02",
+    "Greenhouse",
+    "Verna Forward Laboratory",
+    "Core Grove",
+    "Threshold Camp",
+    "Hanging Pools",
+    "Lower Channels",
+    "Vaultvine Fibre",
+    "Raincap Gel",
+    "Lantern Pollen",
+    "Specimens",
+    "University of Verna"
+  ],
+  "topics": [],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "designation": "G-02",
+    "gateStatus": "active",
+    "discoveredAt": "",
+    "environment": "Temperature: 24°C to 31°C\nHumidity: 85–100%\nAtmosphere: breathable\nSpore load: high\nRainfall: frequent local condensation\nLighting: a repeating bright and dim cycle\nWater continually condenses on the upper structure, and localized rainfall may begin without warning. The ecosystem grows aggressively across exposed equipment and structures: unmaintained surfaces can become overgrown within days.",
+    "knownTraits": [
+      "Everything Finds Something to Grow On: life colonizes exposed surfaces quickly.",
+      "Machines Become Habitats: warm machinery attracts vines, fungal mats and small native organisms.",
+      "Seasons Without Weather: sections of the Vault move between flowering, growth and dormancy without obvious climatic cause."
+    ],
+    "knownHazards": [
+      "Respiratory irritation from spores.",
+      "Rapid overgrowth.",
+      "Root damage to equipment and structures.",
+      "Unstable elevated pathways.",
+      "Small nectar-feeding fauna attracted to blood and perspiration.",
+      "Localized fungal blooms."
+    ],
+    "knownLocations": [
+      "Threshold Camp: the first long-term installation established beyond a Gate.",
+      "Verna Forward Laboratory (\"the Greenhouse\"): laboratories, sample storage, bunks, generators and medical facilities.",
+      "Core Grove: a wide clearing dominated by enormous arching roots, with the Core floating at its centre. The roots have grown around it; whether they predate the Core's presence is unknown.",
+      "Hanging Pools: large natural basins formed by enormous leaf-like growths high above the forest floor.",
+      "Lower Channels: water-filled tunnels and passages beneath the mapped ecosystem. Several appear unusually regular. SURVEY STATUS: INCOMPLETE.",
+      "Eastern Growth Zone: a dense region of rapid vegetation. Repeatedly cleared routes tend to become unusable within weeks."
+    ],
+    "domains": [
+      "verdant"
+    ],
+    "knownCreatures": [
+      "Climbing herbivores (source of Green Shell Fragments).",
+      "Glasswing insects.",
+      "Small nectar-feeding fauna attracted to blood and perspiration."
+    ],
+    "core": "located",
+    "access": "Controlled",
+    "significance": "First permanent Gate research installation."
+  }
+}

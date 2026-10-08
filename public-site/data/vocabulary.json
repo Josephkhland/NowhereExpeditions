@@ -1210,37 +1210,78 @@
       "key": "verdant",
       "name": "Verdant",
       "colour": "#7cc47a",
-      "description": "Biologically dense places dominated by strange growth: forests, wetlands, fungal systems and other highly active life."
+      "description": "Biologically dense places dominated by strange growth: forests, wetlands, fungal systems and other highly active life.",
+      "kind": "environment"
     },
     {
       "key": "volcanic",
       "name": "Volcanic",
       "colour": "#e0815c",
-      "description": "Heat, geothermal activity, magma, ash, mineral pressure and intensely energetic geology."
+      "description": "Heat, geothermal activity, magma, ash, mineral pressure and intensely energetic geology.",
+      "kind": "environment"
     },
     {
       "key": "abyssal",
       "name": "Abyssal",
       "colour": "#6f9fe0",
-      "description": "Deep water: submerged, high-pressure, lightless, oceanic or otherwise deep and hostile places."
+      "description": "Deep water: submerged, high-pressure, lightless, oceanic or otherwise deep and hostile places.",
+      "kind": "environment"
     },
     {
       "key": "arid",
       "name": "Arid",
       "colour": "#d6b46a",
-      "description": "Dry places: deserts, salt flats, exposed stone, desiccated caverns and mineral wastes."
+      "description": "Dry places: deserts, salt flats, exposed stone, desiccated caverns and mineral wastes.",
+      "kind": "environment"
     },
     {
       "key": "frozen",
       "name": "Frozen",
       "colour": "#9fdcec",
-      "description": "Ice, snow, extreme cold, cryogenic conditions and unusual preservation."
+      "description": "Ice, snow, extreme cold, cryogenic conditions and unusual preservation.",
+      "kind": "environment"
     },
     {
       "key": "constructed",
       "name": "Constructed",
       "colour": "#b4b4c8",
-      "description": "Places that were clearly built: machine worlds, ancient complexes, artificial ecosystems and megastructures."
+      "description": "Places that were clearly built: machine worlds, ancient complexes, artificial ecosystems and megastructures.",
+      "kind": "environment"
+    },
+    {
+      "key": "vardic-holds",
+      "name": "Vardic Holds",
+      "colour": "#a08c7a",
+      "description": "Ordinary trade goods of the Vardic Holds: iron, timber, resin and the materials of a northern shipbuilding culture. An origin, not a Gate environment.",
+      "kind": "origin"
+    },
+    {
+      "key": "aurelian-empire",
+      "name": "Aurelian Empire",
+      "colour": "#8a7fd0",
+      "description": "Ordinary trade goods of the Aurelian Empire, prized for standardisation and consistency between batches. An origin, not a Gate environment.",
+      "kind": "origin"
+    },
+    {
+      "key": "vesper-republic",
+      "name": "Vesper Republic",
+      "colour": "#e07a8a",
+      "description": "Ordinary trade goods of the Vesper Republic, made for its electrical networks, laboratories and experimental industries. An origin, not a Gate environment.",
+      "kind": "origin"
+    },
+    {
+      "key": "kharad-compact",
+      "name": "Kharad Compact",
+      "colour": "#48b8ac",
+      "description": "Ordinary trade goods of the Kharad Compact, sold in measured, sealed and graded lots along its trade routes. An origin, not a Gate environment.",
+      "kind": "origin"
+    },
+    {
+      "key": "tianzhao-mandate",
+      "name": "Tianzhao Mandate",
+      "colour": "#c85646",
+      "description": "Ordinary trade goods of the Tianzhao Mandate, from tea to porcelain clay and silk. An origin, not a Gate environment.",
+      "kind": "origin"
     }
   ]
 }

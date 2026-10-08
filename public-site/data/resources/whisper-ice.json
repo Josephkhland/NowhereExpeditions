@@ -1,0 +1,24 @@
+{
+  "id": "whisper-ice",
+  "name": "Whisper Ice",
+  "sourceType": "ground",
+  "description": "Clear crystalline material recovered from deep fractures.",
+  "domains": [
+    "frozen"
+  ],
+  "functions": [
+    "Record",
+    "Resonate"
+  ],
+  "specialProperty": "Under laboratory conditions, vibration sometimes causes samples to reproduce faint patterns corresponding to previous disturbances.",
+  "availability": "sample",
+  "supply": "Much of the original material degraded during transport and thawing. The source was lost with Gate One.",
+  "gateId": "white-expanse",
+  "projectId": null,
+  "image": "data/images/whisper-ice-icon-e65342b8.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 2.0,
+    "zoom": 1.05
+  }
+}

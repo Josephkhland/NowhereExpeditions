@@ -24,11 +24,23 @@
   "relations": [
     {
       "factionId": "aurelian-empire",
-      "text": "Shares the Faith of the First Light, read differently."
+      "text": "Ideological rivals: scrupulously formal diplomacy over real hostility, and the same faith read differently."
     },
     {
       "factionId": "verna",
-      "text": "Its small neighbour."
+      "text": "Its small neighbour: shared academic culture, constant argument over restricted research."
+    },
+    {
+      "factionId": "vardic-holds",
+      "text": "Admires Vardic craft and independence; the Vards wish the politics came with fewer speeches."
+    },
+    {
+      "factionId": "kharad-compact",
+      "text": "Economically entangled, philosophically argumentative: Vesper needs Kharadi credit and attacks concentrated wealth."
+    },
+    {
+      "factionId": "tianzhao-mandate",
+      "text": "Admires its scholarship, criticises its hierarchy; Tianzhao still calls Vesper 'Solenne'."
     }
   ],
   "ruleId": "faction-vesper-republic",

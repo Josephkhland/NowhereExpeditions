@@ -39,6 +39,10 @@
     {
       "factionId": "tianzhao-mandate",
       "text": "Mutual respect for craft; disagreement over metaphysical caution."
+    },
+    {
+      "factionId": "verna",
+      "text": "Mutually useful, methodically at odds: Verna wants to study it first, the Vards want to test it."
     }
   ],
   "ruleId": "faction-vardic-holds",

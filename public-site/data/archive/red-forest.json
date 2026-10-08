@@ -1,0 +1,73 @@
+{
+  "id": "red-forest",
+  "type": "gate-record",
+  "title": "The Red Forest",
+  "subtitle": "",
+  "summary": "A cool, dark forest of crimson leaves where a research station worked for four months before the wildlife drove it out. The Gate and its Core remain; entry needs expedition clearance.",
+  "content": "Gate Three opens into a cool forest dominated by dark trees and broad crimson foliage. Initial surveys encountered manageable wildlife and no immediately catastrophic hazards. On the strength of the [[green-vault|Green Vault]] programme, a semi-permanent research station was built several kilometres beyond the threshold.\n\nFor approximately four months, operations proceeded with only minor incidents. Then hostile encounters increased sharply. Attacks eventually involved multiple species and came simultaneously at several points on the station perimeter. **Forward Station Three** was evacuated.\n\nThe Gate remains open. Later reconnaissance confirms continued biological activity near the abandoned station, and the Core remains within the Gate. See [[the-first-four-gates|Four Gates, Four Lessons]].\n\n## Common Specimens\n\nMaterials Expeditioners often bring back that are not currently classified as useful Resources:\n\n- **Redleaf Clippings**: abundant. The pigment is chemically unusual, but no Function is confirmed.\n- **Thorn Walker Sheath**: rigid material shed naturally from older projections. Heavy and inconvenient to carry. Not currently a Resource.\n- **Black Soil**: unusual microbial activity. No confirmed useful properties.\n- **Redback Claw**: frequently requested by collectors. No confirmed anomalous Function.\n\n> **Report G-03-91: Evacuation of Forward Station Three**\n>\n> *At 03:17 station alarms reported movement along the northern perimeter. Initial response assumed another Redback incursion.*\n>\n> *Contact was subsequently reported along the eastern and western fences. Observation Post North ceased responding several minutes later.*\n>\n> *Multiple species were observed during the attack. Redbacks approached the station perimeter while several Thorn Walkers moved toward the same area. Continuous Bell-Throat vocalization was recorded. Whether these events represent coordination remains unconfirmed.*\n>\n> *At 03:41 the station commander ordered evacuation. All surviving personnel reached the Gate. Four expedition personnel sustained serious injuries. One individual remained unaccounted for and is presumed deceased.*\n>\n> *Forward Station Three was abandoned with substantial equipment intact.*\n>\n> *Committee finding: The Green Vault occupation model cannot be assumed applicable to future Gates. A survivable environment is not necessarily an occupiable environment.*\n\n## Archive Holdings\n\nReports on file for this Gate (not all are transcribed in the public Archive):\n\n- G-03 Initial Fauna Survey\n- G-03 Forward Station Construction Approval\n- G-03 Escalating Fauna Encounters\n- G-03 Evacuation of Forward Station Three (above)\n- G-03 Remote Reconnaissance Review",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": "data/images/g-03-red-forest-poster-23df42d5.webp",
+  "imageCaption": "The Red Forest beside the abandoned Forward Station Three: dark trunks, crimson leaves, pale grass and low mist. The perimeter fence is down, equipment lies where it was left, and a light still shows inside the station. Notice the deep gouges in the bark, and the bands of light in a sky without stars.",
+  "tags": [
+    "Gate Three",
+    "G-03",
+    "Forward Station Three",
+    "Redbacks",
+    "Bell-Throats",
+    "Thorn Walkers",
+    "Threshold Redoubt",
+    "Forked Marker Tree",
+    "Bell Hollow",
+    "Redbark",
+    "Bellbone",
+    "Hunter's Moss",
+    "evacuation",
+    "clearance"
+  ],
+  "topics": [],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "designation": "G-03",
+    "gateStatus": "restricted",
+    "discoveredAt": "",
+    "environment": "Temperature: 8°C to 16°C\nHumidity: 60–80%\nAtmosphere: breathable\nWind: light\nVisibility: moderate to poor beneath the canopy\nNight conditions: low mist common\nThe forest is dominated by dark trunks, crimson or black-red leaves and pale undergrowth. The local night sky shows no confirmed stars. Bands of dim moving light have occasionally been observed above breaks in the canopy.",
+    "knownTraits": [
+      "The Forest Goes Quiet Before Violence: ambient animal noise frequently ceases shortly before hostile encounters.",
+      "Blood Carries Farther Than It Should: injured Expeditioners appear to attract predators from unexpected distances.",
+      "Nothing Hunts Alone Forever: predators first encountered individually frequently appear in larger groups during later encounters."
+    ],
+    "knownHazards": [
+      "Territorial fauna.",
+      "Rapid predator response to injury.",
+      "Parasitic needle mites.",
+      "Low visibility.",
+      "Unreliable trails.",
+      "Abandoned industrial and research structures.",
+      "Possible coordinated animal behaviour."
+    ],
+    "knownLocations": [
+      "Threshold Redoubt: a fortified structure immediately outside the Gate.",
+      "Pale Grass Clearing: a common staging point for deeper expeditions.",
+      "Forked Marker Tree: an important navigational landmark.",
+      "Forward Station Three: the abandoned research compound. Structural condition uncertain. Remote imaging has occasionally detected light inside, although the main generators are shut down.",
+      "Bell Hollow: a region associated with frequent Bell-Throat vocalization.",
+      "Core Site: an open depression approximately nine kilometres from the threshold. Vegetation was reported absent within roughly twenty metres of the Core. CURRENT CONDITIONS UNKNOWN."
+    ],
+    "domains": [
+      "verdant"
+    ],
+    "knownCreatures": [
+      "Redbacks: six-limbed predators of roughly a large wolf's mass. Excellent climbers. Originally believed to hunt alone; later encounters indicate pack behaviour.",
+      "Bell-Throats: tall, long-necked animals known mainly through their resonant calls. Other fauna sometimes change behaviour shortly after specific call patterns. No confirmed explanation.",
+      "Thorn Walkers: large herbivores covered in rigid branch-like projections. Usually passive; extremely dangerous when panicked.",
+      "Parasitic needle mites.",
+      "Unidentified large organism: repeated damage has been observed high on mature trees. No responsible species confirmed."
+    ],
+    "core": "located",
+    "access": "Expedition clearance required",
+    "significance": "Loss of Forward Station Three."
+  }
+}

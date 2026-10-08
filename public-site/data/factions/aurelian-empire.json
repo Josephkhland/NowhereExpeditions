@@ -28,7 +28,19 @@
     },
     {
       "factionId": "vesper-republic",
-      "text": "Shares the Faith of the First Light, read differently."
+      "text": "Ideological rivals: scrupulously formal diplomacy over real hostility, and the same faith read differently."
+    },
+    {
+      "factionId": "kharad-compact",
+      "text": "Deeply interdependent: Kharadi credit and insurance, imperial markets and naval protection."
+    },
+    {
+      "factionId": "tianzhao-mandate",
+      "text": "A polite, sophisticated rivalry: Aurelia wants access, Tianzhao controls it, and tea is on both sides of the table."
+    },
+    {
+      "factionId": "verna",
+      "text": "Respects and funds Vernan expertise; Verna takes the funding and guards its priorities."
     }
   ],
   "ruleId": "faction-aurelian-empire",

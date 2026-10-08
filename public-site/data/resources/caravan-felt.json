@@ -1,0 +1,21 @@
+{
+  "id": "caravan-felt",
+  "name": "Caravan Felt",
+  "sourceType": "fauna",
+  "description": "Dense felt produced from mixed caravan-animal fibres. Used for tents, packing, saddle padding, insulation and shock protection. It is cheap, repairable and ubiquitous across Compact trade routes.",
+  "domains": [
+    "kharad-compact"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/caravan-felt-icon-b345fe6b.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}

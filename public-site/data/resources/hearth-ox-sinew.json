@@ -1,0 +1,21 @@
+{
+  "id": "hearth-ox-sinew",
+  "name": "Hearth-Ox Sinew",
+  "sourceType": "fauna",
+  "description": "Processed tendon taken from the large draft cattle common throughout the Holds. Used traditionally for bowstrings, binding, reinforced tool handles and composite construction. Modern synthetic cordage has replaced it in many industries, but craftsmen still keep substantial stocks.",
+  "domains": [
+    "vardic-holds"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/hearth-ox-sinew-icon-8c61474c.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.05
+  }
+}

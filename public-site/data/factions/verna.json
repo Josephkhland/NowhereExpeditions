@@ -23,7 +23,19 @@
   "relations": [
     {
       "factionId": "vesper-republic",
-      "text": "Its larger neighbour."
+      "text": "Its larger neighbour: shared academic culture, constant argument over restricted research."
+    },
+    {
+      "factionId": "aurelian-empire",
+      "text": "Cooperative but guarded: welcomes imperial funding, resists imperial priorities."
+    },
+    {
+      "factionId": "vardic-holds",
+      "text": "Study it first versus test it: different methods, mutual benefit."
+    },
+    {
+      "factionId": "tianzhao-mandate",
+      "text": "Mutual scholarly respect built on archives and long memory; access to Tianzhao's records stays limited."
     },
     {
       "factionId": "kharad-compact",

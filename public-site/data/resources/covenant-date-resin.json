@@ -1,0 +1,21 @@
+{
+  "id": "covenant-date-resin",
+  "name": "Covenant Date Resin",
+  "sourceType": "flora",
+  "description": "A thick amber resin obtained from several cultivated date-palm varieties. Used for sealing containers, preserving trade goods, preparing medicines and making durable commercial adhesives. It is inexpensive, stable and available along almost every Compact trade route.",
+  "domains": [
+    "kharad-compact"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/covenant-date-resin-icon-9a147259.webp",
+  "imageCrop": {
+    "x": 26.0,
+    "y": 0,
+    "zoom": 1.2
+  }
+}

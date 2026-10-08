@@ -1,0 +1,21 @@
+{
+  "id": "imperial-fireclay",
+  "name": "Imperial Fireclay",
+  "sourceType": "ground",
+  "description": "A standardised refractory clay shipped throughout the Empire for furnaces, boilers, laboratories and industrial construction. Its popularity comes less from exceptional performance than extraordinary consistency between batches: an engineer ordering Imperial Fireclay in one port expects it to behave identically to material bought thousands of miles away.",
+  "domains": [
+    "aurelian-empire"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/imperial-fireclay-icon-cb72e863.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.05
+  }
+}

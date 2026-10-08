@@ -1,0 +1,24 @@
+{
+  "id": "bellbone",
+  "name": "Bellbone",
+  "sourceType": "fauna",
+  "description": "Light internal structure recovered from a deceased Bell-Throat.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Amplify",
+    "Resonate"
+  ],
+  "specialProperty": "Small applied vibrations can produce disproportionately powerful resonant effects.",
+  "availability": "sample",
+  "supply": "",
+  "gateId": "red-forest",
+  "projectId": null,
+  "image": "data/images/bellbone-icon-6539d735.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.2
+  }
+}

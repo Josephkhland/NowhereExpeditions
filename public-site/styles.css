@@ -3045,3 +3045,51 @@ a.rule-step:hover { text-decoration: underline; }
   .board-card h3 a { display: inline-block; padding: 0.35rem 0; }
   .interaction-grid .grid-cell { width: 1.6rem; height: 1.6rem; }
 }
+
+/* Resource icons: a small square crop of the painting, beside the name and tags. */
+.resource-top { display: flex; align-items: flex-start; gap: 0.8rem; }
+.resource-top { align-items: center; }
+.resource-top .resource-head { flex: 1; display: grid; gap: 0.3rem; min-width: 0; }
+.resource-top .resource-pills { display: flex; }
+.resource-icon { flex: none; position: relative; display: block; width: 44px; height: 44px; overflow: hidden; border: 1px solid var(--line-strong); background: #17130f; }
+/* Every Resource icon is an exact window onto the square chosen in the manager; past the painting's edge is backdrop. */
+.resource-icon img, .gate-resource-icon img { position: absolute; display: block; max-width: none; }
+
+/* ---------- Gates: the Factions page's cards, hero and panels, plus a few Gate-only parts ---------- */
+/* The painting is a portrait; banners show its middle band. */
+.gate-card-art .faction-card-homeland, .gate-hero-art { object-position: center 42%; }
+/* The designation sits where a faction's flag does. */
+.gate-badge { display: inline-block; padding: 0.3rem 0.6rem; border: 1px solid rgba(231, 240, 242, 0.5); background: rgba(9, 14, 16, 0.78); color: var(--text); font-size: 0.85rem; font-variant-numeric: tabular-nums; letter-spacing: 0.12em; box-shadow: 0 4px 14px var(--shadow); }
+.gate-card-art .gate-badge { position: absolute; z-index: 1; left: 1rem; bottom: 0.8rem; }
+.gate-card-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.35rem 0.9rem; margin: 0.35rem 0 0; }
+.gate-card-facts > div { display: contents; }
+.gate-card-facts dt { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; align-self: center; }
+.gate-card-facts dd { margin: 0; color: var(--text); font-size: 0.92rem; }
+.gate-hero-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0; }
+.gate-hero-tags .pill { background: rgba(9, 14, 16, 0.7); }
+
+/* The painting, whole, in its own panel. */
+.gate-painting { margin: 0; }
+.gate-painting a { display: block; border: 1px solid var(--line-strong); }
+.gate-painting img { display: block; width: 100%; height: auto; }
+.gate-painting figcaption { margin-top: 0.7rem; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+
+/* Traits, hazards, locations and creatures: name in bold, then what is known. */
+.gate-list { display: grid; gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.gate-list li { color: var(--text-soft); line-height: 1.5; }
+.gate-list strong { display: block; color: var(--text); }
+.gate-environment p { margin: 0 0 0.35rem; color: var(--text-soft); }
+.gate-environment p:last-child { margin: 0.6rem 0 0; }
+.faction-section .gate-count { margin-left: 0.3rem; color: var(--accent); }
+
+/* Resources, in the side column: a grid of small cards. Square icon, the full name, availability, then its Functions. */
+.gate-resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 0.6rem; margin: 0 0 0.9rem; padding: 0; list-style: none; }
+.gate-resource { display: grid; grid-template-columns: 44px minmax(0, 1fr); grid-template-areas: "icon name" "icon availability" "functions functions"; gap: 0.15rem 0.7rem; align-content: start; padding: 0.7rem; border: 1px solid var(--line); background: rgba(9, 14, 16, 0.45); }
+.gate-resource-icon { grid-area: icon; position: relative; display: block; width: 44px; height: 44px; overflow: hidden; border: 1px solid var(--line-strong); background: #17130f; }
+.gate-resource-name { grid-area: name; align-self: end; color: var(--text); font-weight: 700; line-height: 1.25; text-decoration: none; overflow-wrap: anywhere; }
+.gate-resource-name:hover, .gate-resource-name:focus-visible { color: var(--accent); }
+.gate-resource-availability { grid-area: availability; align-self: start; color: var(--muted); font-size: 0.8rem; }
+.gate-resource-availability.availability-available { color: var(--success); }
+.gate-resource-availability.availability-limited { color: var(--accent-2); }
+.gate-resource-functions { grid-area: functions; display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
+@media (max-width: 800px) { .gate-resources { order: -1; } }

@@ -1,0 +1,21 @@
+{
+  "id": "glassvine-sap",
+  "name": "Glassvine Sap",
+  "sourceType": "flora",
+  "description": "Clear resin harvested from cultivated glassvine. Used in varnishes, photographic processes, scientific slides, optical preparations and experimental chemistry. Cured in thin layers it becomes almost perfectly transparent.",
+  "domains": [
+    "vesper-republic"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/glassvine-sap-icon-eb832b0d.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 24.0,
+    "zoom": 1.1
+  }
+}

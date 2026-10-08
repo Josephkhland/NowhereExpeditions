@@ -1,0 +1,21 @@
+{
+  "id": "blackpine-resin",
+  "name": "Blackpine Resin",
+  "sourceType": "flora",
+  "description": "Thick dark resin collected from northern blackpine forests. Traditionally used for waterproofing ships, sealing timber, protecting rope and preparing durable industrial compounds. It smells strongly of smoke and pine even after years of storage.",
+  "domains": [
+    "vardic-holds"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/blackpine-resin-icon-ddc450be.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 50.0,
+    "zoom": 1.2
+  }
+}

@@ -446,7 +446,7 @@ h1, h2, h3, h4, p { margin-top: 0; }
 
 .button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.domain-row { grid-template-columns: 170px 48px minmax(0, 1fr) 170px auto; }
+.domain-row { grid-template-columns: 170px 48px 120px minmax(0, 1fr) 170px auto; }
 .domain-row input[type="color"] { padding: 2px; height: 32px; }
 @media (max-width: 1100px) { .domain-row { grid-template-columns: 1fr; } }
 
@@ -548,3 +548,68 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .learning-path .path-rows { margin: 6px 0; }
 .learning-path .path-row { grid-template-columns: 32px minmax(0, 1fr) 190px auto; }
 .learning-path .path-row select { min-height: 30px; border: 1px solid #cbd5ce; padding: 2px 6px; background: #fff; font-size: 12px; }
+
+/* ---------- Continuity issues ---------- */
+.issue-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 12px 8px; }
+.issue-filters input { grid-column: 1 / -1; min-height: 32px; border: 1px solid #cbd5ce; padding: 4px 8px; font-size: 12px; }
+.issue-filters select { min-height: 30px; border: 1px solid #cbd5ce; padding: 3px 6px; background: #fff; font-size: 12px; }
+.issue-filters select:first-of-type { grid-column: 1 / -1; }
+.severity-chip { display: inline-block; padding: 1px 6px; border: 1px solid currentColor; font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+.severity-critical { color: var(--red); }
+.severity-major { color: var(--orange); }
+.severity-minor { color: var(--muted); }
+.issue-summary { padding-top: 14px; font-size: 13px; line-height: 1.55; }
+.issue-summary p { margin: 0 0 9px; }
+.issue-suggestion { margin: 4px 0 0; padding: 10px 13px; border-left: 3px solid var(--green); background: #f1f7f3; font-size: 12px; }
+.issue-suggestion p { margin: 4px 0 0; }
+.conflict-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; padding-top: 16px; }
+.conflict-side { display: grid; align-content: start; gap: 10px; padding: 13px 14px; border: 1px solid var(--line); border-top: 3px solid var(--forest); background: #fbfcfa; min-width: 0; }
+.conflict-side header { display: grid; gap: 3px; }
+.conflict-side header strong { font: 600 14px Georgia, serif; }
+.conflict-where { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.conflict-side.is-edited { border-top-color: var(--amber); background: #fffaf0; }
+.conflict-side.anchor-stale, .conflict-side.anchor-missing-record, .conflict-side.anchor-missing-field, .conflict-side.anchor-ambiguous { border-top-color: var(--red); }
+.conflict-side.anchor-note { border-top-color: var(--muted); }
+.conflict-context { max-height: 260px; overflow: auto; padding: 9px 10px; border: 1px solid #e3e8e4; background: #fff; color: #56635e; font: 12px/1.55 Georgia, serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+.conflict-context mark { padding: 1px 0; color: var(--ink); background: #fbe7b3; }
+.conflict-note { margin: 0; padding: 8px 11px; border-left: 3px solid var(--line); color: #4d5a55; font: italic 12px/1.5 Georgia, serif; white-space: pre-wrap; }
+.conflict-problem { margin: 0; padding: 8px 10px; color: #7b3029; background: #fae9e6; font-size: 11px; line-height: 1.45; }
+.conflict-edit textarea { width: 100%; resize: vertical; font: 12px/1.5 Georgia, serif; }
+.conflict-side-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.conflict-side-actions .button { min-height: 28px; padding: 0 9px; font-size: 11px; }
+.resolve-panel { display: grid; gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid var(--line); background: var(--paper); }
+.resolve-panel h3 { margin: 0; font: 500 16px Georgia, serif; }
+.resolve-panel p { margin: 0; font-size: 12px; }
+.resolve-panel textarea { width: 100%; resize: vertical; }
+.resolve-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.resolve-panel.is-settled { border-left: 3px solid var(--green); }
+.conflict-diffs { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.conflict-diff { display: grid; gap: 3px; margin-top: 3px; font: 12px/1.5 Georgia, serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+.conflict-diff del { padding: 4px 7px; color: #7b3029; background: #fae9e6; }
+.conflict-diff ins { padding: 4px 7px; color: #1e5a44; background: #e4f2ea; text-decoration: none; }
+.issue-history { margin-top: 14px; font-size: 12px; }
+.issue-history summary { cursor: pointer; color: var(--muted); }
+.issue-history ul { margin: 8px 0 0; padding-left: 18px; }
+.issue-side-row { display: grid; gap: 9px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--line); background: #fbfcfa; }
+.issue-side-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; }
+.issue-banner { padding: 9px 12px; border-left: 3px solid var(--amber); background: #fff7e6; font-size: 12px; }
+
+
+/* ---------- Resource icon framing: a crop square on the painting ---------- */
+.framing-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px; }
+.framing-stage { position: relative; flex: none; overflow: hidden; border: 1px solid var(--line); background: #17130f; user-select: none; touch-action: none; }
+.framing-stage img { position: absolute; display: block; max-width: none; pointer-events: none; opacity: 0.95; }
+.framing-box { position: absolute; box-sizing: border-box; border: 2px solid #7ad7d1; box-shadow: 0 0 0 999px rgba(8, 12, 14, 0.74); cursor: move; }
+.framing-handle { position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px; border: 2px solid #fff; background: #7ad7d1; cursor: nwse-resize; }
+.framing-empty { display: grid; place-items: center; height: 100%; padding: 16px; color: #8fa39b; font-size: 12px; text-align: center; }
+.framing-side { display: grid; gap: 12px; min-width: 240px; }
+.framing-sizes { display: flex; align-items: flex-end; gap: 12px; }
+.framing-thumb { position: relative; display: block; flex: none; overflow: hidden; border: 1px solid #5a6b66; background: #17130f; }
+.framing-thumb img { position: absolute; display: block; max-width: none; }
+.framing-thumb.is-88 { width: 88px; height: 88px; }
+.framing-thumb.is-44 { width: 44px; height: 44px; }
+.framing-sizes .helper { align-self: center; max-width: 12em; }
+.framing-control { display: grid; grid-template-columns: 50px 1fr 46px; align-items: center; gap: 8px; font-size: 12px; }
+.framing-control output { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.framing-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.framing-buttons .button { min-height: 30px; padding: 0 10px; font-size: 11px; }

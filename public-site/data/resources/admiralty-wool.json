@@ -1,0 +1,21 @@
+{
+  "id": "admiralty-wool",
+  "name": "Admiralty Wool",
+  "sourceType": "fauna",
+  "description": "Dense wool produced through standardised Imperial breeding, grading and processing programmes. Used extensively for naval uniforms, insulation, blankets, equipment padding and cold-weather supplies. Official procurement grades are famously exact.",
+  "domains": [
+    "aurelian-empire"
+  ],
+  "functions": [],
+  "specialProperty": "",
+  "availability": "available",
+  "supply": "",
+  "gateId": null,
+  "projectId": null,
+  "image": "data/images/admiralty-wool-icon-9e2b96c0.webp",
+  "imageCrop": {
+    "x": 44.0,
+    "y": 50.0,
+    "zoom": 1.05
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "hunters-moss",
+  "name": "Hunter's Moss",
+  "sourceType": "flora",
+  "description": "Pale moss whose fronds contract when exposed to trace quantities of fresh blood.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Sense",
+    "React"
+  ],
+  "specialProperty": "",
+  "availability": "sample",
+  "supply": "",
+  "gateId": "red-forest",
+  "projectId": null,
+  "image": "data/images/hunters-moss-icon-d6e359e1.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.15
+  }
+}

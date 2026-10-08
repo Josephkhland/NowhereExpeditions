@@ -1,0 +1,73 @@
+{
+  "id": "yellow-mire",
+  "type": "gate-record",
+  "title": "The Yellow Mire",
+  "subtitle": "",
+  "summary": "A warm amber wetland with no large animals, whose returned equipment rotted and whose illness reached people who had never crossed. Quarantined; no authorised expedition has entered since, and its Core has never been located.",
+  "content": "Gate Four opens into a warm, extremely humid wetland of amber water, pale reeds and extensive yellow-white biological films. Initial short-duration expeditions reported no dangerous large fauna and no immediately life-threatening conditions.\n\nWithin days, returned equipment began degrading. Metal developed fine pitting. Rubber became brittle. Leather softened. Glass became cloudy. Several Expeditioners later developed fever, coughing, skin irritation and yellow branching discoloration around minor wounds. Then secondary cases appeared among personnel who had never crossed the Gate, but had handled returned equipment.\n\nGate Four was placed under quarantine. No authorized expedition has entered since, and **all known G-04 materials remain under quarantine**. The Core has not been located. See [[the-first-four-gates|Four Gates, Four Lessons]].\n\n## Common Specimens\n\nMaterial recovered before the quarantine that is not classified as a Resource. All of it is held under quarantine:\n\n- **Yellow Pool Water**: extremely high biological load. No separate Resource classification.\n- **Reed Mud**: large quantities of spores and microorganisms. Research interest is low because of handling risk.\n- **Spiral Colony**: microscopic life recovered from contaminated glass. Still under investigation.\n- **Pale Reed Husk**: outer dead material from Amber Reed. No confirmed Function.\n\n> **Order G-04-12: Suspension of Operations**\n>\n> *Effective immediately:*\n>\n> *No personnel are to enter Gate Four. No material is to be removed from Gate Four. All equipment previously deployed through Gate Four is to be treated as contaminated. Personnel with previous exposure are to report to the Infirmary regardless of current symptoms.*\n>\n> *The following do not constitute proof of safety: absence of symptoms; intact protective clothing; negative surface testing; equipment appearing clean; previous decontamination.*\n>\n> *Three confirmed medical cases have now occurred among personnel whose only known exposure was handling returned equipment.*\n>\n> *Gate Four is therefore classified as a potential threat to Endros itself.*\n\n## Archive Holdings\n\nReports on file for this Gate (not all are transcribed in the public Archive):\n\n- G-04 Initial Environmental Survey\n- G-04 Equipment Degradation Notice\n- G-04 Medical Exposure Report\n- G-04 Suspension of Operations (above)\n- G-04 Quarantine Review",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": "data/images/g-04-yellow-mire-poster-ef8cdfba.webp",
+  "imageCaption": "The Yellow Mire as expedition photographs and crew accounts describe it: amber water, pale reeds and yellow-white film creeping over everything left behind. In the haze stand the Distant Vertical Forms; whether they are plants, rock or something built is not known, and nobody has surveyed them.",
+  "tags": [
+    "Gate Four",
+    "G-04",
+    "quarantine",
+    "contamination",
+    "Mirefilm",
+    "Amber Reed",
+    "Ghost Membrane",
+    "First Landing",
+    "Yellow Pools",
+    "Reed Basin",
+    "Distant Vertical Forms",
+    "Infirmary",
+    "decontamination"
+  ],
+  "topics": [],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "designation": "G-04",
+    "gateStatus": "quarantined",
+    "discoveredAt": "",
+    "environment": "Temperature: 32°C to 38°C\nHumidity: approximately 100%\nAtmosphere: breathable during short exposure\nWater: warm and mildly acidic in surveyed areas\nVisibility: poor to moderate\nAirborne material: high particulate, suspected biological content\nThe Mire consists of shallow pools separated by low islands of fibrous growth. Tall pale reeds produce intermittent clicking sounds. Large sheets of thin membrane float across the water. Most exposed surfaces eventually develop a yellow residue.",
+    "knownTraits": [
+      "Everything Left Here Becomes Food: organic and inorganic materials both show progressive deterioration.",
+      "The Air Leaves Something Behind: equipment develops residue even after apparently clean exposure.",
+      "Contamination Does Not Respect the Threshold: returned materials remain potentially hazardous within Endros."
+    ],
+    "knownHazards": [
+      "Corrosive biofilm.",
+      "Suspected spore exposure.",
+      "Contaminated water.",
+      "Wound colonization.",
+      "Secondary exposure.",
+      "Progressive equipment degradation.",
+      "Uncertain decontamination effectiveness."
+    ],
+    "knownLocations": [
+      "Quarantine Threshold: physically isolated from routine Outpost traffic.",
+      "First Landing: a low dry island approximately 300 metres beyond the Gate. Abandoned equipment remains visible.",
+      "Reed Basin: the largest known concentration of Amber Reed.",
+      "Yellow Pools: a region of dense surface film and unusually rapid equipment degradation.",
+      "Distant Vertical Forms: several expedition photographs show tall shapes far beyond First Landing. Whether they are plants, geological structures or constructed objects is unknown. NOT YET SURVEYED.",
+      "Core Site: NO DATA."
+    ],
+    "domains": [
+      "verdant"
+    ],
+    "knownCreatures": [
+      "Pale reed colonies.",
+      "Floating membrane sheets.",
+      "Translucent worm-like scavengers.",
+      "Microscopic spiral organisms.",
+      "Airborne spore-like structures.",
+      "No large animal life confirmed. This is no longer considered evidence of safety."
+    ],
+    "core": "not-located",
+    "access": "Prohibited without special authorization",
+    "significance": "First Gate classified as an Outpost-level contamination threat."
+  }
+}

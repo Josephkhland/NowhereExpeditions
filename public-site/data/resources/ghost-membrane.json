@@ -1,0 +1,24 @@
+{
+  "id": "ghost-membrane",
+  "name": "Ghost Membrane",
+  "sourceType": "flora",
+  "description": "Thin floating tissue capable of blocking several contaminants while letting some gases and water through. Its classification as flora is provisional.",
+  "domains": [
+    "verdant"
+  ],
+  "functions": [
+    "Dampen",
+    "Filter"
+  ],
+  "specialProperty": "Some sealed samples have continued growing under apparently nutrient-poor conditions.",
+  "availability": "sample",
+  "supply": "Under quarantine with all G-04 material.",
+  "gateId": "yellow-mire",
+  "projectId": null,
+  "image": "data/images/ghost-membrane-icon-5895dc45.webp",
+  "imageCrop": {
+    "x": 50.0,
+    "y": 0,
+    "zoom": 1.1
+  }
+}
