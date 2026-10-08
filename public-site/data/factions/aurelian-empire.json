@@ -54,5 +54,12 @@
   "clothing": [
     "data/images/aurelian-empire-clothing-ef0470e2.jpg"
   ],
-  "order": 2
+  "order": 2,
+  "readingPath": [
+    "the-aurelian-empire",
+    "imperial-standard",
+    "faith-of-the-first-light",
+    "crowned-sun",
+    "before-the-crowned-sun"
+  ]
 }

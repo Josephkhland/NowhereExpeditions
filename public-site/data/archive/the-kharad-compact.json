@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "data/images/kharad-compact-homeland-7134d104.jpg",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Kharad",
     "Kharadi",
@@ -35,5 +35,8 @@
   "factionIds": [
     "kharad-compact"
   ],
-  "details": {}
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
 }

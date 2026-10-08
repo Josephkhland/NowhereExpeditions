@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Old Scholastic Coast",
     "Silencing",
@@ -32,5 +32,8 @@
     "kharad-compact",
     "verna"
   ],
-  "details": {}
+  "details": {
+    "kind": "event",
+    "startStep": null
+  }
 }

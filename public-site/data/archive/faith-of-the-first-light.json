@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "First Light",
     "Crowned Sun",
@@ -37,5 +37,8 @@
     "vesper-republic",
     "vardic-holds"
   ],
-  "details": {}
+  "details": {
+    "kind": "faith",
+    "startStep": null
+  }
 }

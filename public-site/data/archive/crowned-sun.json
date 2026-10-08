@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Aurelion",
     "Light Enthroned",
@@ -35,5 +35,8 @@
   "factionIds": [
     "aurelian-empire"
   ],
-  "details": {}
+  "details": {
+    "kind": "faith",
+    "startStep": null
+  }
 }

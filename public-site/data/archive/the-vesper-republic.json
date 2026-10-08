@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "data/images/vesper-republic-homeland-bdd4f282.jpg",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Vesper",
     "House of Solenne",
@@ -35,5 +35,8 @@
   "factionIds": [
     "vesper-republic"
   ],
-  "details": {}
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
 }

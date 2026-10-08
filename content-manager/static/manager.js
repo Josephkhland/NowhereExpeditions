@@ -25,6 +25,19 @@ const JOB_STATUSES = ["open", "scheduled", "in-progress", "completed", "failed",
 // Structural types; what a lore entry is about is its topics.
 const ARCHIVE_TYPES = [["gate-record", "Gate Record"], ["session-record", "Session Record"], ["newspaper", "Newspaper"], ["lore", "Lore"]];
 const archiveTypeLabel = (type) => (ARCHIVE_TYPES.find(([key]) => key === type) || [type, humanize(type)])[1];
+// What kind of reading a lore entry is. The order is also the default order of a faction's study guide.
+const LORE_KINDS = [["overview", "Overview", "Who they are and how they got here: history and politics."],
+  ["society", "Society", "Daily life, dress, places and the look of things."], ["faith", "Faith", "Religion, gods, the dead."],
+  ["folklore", "Folklore", "Older stories, customs and superstitions."], ["institution", "Institution", "An organisation and how it works."],
+  ["event", "Event", "One moment in history and what it changed."], ["endros", "Endros & the Gates", "The Outpost, the Ruins and the Gates."]];
+const loreKindLabel = (kind) => (LORE_KINDS.find(([key]) => key === kind) || [])[1] || "";
+const loreKindRank = (entry) => { const index = LORE_KINDS.findIndex(([key]) => key === entry.details?.kind); return index < 0 ? LORE_KINDS.length : index; };
+// A faction's study guide when the GM has not set one: its lore by kind, its own entries before shared ones.
+const defaultReadingPath = (factionId) => state.archive
+  .filter((entry) => entry.type === "lore" && (entry.factionIds || []).includes(factionId))
+  .sort((left, right) => loreKindRank(left) - loreKindRank(right) || (left.factionIds || []).length - (right.factionIds || []).length
+    || String(left.title).localeCompare(String(right.title)))
+  .map((entry) => entry.id);
 const GEAR_CATEGORIES = ["weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special"];
 const GEAR_AVAILABILITY = ["common", "restricted", "rare", "unavailable"];
 const PROMO_LABELS = ["DISCOUNT", "NEW", "LIMITED", "FEATURED"];
@@ -865,7 +878,7 @@ const collections = {
   archive: {
     title: "Archive", panel: "ARCHIVE ENTRIES", singular: "Archive entry",
     name: (record) => record.title,
-    meta: (record) => [record.type === "lore" && record.topics?.length ? record.topics.join(" · ") : archiveTypeLabel(record.type),
+    meta: (record) => [record.type === "lore" ? loreKindLabel(record.details?.kind) || "Lore · no kind" : archiveTypeLabel(record.type),
       record.type === "gate-record" ? record.details?.designation : record.publishedAt || record.details?.sessionDate],
     filters: [["type", "All types", ARCHIVE_TYPES]],
     idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (gates.html#id, lore.html#id or reports.html#id) and the target of [[id]] links.",
@@ -905,6 +918,11 @@ const collections = {
         ${textarea("Known creatures", "knownCreatures", listText(details.knownCreatures), { full: true, help: "One per line. They inherit the Gate's Domain." })}
         <div class="form-section cm-only">CM only · never published</div>
         ${textarea("CM notes", "gmNotes", details.gmNotes || "", { full: true, rows: 4, help: "The Gate Aspect, secrets, generator notes." })}`)}
+      ${section("lore", `
+        <div class="form-section">Reading</div>
+        ${selectField("Kind", "loreKind", details.kind || "", LORE_KINDS.map(([key, label, text]) => [key, `${label}: ${text}`]), { emptyLabel: "— Choose a kind —", full: true,
+          help: "Shown above the title everywhere, so readers know what they are about to read. It also sets the entry's place in a faction's study guide." })}
+        ${field("Start here step", "startStep", details.startStep ?? "", { type: "number", min: 1, help: "Optional. Its place in the Lore page's Start here path for new players (1 comes first). Keep that path to three to five entries." })}`)}
       ${section("session-record", `
         <div class="form-section">Session Record</div>
         ${field("Session date", "sessionDate", details.sessionDate || "", { type: "date" })}
@@ -942,7 +960,8 @@ const collections = {
         domains: formData.getAll("domains"), knownCreatures: linesToArray(formData.get("knownCreatures")), gmNotes: formText(formData, "gmNotes"),
         core: formText(formData, "gateCore"), access: formText(formData, "gateAccess"), significance: formText(formData, "gateSignificance")
       } : type === "session-record" ? { sessionDate: formText(formData, "sessionDate"), outcome: formText(formData, "outcome"), gateIds: formData.getAll("reportGateIds") }
-        : type === "newspaper" ? { gateIds: formData.getAll("bulletinGateIds") } : {};
+        : type === "newspaper" ? { gateIds: formData.getAll("bulletinGateIds") }
+        : type === "lore" ? { kind: formText(formData, "loreKind"), startStep: formText(formData, "startStep") } : {};
       return {
         type, title: formText(formData, "title"), subtitle: formText(formData, "subtitle"),
         summary: formText(formData, "summary"), content: formText(formData, "content"), author: formText(formData, "author"),
@@ -1167,6 +1186,29 @@ function relationRow(item = { factionId: "", text: "" }, ownId = "") {
   </div>`;
 }
 
+// The study guide: every entry about the faction with a step box. Blank boxes everywhere: the site orders its lore by
+// kind (the grey numbers). Numbers set the GM's own order; entries left blank are then Connected reading.
+function readingPathField(record) {
+  const path = record.readingPath || [];
+  const auto = defaultReadingPath(record.id);
+  const rank = (entry) => path.includes(entry.id) ? path.indexOf(entry.id) : 100 + (auto.includes(entry.id) ? auto.indexOf(entry.id) : 100);
+  const entries = state.archive.filter((entry) => (entry.factionIds || []).includes(record.id) || path.includes(entry.id))
+    .sort((left, right) => rank(left) - rank(right) || String(left.title).localeCompare(String(right.title)));
+  const rows = entries.map((entry) => `<div class="path-row" data-path-row="${escapeHtml(entry.id)}">
+      <input type="number" min="1" max="99" name="pathStep-${escapeHtml(entry.id)}" value="${path.includes(entry.id) ? path.indexOf(entry.id) + 1 : ""}"
+        placeholder="${!path.length && auto.includes(entry.id) ? auto.indexOf(entry.id) + 1 : "–"}" aria-label="Step for ${escapeHtml(entry.title)}" />
+      <span>${referenceLink("archive", entry, entry.title)}</span>
+      <span class="helper">${escapeHtml(entry.type === "lore" ? loreKindLabel(entry.details?.kind) || "No kind" : archiveTypeLabel(entry.type))}${entry.published ? "" : " · unpublished"}</span>
+    </div>`).join("");
+  return `<div class="field full">
+    <div class="path-rows">${rows || '<div class="empty-list">No Archive entry names this faction yet. Tick it on an entry first.</div>'}</div>
+    <span class="helper">The reading order on the faction page. Leave every box blank to order its lore by kind (the grey numbers). Number the entries to set your own order; unnumbered ones are listed as Connected reading.</span></div>`;
+}
+
+const readReadingPath = (form) => [...form.querySelectorAll("[data-path-row]")]
+  .map((row, index) => ({ id: row.dataset.pathRow, step: Number(row.querySelector("input").value), index }))
+  .filter((item) => item.step > 0).sort((left, right) => left.step - right.step || left.index - right.index).map((item) => item.id);
+
 const readRelations = (form) => [...form.querySelectorAll("[data-relation-row]")]
   .map((row) => ({ factionId: row.querySelector('[data-relation="factionId"]').value, text: row.querySelector('[data-relation="text"]').value.trim() }))
   .filter((item) => item.factionId);
@@ -1210,12 +1252,14 @@ collections.factions = {
     <div class="field full"><span class="field-label">Relations</span>
       <div class="checklist-rows" id="relation-rows">${(record.relations || []).map((item) => relationRow(item, record.id)).join("")}</div>
       <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-relation">+ Add relation</button></div>
-      <span class="helper">One line each. Relations to unpublished factions stay off the site.</span></div>`,
+      <span class="helper">One line each. Relations to unpublished factions stay off the site.</span></div>
+    <div class="form-section">Study guide</div>
+    ${readingPathField(record)}`,
   related: (record) => {
     const entries = state.archive.filter((entry) => (entry.factionIds || []).includes(record.id));
     const relatedBy = state.factions.filter((other) => (other.relations || []).some((item) => item.factionId === record.id));
     return `<div class="form-section">Derived references</div>
-      ${relatedBlock("Archive entries about this faction", entries.map((entry) => `${referenceLink("archive", entry, entry.title)} <span class="helper">${escapeHtml(archiveTypeLabel(entry.type))}${entry.published ? "" : " · unpublished"}</span>`), "None yet. Tick this faction on an Archive entry to list it here.")}
+      ${relatedBlock("Archive entries about this faction", entries.map((entry) => `${referenceLink("archive", entry, entry.title)} <span class="helper">${escapeHtml(entry.type === "lore" ? loreKindLabel(entry.details?.kind) || "Lore" : archiveTypeLabel(entry.type))}${entry.published ? "" : " · unpublished"}</span>`), "None yet. Tick this faction on an Archive entry to list it here.")}
       ${relatedBlock("Named in the relations of", relatedBy.map((other) => referenceLink("factions", other, other.name)), "No other faction lists this one.")}
       ${linkCheck([record.summary, record.beliefs, record.history, record.gateAttitude, record.visualSummary])}`;
   },
@@ -1228,7 +1272,8 @@ collections.factions = {
     extraName: formText(formData, "extraName"), extraRule: formText(formData, "extraRule"), expectations: formText(formData, "expectations"),
     flag: formText(formData, "flag"), homeland: formText(formData, "homeland"), gallery: formData.getAll("gallery"), clothing: formData.getAll("clothing"),
     visualSummary: formText(formData, "visualSummary"), palette: formText(formData, "palette"), materials: formText(formData, "materials"),
-    beliefs: formText(formData, "beliefs"), history: formText(formData, "history"), relations: readRelations(form)
+    beliefs: formText(formData, "beliefs"), history: formText(formData, "history"), relations: readRelations(form),
+    readingPath: readReadingPath(form)
   })
 };
 

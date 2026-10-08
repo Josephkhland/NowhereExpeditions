@@ -613,3 +613,9 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .framing-control output { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
 .framing-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .framing-buttons .button { min-height: 30px; padding: 0 10px; font-size: 11px; }
+
+/* ---------- Faction study guide: a step box per entry ---------- */
+.path-rows { display: grid; gap: 4px; }
+.path-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 4px 8px; border: 1px solid var(--line); background: #fff; }
+.path-row input { width: 100%; min-height: 30px; padding: 2px 6px; text-align: center; }
+.path-row input::placeholder { color: #9aa8a3; }

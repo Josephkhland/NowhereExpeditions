@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "uniform",
     "insignia",
@@ -30,5 +30,8 @@
   "factionIds": [
     "aurelian-empire"
   ],
-  "details": {}
+  "details": {
+    "kind": "society",
+    "startStep": null
+  }
 }

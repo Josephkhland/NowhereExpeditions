@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Spark",
     "One flame lights another",
@@ -34,5 +34,8 @@
   "factionIds": [
     "vesper-republic"
   ],
-  "details": {}
+  "details": {
+    "kind": "faith",
+    "startStep": null
+  }
 }

@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "fairy tales",
     "festival",
@@ -27,5 +27,8 @@
   "factionIds": [
     "vesper-republic"
   ],
-  "details": {}
+  "details": {
+    "kind": "folklore",
+    "startStep": null
+  }
 }

@@ -54,5 +54,6 @@
   "clothing": [
     "data/images/tianzhao-mandate-clothing-b9528577.jpg"
   ],
-  "order": 5
+  "order": 5,
+  "readingPath": []
 }

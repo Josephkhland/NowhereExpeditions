@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Great Weave",
     "final death",
@@ -33,5 +33,8 @@
   "factionIds": [
     "vardic-holds"
   ],
-  "details": {}
+  "details": {
+    "kind": "faith",
+    "startStep": null
+  }
 }

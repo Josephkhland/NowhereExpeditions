@@ -56,5 +56,6 @@
   "clothing": [
     "data/images/kharad-compact-clothing-dff706d8.jpg"
   ],
-  "order": 4
+  "order": 4,
+  "readingPath": []
 }

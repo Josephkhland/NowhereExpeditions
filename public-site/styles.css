@@ -3093,3 +3093,53 @@ a.rule-step:hover { text-decoration: underline; }
 .gate-resource-availability.availability-limited { color: var(--accent-2); }
 .gate-resource-functions { grid-area: functions; display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
 @media (max-width: 800px) { .gate-resources { order: -1; } }
+
+/* ---------- Lore reading paths: kinds, Start here, shelves, next/previous, faction study guide ---------- */
+.lore-kind { display: block; color: var(--accent-2); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.lore-minutes { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+
+.lore-start { margin: 0 0 1.2rem; padding: 1.1rem 1.2rem 1.2rem; border: 1px solid var(--line); border-left: 3px solid var(--accent-2); background: var(--panel); }
+.lore-start-head h2 { margin: 0; font-size: 1.15rem; }
+.lore-start-head p { margin: 0.3rem 0 0.9rem; color: var(--muted); font-size: 0.93rem; }
+.lore-start-path { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 0.7rem; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.lore-start-step { position: relative; display: grid; align-content: start; gap: 0.25rem; height: 100%; padding: 0.8rem 0.9rem 0.8rem 3rem; border: 1px solid var(--line); background: rgba(10, 17, 19, 0.55); color: var(--text); text-decoration: none; }
+.lore-start-step:hover, .lore-start-step:focus-visible, .lore-start-step.selected { border-color: var(--line-strong); background: rgba(224, 168, 93, 0.06); }
+.lore-start-step strong { font-size: 0.98rem; line-height: 1.25; }
+.lore-start-sub { color: var(--muted); font-size: 0.84rem; line-height: 1.35; }
+.lore-step-number, .lore-item-step, .study-step { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; border: 1px solid var(--accent-2); color: var(--accent-2); font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lore-start-step .lore-step-number { position: absolute; top: 0.8rem; left: 0.8rem; }
+
+.shelf + .shelf { margin-top: 0.9rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.shelf-head { display: flex; align-items: center; gap: 0.5rem; margin: 0.2rem 0.25rem 0.5rem; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft, var(--muted)); }
+.shelf-flag { width: 1.5rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
+a.entry-item.lore-item { display: grid; grid-template-columns: 1.7rem minmax(0, 1fr); align-items: start; gap: 0.7rem; margin-bottom: 0.25rem; padding: 0.6rem 0.65rem; }
+.lore-item .entry-name { margin: 0.1rem 0 0.15rem; }
+.lore-item .entry-meta { margin: 0; }
+.lore-item-step { width: 1.6rem; height: 1.6rem; margin-top: 0.1rem; border-color: var(--line-strong); color: var(--muted); font-size: 0.75rem; }
+.lore-item.selected .lore-item-step { border-color: var(--accent-2); color: var(--accent-2); }
+
+.reading-where { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.reading-nav { margin-top: 0.4rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.reading-nav-head { margin: 0 0 0.6rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.reading-nav-links { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.reading-step { display: grid; align-content: start; gap: 0.2rem; padding: 0.75rem 0.9rem; border: 1px solid var(--line); color: var(--text); text-decoration: none; }
+.reading-step:hover, .reading-step:focus-visible { border-color: var(--line-strong); background: rgba(122, 215, 209, 0.05); }
+.reading-step.is-next { text-align: right; }
+.reading-step.is-next .lore-kind { justify-self: end; }
+.reading-step-label { color: var(--muted); font-size: 0.75rem; }
+.reading-step.is-finish { border-color: rgba(224, 168, 93, 0.45); }
+@media (max-width: 560px) { .reading-nav-links { grid-template-columns: 1fr; } .reading-step.is-next { text-align: left; } .reading-step.is-next .lore-kind { justify-self: start; } }
+
+.faction-study { display: grid; gap: 1.2rem; align-items: start; }
+.faction-study.has-connected { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.faction-study:not(.has-connected) .study-path, .faction-study:not(.has-connected) .study-intro { max-width: 52rem; }
+@media (max-width: 900px) { .faction-study.has-connected { grid-template-columns: 1fr; } }
+.study-intro { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.93rem; }
+.study-path { display: grid; gap: 0; margin: 0 0 1rem; padding: 0; list-style: none; }
+.study-path li { display: grid; grid-template-columns: 1.7rem minmax(0, 1fr) auto; gap: 0.9rem; align-items: start; padding: 0.85rem 0; border-bottom: 1px solid var(--line); }
+.study-path li:first-child { padding-top: 0.2rem; }
+.study-body { display: grid; gap: 0.15rem; min-width: 0; }
+.study-title { color: var(--text); font-size: 1.02rem; font-weight: 700; text-decoration: none; }
+.study-title:hover, .study-title:focus-visible { color: var(--accent); }
+.study-sub { color: var(--text-soft, var(--muted)); font-size: 0.88rem; }
+.study-body p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.9rem; }

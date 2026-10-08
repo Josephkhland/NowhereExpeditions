@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": "data/images/tianzhao-mandate-homeland-e16867e5.jpg",
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "Tianzhao",
     "Mandate of Heaven",
@@ -36,5 +36,8 @@
   "factionIds": [
     "tianzhao-mandate"
   ],
-  "details": {}
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
 }

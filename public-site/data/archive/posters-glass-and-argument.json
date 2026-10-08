@@ -9,7 +9,7 @@
   "publishedAt": "",
   "eventDate": "",
   "image": null,
-  "imageCaption": null,
+  "imageCaption": "",
   "tags": [
     "posters",
     "print culture",
@@ -31,5 +31,8 @@
   "factionIds": [
     "vesper-republic"
   ],
-  "details": {}
+  "details": {
+    "kind": "society",
+    "startStep": null
+  }
 }
