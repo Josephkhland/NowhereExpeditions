@@ -64,6 +64,10 @@ LEGACY_LORE_TYPES = {"history": "History", "folklore": "Folklore"}
 LORE_TOPICS = ("History", "Folklore", "Religion", "Politics", "Technology", "Culture", "Notable People", "Institutions",
                "Events", "Diplomacy")
 MAX_TOPICS = 12
+# What kind of reading a lore entry is: one per entry, shown above its title. The order is also the default reading
+# order of a faction's study guide (who they are, how they live, what they believe, older stories, then the rest).
+LORE_KINDS = ("overview", "society", "faith", "folklore", "institution", "event", "endros")
+MAX_READING_PATH = 24
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
@@ -557,6 +561,12 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
         }
     if entry_type == "newspaper":
         return {"gateIds": clean_ids(details, "gateIds", "Gates")}
+    if entry_type == "lore":
+        return {
+            "kind": clean_choice(details, "kind", ("", *LORE_KINDS), ""),
+            # Its step in the Lore page's "Start here" path for new readers; empty when it is not part of it.
+            "startStep": clean_int(details.get("startStep"), "Start here step", 1, 99, allow_none=True),
+        }
     return {}
 
 
@@ -986,6 +996,13 @@ def clean_image_list(data: dict[str, Any], key: str, label: str) -> list[str]:
     return images
 
 
+def clean_reading_path(data: dict[str, Any]) -> list[str]:
+    path = clean_ids(data, "readingPath", "Reading path")
+    if len(path) > MAX_READING_PATH:
+        raise ManagerError(f"A reading path can have at most {MAX_READING_PATH} entries.")
+    return path
+
+
 def clean_faction(data: dict[str, Any]) -> dict[str, Any]:
     """A power of the wider world: a country, league or institution Expeditioners come from and deal with. The page is
     a map into the lore: short orientation here, the deeper history and folklore in Archive entries that name it."""
@@ -1017,6 +1034,8 @@ def clean_faction(data: dict[str, Any]) -> dict[str, Any]:
         "palette": clean_text(data, "palette"),
         "materials": clean_text(data, "materials"),
         "relations": cleaned_relations,
+        # The faction's study guide: Archive entry IDs in reading order. Empty: the site orders its lore by kind.
+        "readingPath": clean_reading_path(data),
         # Sponsorship: the Recruitment Faction rule it links to, and a compact version of its Extra.
         "ruleId": slugify(str(data.get("ruleId") or "")) or None,
         "sponsorFraming": clean_text(data, "sponsorFraming"),
@@ -1095,7 +1114,8 @@ COLLECTIONS: dict[str, Collection] = {
         unique=lambda record: ("name", record["name"]),
         public_fields=("id", "name", "shortName", "aliases", "tagline", "summary", "government", "knownFor", "coreValues",
                        "gateAttitude", "beliefs", "history", "visualSummary", "palette", "materials", "relations", "ruleId",
-                       "sponsorFraming", "extraName", "extraRule", "expectations", "flag", "homeland", "gallery", "clothing", "order"),
+                       "sponsorFraming", "extraName", "extraRule", "expectations", "flag", "homeland", "gallery", "clothing", "order",
+                       "readingPath"),
         image_fields=("flag", "homeland", "gallery", "clothing"),
         text_fields=("summary", "gateAttitude", "beliefs", "history", "visualSummary", "sponsorFraming", "extraRule", "expectations"),
     ),
@@ -2070,7 +2090,8 @@ class ContentStore:
                                 "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
                                 "domains": domain_keys(), "environmentDomains": environment_domain_keys(), "domainKinds": DOMAIN_KINDS, "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
                                 "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
-                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "gateCoreStates": GATE_CORE_STATES, "loreTopics": LORE_TOPICS}
+                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "gateCoreStates": GATE_CORE_STATES, "loreTopics": LORE_TOPICS,
+                                "loreKinds": LORE_KINDS}
         result["vocabulary"].update({"issueStatuses": ISSUE_STATUSES, "issueSeverities": ISSUE_SEVERITIES,
                                      "issueCategories": ISSUE_CATEGORIES, "issueResolutions": ISSUE_RESOLUTIONS})
         return result
@@ -2306,6 +2327,7 @@ class ContentStore:
                 "relations": [{**item, "text": scrub_archive_links(item.get("text") or "", public_archive)}
                               for item in faction.get("relations") or [] if item["factionId"] in published["factions"]],
                 "ruleId": faction.get("ruleId") if faction.get("ruleId") in public_rules else None,
+                "readingPath": [item for item in faction.get("readingPath") or [] if item in public_archive],
             })
 
         public_project = lambda project_id: project_id if project_id in published["projects"] else None

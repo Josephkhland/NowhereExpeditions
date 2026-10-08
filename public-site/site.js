@@ -1276,8 +1276,45 @@ const ARCHIVE_CATEGORIES = [
 ];
 const ARCHIVE_TYPE_LABELS = { "gate-record": "Gate", "session-record": "Expedition Report", newspaper: "Bulletin", lore: "Lore" };
 // How an entry is labelled in lists: a lore entry by its topics.
-const archiveEntryKind = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics.join(" · ") : archiveTypeLabel(entry.type);
 const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
+
+/* ---------- Lore kinds and reading paths ---------- */
+
+// What kind of reading a lore entry is, set in the manager. The order is also a faction's default reading order.
+const LORE_KINDS = { overview: "Overview", society: "Society", faith: "Faith", folklore: "Folklore", institution: "Institution",
+  event: "Event", endros: "Endros & the Gates" };
+const LORE_KIND_KEYS = Object.keys(LORE_KINDS);
+const loreKind = (entry) => entry?.type === "lore" ? LORE_KINDS[entry.details?.kind] || "" : "";
+const archiveEntryKind = (entry) => entry.type === "lore" ? loreKind(entry) || "Lore" : archiveTypeLabel(entry.type);
+const readingMinutes = (entry) => Math.max(1, Math.round(String(entry.content || "").split(/\s+/).filter(Boolean).length / 200));
+
+// The paths through the lore: "Start here" (entries with a start step), one per faction (the GM's order, or its lore by
+// kind), and a last shelf for lore about no faction. A faction path's `extra` is its lore left out of the path.
+const READING_PATHS = new WeakMap();
+const readingPaths = (campaign) => {
+  if (READING_PATHS.has(campaign)) return READING_PATHS.get(campaign);
+  const lore = campaign.archive.filter((entry) => entry.type === "lore");
+  const rank = (entry) => { const index = LORE_KIND_KEYS.indexOf(entry.details?.kind); return index < 0 ? LORE_KIND_KEYS.length : index; };
+  const byKind = (left, right) => rank(left) - rank(right) || (left.factionIds || []).length - (right.factionIds || []).length
+    || String(left.title).localeCompare(String(right.title));
+  const paths = [];
+  const start = lore.filter((entry) => entry.details?.startStep)
+    .sort((left, right) => left.details.startStep - right.details.startStep || String(left.title).localeCompare(String(right.title)));
+  if (start.length) paths.push({ key: "start", title: "Start here", entries: start, extra: [] });
+  const factions = [...campaign.factions].sort((left, right) => (left.order ?? 999) - (right.order ?? 999) || String(left.name).localeCompare(String(right.name)));
+  factions.forEach((faction) => {
+    const tagged = lore.filter((entry) => (entry.factionIds || []).includes(faction.id)).sort(byKind);
+    const chosen = (faction.readingPath || []).map((id) => campaign.archiveById.get(id)).filter(Boolean);
+    const entries = chosen.length ? chosen : tagged;
+    if (entries.length) paths.push({ key: faction.id, title: faction.name, faction, entries, extra: tagged.filter((entry) => !entries.includes(entry)) });
+  });
+  const placed = new Set(paths.filter((path) => path.faction).flatMap((path) => [...path.entries, ...path.extra]));
+  const rest = lore.filter((entry) => !placed.has(entry)).sort(byKind);
+  if (rest.length) paths.push({ key: "world", title: "Endros & the Gates", entries: rest, extra: [] });
+  READING_PATHS.set(campaign, paths);
+  return paths;
+};
+const loreHref = (entry, pathKey) => `lore.html${pathKey ? `?path=${encodeURIComponent(pathKey)}` : ""}#${encodeURIComponent(entry.id)}`;
 
 /* ---------- Archive Explore mode: a neighborhood view of how records link ---------- */
 
@@ -1500,7 +1537,7 @@ const loreShapeIcon = (kind) => kind === "job"
 
 /* A browsable list of Archive entries with one entry open beside it. The Lore page and the Expedition Reports page
    are two configurations of it; Gates have their own page (renderGates). */
-const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, searchLabel, emptyText, newestFirst = false }) => {
+const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, searchLabel, emptyText, newestFirst = false, shelves = false }) => {
   const root = document.getElementById(rootId);
   if (!root) return;
   const pageName = window.location.pathname.split("/").pop() || `${rootId}.html`;
@@ -1525,8 +1562,10 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
     // Factions used by at least one entry can filter the list; ?faction=<id> (from a faction page) sets it.
     const usedFactions = campaign.factions.filter((item) => entries.some((entry) => (entry.factionIds || []).includes(item.id)))
       .sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    // On the Lore page the filter also offers the shelf of lore about no faction (?faction=world).
+    const worldPath = shelves ? readingPaths(campaign).find((path) => path.key === "world") : null;
     let faction = new URLSearchParams(window.location.search).get("faction") || "";
-    if (!usedFactions.some((item) => item.id === faction)) faction = "";
+    if (!usedFactions.some((item) => item.id === faction) && !(worldPath && faction === "world")) faction = "";
     // Lore topics in use, most used first; ?topic=<name> sets the filter.
     const topicCounts = new Map();
     entries.forEach((entry) => (entry.topics || []).forEach((name) => topicCounts.set(name, (topicCounts.get(name) || 0) + 1)));
@@ -1539,8 +1578,58 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
       else url.searchParams.delete(name);
       window.history.replaceState(null, "", url);
     };
+    // The Lore page is arranged as reading paths; the path being followed decides "next" and "previous".
+    const paths = shelves ? readingPaths(campaign) : [];
+    const startPath = paths.find((path) => path.key === "start");
+    let currentPath = new URLSearchParams(window.location.search).get("path") || "";
+    const pathOf = (entry) => {
+      const has = (path) => path.entries.includes(entry);
+      return paths.find((path) => path.key === currentPath && has(path)) || paths.find((path) => path.faction && has(path)) || paths.find(has) || null;
+    };
+    const kindLabel = (entry) => `<span class="lore-kind">${escapeHtml(archiveEntryKind(entry))}</span>`;
+    const startStrip = () => startPath ? `
+      <div class="lore-start-head">
+        <h2 id="lore-start-head">New to the world? Start here</h2>
+        <p>Read these first, in order. Then choose a faction below and follow its path.</p>
+      </div>
+      <ol class="lore-start-path">${startPath.entries.map((entry, index) => `
+        <li><a class="lore-start-step" href="#${encodeURIComponent(entry.id)}" data-path="start">
+          <span class="lore-step-number" aria-hidden="true">${index + 1}</span>
+          ${kindLabel(entry)}
+          <strong>${escapeHtml(entry.title)}</strong>
+          ${entry.subtitle ? `<span class="lore-start-sub">${escapeHtml(entry.subtitle)}</span>` : ""}
+          <span class="lore-minutes">${readingMinutes(entry)} min read</span>
+        </a></li>`).join("")}
+      </ol>` : "";
+    // Where the opened entry sits in its path, and the way on.
+    const pathNav = (entry) => {
+      const path = pathOf(entry);
+      if (!path) return { where: "", nav: "" };
+      const index = path.entries.indexOf(entry);
+      if (index < 0) return { where: "", nav: "" };
+      const label = path.key === "start" ? "Start here" : path.faction ? `${path.title} reading path` : path.title;
+      const step = (other, direction) => other ? `
+        <a class="reading-step is-${direction}" href="#${encodeURIComponent(other.id)}" data-path="${escapeHtml(path.key)}">
+          <span class="reading-step-label">${direction === "prev" ? "Previous" : "Next"}</span>
+          ${kindLabel(other)}
+          <strong>${escapeHtml(other.title)}</strong>
+        </a>` : "";
+      const finish = path.faction ? `<a class="reading-step is-next is-finish" href="factions.html#${encodeURIComponent(path.faction.id)}">
+          <span class="reading-step-label">Path complete</span><strong>Back to ${escapeHtml(path.faction.shortName || path.title)}</strong></a>`
+        : path.key === "start" ? `<a class="reading-step is-next is-finish" href="factions.html">
+          <span class="reading-step-label">Path complete</span><strong>Choose a faction to read about</strong></a>` : "";
+      return {
+        where: `<p class="reading-where">Step ${index + 1} of ${path.entries.length} · ${path.faction
+          ? `<a class="inline-link" href="factions.html#${encodeURIComponent(path.faction.id)}">${escapeHtml(label)}</a>` : escapeHtml(label)}</p>`,
+        nav: `<nav class="reading-nav" aria-label="${escapeHtml(label)}">
+          <p class="reading-nav-head">${escapeHtml(label)} <span class="muted">· ${index + 1} of ${path.entries.length}</span></p>
+          <div class="reading-nav-links">${step(path.entries[index - 1], "prev") || "<span></span>"}${step(path.entries[index + 1], "next") || finish}</div>
+        </nav>`,
+      };
+    };
     root.innerHTML = `
       <div id="archive-browse">
+      ${startPath ? '<section id="lore-start" class="lore-start" aria-labelledby="lore-start-head"></section>' : ""}
       ${categories ? `<div class="filter-bar" role="group" aria-label="${escapeHtml(noun)} categories">
         ${categories.map(([type, label]) => `<button type="button" class="filter-chip" data-archive-type="${type}" aria-pressed="${type === category}">${label}</button>`).join("")}
       </div>` : ""}
@@ -1554,11 +1643,12 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
             <span class="sr-only">${escapeHtml(searchLabel)}</span>
             <input id="archive-search" class="search-input" type="search" placeholder="${escapeHtml(searchLabel)}..." />
           </label>
-          ${usedFactions.length ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
+          ${usedFactions.length || worldPath ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
             <span class="sr-only">Show entries about a faction</span>
             <select id="archive-faction" class="search-input archive-faction-filter">
-              <option value="">Any faction</option>
+              <option value="">${shelves ? "All shelves" : "Any faction"}</option>
               ${usedFactions.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === faction ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
+              ${worldPath ? `<option value="world" ${faction === "world" ? "selected" : ""}>${escapeHtml(worldPath.title)}</option>` : ""}
             </select>
           </label>` : ""}
           <div id="archive-list" class="entry-list"></div>
@@ -1611,14 +1701,16 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
         ...references.entries.map((other) => `<li>${archiveLink(other)} <span class="muted">${escapeHtml(archiveTypeLabel(other.type))}</span></li>`)
       ];
       const bulletinGates = entry.type === "newspaper" ? gatesOf(entry) : [];
+      const reading = shelves ? pathNav(entry) : { where: "", nav: "" };
       detail.innerHTML = `
         <a class="back-link archive-back" href="#">← All ${escapeHtml(noun.toLowerCase())}</a>
         <article class="detail-surface archive-entry archive-${escapeHtml(entry.type)}">
           <div class="detail-heading">
             <div>
-              <span class="pill">${escapeHtml(archiveTypeLabel(entry.type))}</span>
+              <span class="pill">${escapeHtml(archiveEntryKind(entry))}</span>
               <h2>${escapeHtml(entry.title)}</h2>
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
+              ${reading.where}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
               ${entry.topics?.length ? `<p class="entry-topics"><span class="muted">Topics</span>${entry.topics.map((name) => `<button type="button" class="topic-link" data-archive-topic="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</p>` : ""}
               ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
@@ -1634,6 +1726,7 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
           ${entry.type === "session-record" ? sessionFacts(entry) : ""}
           <div class="detail-block archive-body">${richText(entry.content, campaign, "No text on record.")}</div>
           ${(entry.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${entry.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+          ${reading.nav}
           ${referenceRows.length ? `<div class="detail-block"><h3>Referenced In</h3><ul class="clean-list">${referenceRows.join("")}</ul></div>` : ""}
         </article>`;
     };
@@ -1641,14 +1734,47 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
     const renderList = () => {
       const list = document.getElementById("archive-list");
       const filtered = entries.filter((entry) => (!category || entry.type === category)
-        && (!faction || (entry.factionIds || []).includes(faction)) && (!topic || (entry.topics || []).includes(topic))
+        && (!faction || (faction === "world" ? worldPath?.entries.includes(entry) : (entry.factionIds || []).includes(faction))) && (!topic || (entry.topics || []).includes(topic))
         && [entry.title, entry.subtitle, entry.summary, entry.content, entry.author, ...(entry.tags || []), ...(entry.topics || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query));
       // A linked entry always opens, even when the current filter hides it from the list.
       const linked = campaign.archiveById.get(selectedHash());
-      const selected = linked && types.includes(linked.type) ? linked : filtered[0];
       // Phones show either the list or the opened entry, never both stacked.
       document.getElementById("archive-browse").classList.toggle("is-reading", Boolean(linked));
+      if (shelves) {
+        // The lore as shelves: one per path, numbered in reading order; lore left out of a faction's path follows it.
+        const browsing = !query && !topic && !faction;
+        const start = document.getElementById("lore-start");
+        if (start) {
+          start.hidden = Boolean(linked) || !browsing;
+          if (!start.hidden && !start.childElementCount) start.innerHTML = startStrip();
+        }
+        const groups = paths.filter((path) => path.key !== "start" && (!faction || path.key === faction))
+          .map((path) => ({ path, items: [...path.entries.map((entry, index) => [entry, index + 1]), ...path.extra.map((entry) => [entry, null])]
+            .filter(([entry]) => filtered.includes(entry)) }))
+          .filter((group) => group.items.length);
+        const firstShown = groups[0]?.items[0]?.[0];
+        const selected = linked && types.includes(linked.type) ? linked : (browsing && startPath?.entries[0]) || firstShown;
+        // The landing page opens the first Start here entry: read it as part of that path.
+        if (!linked && browsing && startPath && selected === startPath.entries[0]) currentPath = "start";
+        start?.querySelectorAll(".lore-start-step").forEach((link) => link.classList.toggle("selected", link.getAttribute("href") === `#${encodeURIComponent(selected?.id || "")}`));
+        list.innerHTML = groups.length ? groups.map(({ path, items }) => `
+          <section class="shelf" aria-label="${escapeHtml(path.title)}">
+            <h3 class="shelf-head">${path.faction ? factionFlag(path.faction, "shelf-flag") : ""}<span>${escapeHtml(path.title)}</span></h3>
+            ${items.map(([entry, step]) => `
+            <a class="entry-item lore-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" data-path="${escapeHtml(path.key)}" ${entry === selected ? 'aria-current="true"' : ""}>
+              <span class="lore-item-step" aria-hidden="true">${step || "·"}</span>
+              <span class="lore-item-body">
+                ${kindLabel(entry)}
+                <span class="entry-name">${escapeHtml(entry.title)}</span>
+                ${entry.subtitle ? `<span class="entry-meta">${escapeHtml(entry.subtitle)}</span>` : ""}
+              </span>
+            </a>`).join("")}
+          </section>`).join("") : `<div class="empty-state">${escapeHtml(entries.length ? "No entries match the current filter." : emptyText)}</div>`;
+        renderDetail(selected);
+        return;
+      }
+      const selected = linked && types.includes(linked.type) ? linked : filtered[0];
       list.innerHTML = filtered.length ? filtered.map((entry) => `
         <a class="entry-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" ${entry === selected ? 'aria-current="true"' : ""}>
           <span class="entry-name">${escapeHtml(entry.title)}</span>
@@ -1658,6 +1784,13 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
       renderDetail(selected);
     };
 
+    // Following a link in a path remembers the path, so "next" stays on it.
+    root.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-path]");
+      if (!link) return;
+      currentPath = link.dataset.path;
+      setParam("path", currentPath);
+    });
     root.querySelectorAll("[data-archive-type]").forEach((button) => button.addEventListener("click", () => {
       category = button.dataset.archiveType;
       root.querySelectorAll("[data-archive-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
@@ -1724,7 +1857,7 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
 const EXPLORE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="4.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="19" r="2.2" fill="currentColor"/><circle cx="4.5" cy="19" r="2.2" fill="currentColor"/><path d="M6 6.5l4 3.5M18 6.5l-4 3.5M18 17.5l-4-3.5M6 17.5l4-3.5" stroke="currentColor" stroke-width="1.5"/></svg>';
 
 const renderLore = () => renderArchiveBrowser({ rootId: "lore", types: ["lore"], noun: "Lore", searchLabel: "Search the lore",
-  emptyText: "No lore is on public record yet." });
+  emptyText: "No lore is on public record yet.", shelves: true });
 
 const renderReports = () => renderArchiveBrowser({ rootId: "reports", types: ["session-record", "newspaper"], noun: "Reports",
   categories: [["", "All"], ["session-record", "Expedition Reports"], ["newspaper", "Bulletins"]], searchLabel: "Search reports and bulletins",
@@ -2246,11 +2379,23 @@ const renderCharacterRoster = async () => {
     const renderProfile = (character) => {
       const jobs = campaign.jobsForCharacter(character.id);
       const sessions = campaign.sessionRecordsForCharacter(character.id);
-      const stash = renderStash(character, campaign);
+      // Known Figures carry no stash unless the GM gives them one.
+      const stash = character.type === "npc" && !(character.stash || []).length ? "" : renderStash(character, campaign);
       const projects = campaign.projectsForCharacter(character.id).sort((left, right) => String(left.name).localeCompare(String(right.name)));
       const ongoing = projects.filter((project) => !projectComplete(project));
       const completed = projects.filter(projectComplete);
       const tabbed = Boolean(character.sheet || projects.length);
+      // Archive entries that link to this character (characters.html#id), beyond the reports they were part of.
+      const mention = new RegExp(`characters\\.html#${character.id.replace(/[^a-z0-9-]/g, "")}(?![a-z0-9-])`);
+      const mentions = campaign.archive.filter((entry) => !sessions.includes(entry) && mention.test(`${entry.summary || ""}
+${entry.content || ""}`))
+        .sort((left, right) => String(left.title).localeCompare(String(right.title)));
+      const archiveBlock = mentions.length ? `<h3${jobs.length || character.type !== "npc" ? ' class="sheet-subheading"' : ""}>In the Archive</h3>
+        <ul class="faction-entries">${mentions.map((entry) => `<li>
+          <a href="${archiveHref(entry)}">${escapeHtml(entry.type === "gate-record" ? gateName(entry) : entry.title)}</a>
+          <span class="muted">${escapeHtml(archiveEntryKind(entry))}</span>
+          ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
+        </li>`).join("")}</ul>` : "";
       const projectGroup = (title, items, empty) => `<h3${title === "Completed" ? ' class="sheet-subheading"' : ""}>${title}</h3>
         ${items.length ? `<div class="grid grid-two project-grid">${items.map((project) => projectCard(project, campaign)).join("")}</div>` : `<p class="muted">${empty}</p>`}`;
       root.innerHTML = `
@@ -2276,12 +2421,13 @@ const renderCharacterRoster = async () => {
               ${projects.length ? `<button type="button" class="profile-tab" role="tab" id="tab-projects" aria-controls="panel-projects" data-profile-tab="projects">Projects <span class="chip-count">${projects.length}</span></button>` : ""}
             </div>` : ""}
           <div class="detail-block" id="panel-profile" ${tabbed ? 'role="tabpanel" aria-labelledby="tab-profile"' : ""}>
-            <h3>Job History</h3>
+            ${character.type === "npc" && !jobs.length && mentions.length ? "" : "<h3>Job History</h3>"}
             ${jobs.length ? `<ul class="archive-list">${jobs.map((job) => `<li><a class="archive-row" href="jobs.html#${encodeURIComponent(job.id)}">
                 <span class="archive-title">${escapeHtml(jobLabel(job))}</span>
                 <span class="archive-meta">${escapeHtml([job.organizerId === character.id ? "Organizer" : "Crew", humanize(job.type), job.scheduledAt ? formatSchedule(job.scheduledAt) : ""].filter(Boolean).join(" · "))}</span>
                 <span class="archive-status">${statusPill(job.status, "pill pill-small")}</span>
-              </a></li>`).join("")}</ul>` : '<p class="muted">No jobs on record.</p>'}
+              </a></li>`).join("")}</ul>` : character.type === "npc" && mentions.length ? "" : '<p class="muted">No jobs on record.</p>'}
+            ${archiveBlock}
             ${sessions.length ? `<h3 class="sheet-subheading">Session Records</h3><ul class="clean-list">${sessions.map((entry) => `<li>${archiveLink(entry)} <span class="muted">${escapeHtml(formatDate(entry.details?.sessionDate))}</span></li>`).join("")}</ul>` : ""}
             ${character.sheet ? "" : stash}
           </div>
@@ -2994,10 +3140,25 @@ const renderFactions = async () => {
       ${pictures.length ? `<div class="faction-gallery">${pictures.map(([src, alt, kind]) => `
         <a class="faction-picture ${kind}" href="${escapeHtml(src)}" target="_blank" rel="noopener"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" /></a>`).join("")}</div>` : ""}` : "";
     const relations = (faction.relations || []).map((item) => [campaign.factionById.get(item.factionId), item.text]).filter(([other]) => other);
-    const entries = campaign.archiveForFaction(faction.id);
-    const entryKeys = (entry) => entry.type === "lore" && entry.topics?.length ? entry.topics : [archiveTypeLabel(entry.type)];
-    const types = [...new Set(entries.flatMap(entryKeys))];
-    const entryRow = (entry) => `<li data-entry-keys="${escapeHtml(JSON.stringify(entryKeys(entry)))}">
+    const path = readingPaths(campaign).find((item) => item.key === faction.id);
+    const studied = path?.entries || [];
+    const connected = campaign.archiveForFaction(faction.id).filter((entry) => !studied.includes(entry));
+    const studyGuide = studied.length ? `
+      <p class="study-intro">Read these in order, from the broad picture to the details. About ${studied.reduce((total, entry) => total + readingMinutes(entry), 0)} minutes in all.</p>
+      <ol class="study-path">${studied.map((entry, index) => `
+        <li>
+          <span class="study-step" aria-hidden="true">${index + 1}</span>
+          <div class="study-body">
+            <span class="lore-kind">${escapeHtml(archiveEntryKind(entry))}</span>
+            <a class="study-title" href="${loreHref(entry, faction.id)}">${escapeHtml(entry.title)}</a>
+            ${entry.subtitle ? `<span class="study-sub">${escapeHtml(entry.subtitle)}</span>` : ""}
+            ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
+          </div>
+          <span class="lore-minutes">${readingMinutes(entry)} min</span>
+        </li>`).join("")}
+      </ol>
+      <a class="destination-link" href="${loreHref(studied[0], faction.id)}">Start reading <span aria-hidden="true">→</span></a>` : "";
+    const entryRow = (entry) => `<li>
       <a href="${archiveHref(entry)}">${escapeHtml(entry.type === "gate-record" ? gateName(entry) : entry.title)}</a>
       <span class="muted">${escapeHtml(archiveEntryKind(entry))}</span>
       ${entry.summary ? `<p>${richInline(entry.summary, campaign)}</p>` : ""}
@@ -3028,19 +3189,13 @@ const renderFactions = async () => {
               <li>${factionChip(other)}${text ? `<span>${richInline(text, campaign)}</span>` : ""}</li>`).join("")}</ul>` : "")}
           </aside>
         </div>
-        ${section("In the Archive", entries.length ? `
-          ${types.length > 1 ? `<div class="filter-bar" role="group" aria-label="Filter Archive entries">
-            <button type="button" class="filter-chip" data-faction-type="" aria-pressed="true">All</button>
-            ${types.map((key) => `<button type="button" class="filter-chip" data-faction-type="${escapeHtml(key)}" aria-pressed="false">${escapeHtml(key)}</button>`).join("")}
-          </div>` : ""}
-          <ul class="faction-entries">${entries.map(entryRow).join("")}</ul>
-          <a class="destination-link" href="lore.html?faction=${encodeURIComponent(faction.id)}">Browse the lore <span aria-hidden="true">→</span></a>`
-          : '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
+        ${studied.length || connected.length ? `<div class="faction-study${studied.length && connected.length ? " has-connected" : ""}">
+          ${section("Study guide", studyGuide, "faction-archive")}
+          ${section(studied.length ? "Connected reading" : "In the Archive", connected.length ? `
+            ${studied.length ? '<p class="study-intro">Other records that touch them: shared histories, Gates and reports.</p>' : ""}
+            <ul class="faction-entries">${connected.map(entryRow).join("")}</ul>` : "", "faction-connected")}
+        </div>` : section("Study guide", '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
       </article>`;
-    root.querySelectorAll("[data-faction-type]").forEach((button) => button.addEventListener("click", () => {
-      root.querySelectorAll("[data-faction-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-      root.querySelectorAll(".faction-entries li").forEach((item) => { item.hidden = Boolean(button.dataset.factionType) && !JSON.parse(item.dataset.entryKeys).includes(button.dataset.factionType); });
-    }));
   };
 
   const route = () => {

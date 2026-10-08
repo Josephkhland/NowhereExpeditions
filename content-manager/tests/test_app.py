@@ -190,7 +190,8 @@ class ContentStoreTests(unittest.TestCase):
             with self.subTest(entry_type=entry_type):
                 entry = self.store.save_record("archive", None, {"type": entry_type, "title": f"A {entry_type}",
                                                                  "details": GATE_DETAILS, "published": True})["id"]
-                self.assertEqual(self.record("archive", entry)["details"], {"gateIds": []} if entry_type == "newspaper" else {},
+                self.assertEqual(self.record("archive", entry)["details"],
+                                 {"gateIds": []} if entry_type == "newspaper" else {"kind": "", "startStep": None},
                                  "Gate metadata is not kept on other types; a bulletin can only name its Gates")
         job = self.store.save_record("jobs", None, {
             "title": "Return to the Sunken Archive", "designation": "017-C", "type": "expedition", "status": "open",
@@ -737,6 +738,23 @@ class ContentStoreTests(unittest.TestCase):
                 self.store.save_record("archive", None, data)
         self.store.export_site()
         self.assertEqual(read_json(self.export_dir / "data" / "archive" / f"{entry}.json")["topics"], ["Religion", "Folklore", "Tea Rites"])
+
+    def test_lore_kinds_start_steps_and_faction_reading_paths(self) -> None:
+        faction = self.store.save_record("factions", None, {"name": "Vesper Republic", "published": True})["id"]
+        overview = self.store.save_record("archive", None, {"type": "lore", "title": "The Vesper Republic", "published": True,
+                                                            "factionIds": [faction], "details": {"kind": "overview", "startStep": "2"}})["id"]
+        draft = self.store.save_record("archive", None, {"type": "lore", "title": "Unfinished", "details": {"kind": "faith"}})["id"]
+        self.assertEqual(self.record("archive", overview)["details"], {"kind": "overview", "startStep": 2})
+        for details in ({"kind": "gossip"}, {"startStep": 0}, {"startStep": "first"}):
+            with self.subTest(details=details), self.assertRaises(ManagerError):
+                self.store.save_record("archive", None, {"type": "lore", "title": "Bad", "details": details})
+        self.store.save_record("factions", faction, {**self.record("factions", faction), "readingPath": [overview, draft, overview, " "]})
+        self.assertEqual(self.record("factions", faction)["readingPath"], [overview, draft])
+        with self.assertRaisesRegex(ManagerError, "at most"):
+            self.store.save_record("factions", faction, {**self.record("factions", faction), "readingPath": [f"entry-{n}" for n in range(25)]})
+        self.store.sync_site_data()
+        self.assertEqual(read_json(self.data_dir / "factions" / f"{faction}.json")["readingPath"], [overview], "unpublished entries stay off the path")
+        self.assertEqual(read_json(self.data_dir / "archive" / f"{overview}.json")["details"]["kind"], "overview")
 
     def test_opening_an_older_database_turns_history_and_folklore_into_topics(self) -> None:
         entry = self.store.save_record("archive", None, {"type": "lore", "title": "Old Myth"})["id"]
