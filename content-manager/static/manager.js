@@ -1,4 +1,4 @@
-const state = { factions: [], gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {},
+const state = { factions: [], gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {}, issues: [],
   settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [],
   // The shared vocabulary (Functions, Domains...), sent by the server so it is defined in one place.
   vocabulary: { loreTopics: [], functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
@@ -842,6 +842,7 @@ const collections = {
       ${field("Minimum crew", "crewMin", record.crewMin ?? "", { type: "number", min: 0 })}
       ${field("Maximum crew", "crewMax", record.crewMax ?? "", { type: "number", min: 0 })}
       ${referenceSelect("Organizer", "organizerId", record.organizerId, "characters", characterLabel, { full: true })}
+      ${gateSelect("Gate", "gateId", record.gateId, "Optional. The Gate this job goes to; it is listed on the Gate's page.")}
       ${participantPicker(record.participantIds || [])}
       ${textarea("Requirements", "requirements", listText(record.requirements), { full: true, help: "Optional. One per line." })}
       <div class="form-section">After play</div>
@@ -858,7 +859,7 @@ const collections = {
       organizerId: formText(formData, "organizerId") || null,
       participantIds: [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value),
       requirements: linesToArray(formData.get("requirements")),
-      sessionRecordId: formText(formData, "sessionRecordId") || null
+      sessionRecordId: formText(formData, "sessionRecordId") || null, gateId: formText(formData, "gateId") || null
     })
   },
   archive: {
@@ -867,7 +868,7 @@ const collections = {
     meta: (record) => [record.type === "lore" && record.topics?.length ? record.topics.join(" · ") : archiveTypeLabel(record.type),
       record.type === "gate-record" ? record.details?.designation : record.publishedAt || record.details?.sessionDate],
     filters: [["type", "All types", ARCHIVE_TYPES]],
-    idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (archive.html#id) and the target of [[id]] links.",
+    idHelp: "Generated from the designation or title when left blank. It is the entry's permanent URL (gates.html#id, lore.html#id or reports.html#id) and the target of [[id]] links.",
     fields: (record) => {
       const listType = listFilters.archive?.type;
       const type = record.type || (activePreset === "gates" ? "gate-record" : listType && !listType.startsWith("!") && listType !== "gate-record" ? listType : "lore");
@@ -883,16 +884,20 @@ const collections = {
       ${field("Published", "publishedAt", record.publishedAt || "", { type: "date", help: "When the document appeared in the world." })}
       ${field("Event date", "eventDate", record.eventDate || "", { help: "Free text; in-world dates are allowed." })}
       ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
-      ${imageField("Image", "image", record.image)}
+      ${imageField("Image", "image", record.image, "image", "Lore: shown above the text. Gate Record: the Gate's painting, shown in its own panel beside the dossier.")}
+      ${textarea("Image caption", "imageCaption", record.imageCaption || "", { full: true, rows: 2, help: "Optional. What the reader should notice in the image, and what it does or doesn't confirm." })}
       ${topicPicker(record.topics || [])}
       ${recordChecklist("factionIds", record.factionIds || [], "factions", (faction) => faction.name, "Factions",
         "Optional. Who this entry is about; it is listed on those factions' pages. An entry can name several.")}
       ${section("gate-record", `
         <div class="form-section">Gate Record</div>
         ${field("Designation", "gateDesignation", details.designation || "", { placeholder: "G-17", help: "Required for Gate Records." })}
-        ${selectField("Gate status", "gateStatus", details.gateStatus || "active", enumChoices(state.vocabulary.gateStatuses), { help: "Collapsed: Core recovered. Sealed: closed as an unacceptable threat. Emerging: newly opening." })}
-        ${domainPicker("domains", details.domains || [], "Normally one Domain. Two only when that defines the place; its native Resources and creatures inherit it.")}
+        ${selectField("Gate status", "gateStatus", details.gateStatus || "active", enumChoices(state.vocabulary.gateStatuses), { help: "Collapsed: Core recovered. Sealed: closed as an unacceptable threat. Emerging: newly opening. Restricted: open, clearance required. Quarantined: open, entry prohibited." })}
+        ${domainPicker("domains", details.domains || [], "Normally one Domain. Two only when that defines the place; its native Resources and creatures inherit it.", environmentDomains())}
         ${field("Discovered", "discoveredAt", details.discoveredAt || "", { type: "date" })}
+        ${selectField("Core", "gateCore", details.core || "unknown", (state.vocabulary.gateCoreStates || ["unknown", "not-located", "located", "recovered"]).map((value) => [value, { unknown: "Unknown", "not-located": "Not located", located: "Located (still inside)", recovered: "Recovered" }[value] || humanize(value)]), { help: "Recovering a Core collapses its Gate." })}
+        ${field("Access", "gateAccess", details.access || "", { placeholder: "e.g. Expedition clearance required", help: "Who may go in, in a few words." })}
+        ${field("Significance", "gateSignificance", details.significance || "", { full: true, placeholder: "e.g. First permanent Gate research installation.", help: "One line on why this Gate matters. Shown under its name when it has no subtitle." })}
         ${textarea("Environment", "environment", details.environment || "", { full: true, help: "What the Outpost currently knows. Keep GM-only truths out of this record." })}
         ${textarea("Known traits", "knownTraits", listText(details.knownTraits), { help: "One per line." })}
         ${textarea("Known hazards", "knownHazards", listText(details.knownHazards), { help: "One per line." })}
@@ -904,7 +909,11 @@ const collections = {
         <div class="form-section">Session Record</div>
         ${field("Session date", "sessionDate", details.sessionDate || "", { type: "date" })}
         ${selectField("Outcome", "outcome", details.outcome || "unknown", enumChoices(["success", "partial", "failed", "aborted", "unknown"]))}
-        ${participantPicker(record.participantIds || [])}`)}`;
+        ${participantPicker(record.participantIds || [])}
+        ${gateChecklist("reportGateIds", details.gateIds || [], "The Gate(s) this expedition went to. A report linked to a Job also shows on that Job's Gate.")}`)}
+      ${section("newspaper", `
+        <div class="form-section">Bulletin</div>
+        ${gateChecklist("bulletinGateIds", details.gateIds || [], "Optional. Gates this bulletin is about; it is listed on their pages.")}`)}`;
     },
     related: (record) => {
       const jobs = state.jobs.filter((job) => job.sessionRecordId === record.id);
@@ -912,7 +921,9 @@ const collections = {
       const projects = state.projects.filter((project) => project.relatedGateId === record.id);
       const gateBlock = record.type === "gate-record" ? `
         ${relatedBlock("Resources from this Gate", resources.map((resource) => `${referenceLink("resources", resource, resource.name)} <span class="helper">${escapeHtml(resource.availability)}</span>`), "No Resources yet. Add them in Resources or generate them in CM Tools.")}
-        ${relatedBlock("Related projects", projectRows(projects), "No project names this Gate.")}` : "";
+        ${relatedBlock("Related projects", projectRows(projects), "No project names this Gate.")}
+        ${relatedBlock("Jobs to this Gate", state.jobs.filter((job) => job.gateId === record.id).map((job) => referenceLink("jobs", job, jobLabel(job))), "No Job names this Gate.")}
+        ${relatedBlock("Reports and bulletins", state.archive.filter((entry) => (entry.details?.gateIds || []).includes(record.id)).map((entry) => referenceLink("archive", entry, entry.title)), "No report or bulletin names this Gate.")}` : "";
       const linkedFrom = [...state.archive, ...state.jobs].filter((other) => other.id !== record.id
         && [other.content, other.summary, other.briefing, other.objective].join("\n").includes(`[[${record.id}`));
       return `<div class="form-section">Derived references</div>
@@ -928,13 +939,15 @@ const collections = {
         discoveredAt: formText(formData, "discoveredAt"), environment: formText(formData, "environment"),
         knownTraits: linesToArray(formData.get("knownTraits")), knownHazards: linesToArray(formData.get("knownHazards")),
         knownLocations: linesToArray(formData.get("knownLocations")),
-        domains: formData.getAll("domains"), knownCreatures: linesToArray(formData.get("knownCreatures")), gmNotes: formText(formData, "gmNotes")
-      } : type === "session-record" ? { sessionDate: formText(formData, "sessionDate"), outcome: formText(formData, "outcome") } : {};
+        domains: formData.getAll("domains"), knownCreatures: linesToArray(formData.get("knownCreatures")), gmNotes: formText(formData, "gmNotes"),
+        core: formText(formData, "gateCore"), access: formText(formData, "gateAccess"), significance: formText(formData, "gateSignificance")
+      } : type === "session-record" ? { sessionDate: formText(formData, "sessionDate"), outcome: formText(formData, "outcome"), gateIds: formData.getAll("reportGateIds") }
+        : type === "newspaper" ? { gateIds: formData.getAll("bulletinGateIds") } : {};
       return {
         type, title: formText(formData, "title"), subtitle: formText(formData, "subtitle"),
         summary: formText(formData, "summary"), content: formText(formData, "content"), author: formText(formData, "author"),
         publishedAt: formText(formData, "publishedAt"), eventDate: formText(formData, "eventDate"),
-        image: formText(formData, "image"), tags: linesToArray(formData.get("tags")), details, factionIds: formData.getAll("factionIds"),
+        image: formText(formData, "image"), imageCaption: formText(formData, "imageCaption"), tags: linesToArray(formData.get("tags")), details, factionIds: formData.getAll("factionIds"),
         topics: [...formData.getAll("topics"), ...parseList(formData.get("newTopics"))],
         participantIds: type === "session-record" ? [...form.querySelectorAll(".participant-check:checked")].map((checkbox) => checkbox.value) : []
       };
@@ -1055,10 +1068,10 @@ function functionPicker(name, selected, label, help = "") {
     ${help ? `<span class="helper">${help}</span>` : ""}</div>`;
 }
 
-function domainPicker(name, selected, help = "") {
+function domainPicker(name, selected, help = "", keys = state.vocabulary.domains) {
   return `<div class="field full"><span class="field-label">Domain</span>
-    <div class="domain-options">${state.vocabulary.domains.map((domain) => `
-      <label><input type="checkbox" name="${name}" value="${domain}" ${selected.includes(domain) ? "checked" : ""} />${escapeHtml(domainName(domain))}</label>`).join("")}</div>
+    <div class="domain-options">${keys.map((domain) => `
+      <label><input type="checkbox" name="${name}" value="${domain}" ${selected.includes(domain) ? "checked" : ""} />${escapeHtml(domainName(domain))}${isOriginDomain(domain) ? ' <span class="helper">(origin)</span>' : ""}</label>`).join("")}</div>
     ${help ? `<span class="helper">${help}</span>` : ""}</div>`;
 }
 
@@ -1089,6 +1102,14 @@ function recordChecklist(name, selectedIds, key, labelFor, label, help = "") {
 const isGate = (entry) => entry.type === "gate-record";
 const gateLabel = (entry) => [entry.details?.designation, entry.title].filter(Boolean).join(" · ");
 const gateSelect = (label, name, value, help) => referenceSelect(label, name, value, "archive", gateLabel, { filter: isGate, emptyLabel: "— No Gate —", help });
+// The Gates a report or bulletin is about. Each form section needs its own field name: hidden sections still submit.
+function gateChecklist(name, selected, help) {
+  const gates = state.archive.filter(isGate).sort((left, right) => gateLabel(left).localeCompare(gateLabel(right), undefined, { numeric: true }));
+  return `<div class="field full"><span class="field-label">Gates</span><div class="check-list">${gates.length ? gates.map((gate) => `
+    <label class="check-option"><input type="checkbox" name="${name}" value="${escapeHtml(gate.id)}" ${selected.includes(gate.id) ? "checked" : ""} />
+      <span>${escapeHtml(gateLabel(gate))}${gate.published ? "" : " — unpublished"}</span></label>`).join("") : '<div class="empty-list">No Gates yet.</div>'}</div>
+    <span class="helper">${help}</span></div>`;
+}
 const gateDomains = (gateId) => findRecord("archive", gateId)?.details?.domains || [];
 const resourceDomains = (resource) => resource.domains?.length ? resource.domains : gateDomains(resource.gateId);
 const domainText = (domains) => domains.length ? domains.map(domainName).join(" + ") : "No Domain";
@@ -1108,11 +1129,13 @@ collections.resources = {
     ${gateSelect("Origin Gate", "gateId", record.gateId, "The Gate it comes from. It inherits that Gate's Domain unless you pick one below.")}
     ${selectField("Availability", "availability", record.availability || "sample", state.vocabulary.resourceAvailability.map((value) => [value, humanize(value)]),
       { help: "Sample: research quantities. Limited: a stock that use consumes. Available: a dependable supply." })}
-    ${domainPicker("domains", record.domains || [], "Leave empty to inherit the origin Gate's Domain.")}
+    ${domainPicker("domains", record.domains || [], "Leave empty to inherit the origin Gate's Domain. An ordinary trade material takes its culture of origin (marked origin) instead.")}
     ${textarea("Description", "description", record.description || "", { full: true, rows: 3, help: "What it looks, feels and behaves like. Fiction, not mechanics." })}
     ${functionPicker("functions", record.functions || [], "Known Functions", "What Endros currently understands it can do. Usually 1–3; 4+ is exceptional.")}
     ${textarea("Special Property", "specialProperty", record.specialProperty || "", { full: true, rows: 2, help: "Strange behavior too specific to be a Function." })}
     ${field("Supply", "supply", record.supply || "", { full: true, placeholder: "e.g. Established extraction operation", help: "Optional. How Endros gets it." })}
+    ${imageField("Icon", "image", record.image, "image", "The whole painting of the material (about 256px is plenty). Choose the square the site shows in Icon framing, below.")}
+    ${iconFramingField(record)}
     ${projectSelect(record)}
     <div class="form-section cm-only">CM only · never published</div>
     <div class="field full gm-only">${functionPicker("hiddenFunctions", record.hiddenFunctions || [], "Hidden Functions", "Already in the material, not yet understood. Research can reveal them: move them to Known Functions when it does.")}</div>
@@ -1128,7 +1151,8 @@ collections.resources = {
     availability: formText(formData, "availability"), domains: formData.getAll("domains"), description: formText(formData, "description"),
     functions: formData.getAll("functions"), specialProperty: formText(formData, "specialProperty"), supply: formText(formData, "supply"),
     projectId: formText(formData, "projectId") || null, hiddenFunctions: formData.getAll("hiddenFunctions"),
-    harvestingIssue: formText(formData, "harvestingIssue"), gmNotes: formText(formData, "gmNotes")
+    harvestingIssue: formText(formData, "harvestingIssue"), gmNotes: formText(formData, "gmNotes"), image: formText(formData, "image") || null,
+    imageCrop: { x: Number(formData.get("cropX") ?? 0), y: Number(formData.get("cropY") ?? 0), size: Number(formData.get("cropSize") ?? 100), ratio: Number(formData.get("cropRatio") ?? 1) }
   })
 };
 
@@ -1266,7 +1290,7 @@ function draftCard(resource, index, { inheritGate = false, removable = false } =
       <label>Name<input type="text" data-draft="name" value="${escapeHtml(resource.name)}" /></label>
       <label>Source<select data-draft="sourceType">${optionList(state.vocabulary.resourceSources, resource.sourceType)}</select></label>
       <label>Availability<select data-draft="availability">${optionList(state.vocabulary.resourceAvailability, resource.availability)}</select></label>
-      ${inheritGate ? "" : `<label>Domain<select data-draft="domain"><option value="">Inherit from Gate</option>${optionList(state.vocabulary.domains, resource.domains?.[0] || "", domainLabels())}</select></label>`}
+      ${inheritGate ? "" : `<label>Domain<select data-draft="domain"><option value="">Inherit from Gate</option>${optionList(environmentDomains(), resource.domains?.[0] || "", domainLabels())}</select></label>`}
       <label>Known Functions<input type="text" data-draft="functions" value="${escapeHtml(listInput(resource.functions))}" title="${escapeHtml(words)}" /></label>
       <label>Hidden Functions (CM only)<input type="text" data-draft="hiddenFunctions" value="${escapeHtml(listInput(resource.hiddenFunctions))}" title="${escapeHtml(words)}" /></label>
     </div>
@@ -1292,7 +1316,7 @@ function resourceToolPanel() {
   const draftResource = toolView.resource;
   return `
     <div class="tool-options" id="tool-resource-options">
-      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(state.vocabulary.domains, options.domain, domainLabels())}</select></label>
+      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(environmentDomains(), options.domain, domainLabels())}</select></label>
       <label>Source<select name="source"><option value="random">Random</option>${optionList(["fauna", "flora", "ground"], options.source, { fauna: "Fauna-derived", flora: "Flora-derived", ground: "Ground / ore / stone" })}</select></label>
       <label>Functions<select name="count">${optionList(["random", 1, 2, 3, 4], options.count, { random: "Random (1–3)", 4: "4 (exceptional)" })}</select></label>
       <label>Combination<select name="mode">${optionList(["synergy", "mixed", "opposed", "unstable"], options.mode, { synergy: "Naturally synergistic", mixed: "Mixed / ordinary", opposed: "Opposed", unstable: "Unstable / catastrophic" })}</select></label>
@@ -1315,8 +1339,8 @@ function gateToolPanel() {
   return `
     <div class="tool-options" id="tool-gate-options">
       <label>Designation<input type="text" name="designation" value="${escapeHtml(options.designation || nextGateDesignation())}" /></label>
-      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(state.vocabulary.domains, options.domain, domainLabels())}</select></label>
-      <label>Second Domain (rare)<select name="secondDomain"><option value="">None</option>${optionList(state.vocabulary.domains, options.secondDomain, domainLabels())}</select></label>
+      <label>Domain<select name="domain"><option value="random">Random</option>${optionList(environmentDomains(), options.domain, domainLabels())}</select></label>
+      <label>Second Domain (rare)<select name="secondDomain"><option value="">None</option>${optionList(environmentDomains(), options.secondDomain, domainLabels())}</select></label>
       <label>Fauna Resources<select name="fauna">${optionList(counts, options.fauna, { random: "Random (1–3)" })}</select></label>
       <label>Flora Resources<select name="flora">${optionList(counts, options.flora, { random: "Random (1–3)" })}</select></label>
       <label>Ground Resources<select name="ground">${optionList(counts, options.ground, { random: "Random (1–3)" })}</select></label>
@@ -1431,6 +1455,9 @@ async function handleToolAction(action, button) {
 const domainList = () => state.vocabulary.domainList || [];
 const domainName = (key) => domainList().find((domain) => domain.key === key)?.name || humanize(key);
 const domainLabels = () => Object.fromEntries(domainList().map((domain) => [domain.key, domain.name]));
+// Gate environments (Verdant, Frozen...). Origins (a culture, for ordinary trade materials) never describe a Gate.
+const environmentDomains = () => state.vocabulary.environmentDomains || state.vocabulary.domains;
+const isOriginDomain = (key) => domainList().find((domain) => domain.key === key)?.kind === "origin";
 
 let vocabTab = "functions";
 let domainDraft = null;
@@ -1467,13 +1494,17 @@ function renderDomainEditor() {
       <div class="path-help helper">
         <p>A Gate normally has one Domain; its Resources and creatures inherit it. <strong>Renaming</strong> a Domain is safe: records keep
           pointing at it by its key, which never changes. <strong>Removing</strong> one is refused while a Gate, Resource or Project uses it.</p>
-        <p>The colour is used for the Domain's label on the site. The Domains rule lists these automatically.</p>
+        <p>The colour is used for the Domain's label on the site. The Domains rule lists the environments automatically.</p>
+        <p><strong>Kind:</strong> an <em>environment</em> is a kind of Gate world. An <em>origin</em> is the culture an ordinary trade material
+          comes from (such as a faction); Resources can use it, Gates and the generators never do.</p>
       </div>
       <div class="vocab-rows domain-rows">${domainDraft.map((domain, index) => {
         const used = domain.isNew ? 0 : usage[domain.key] || 0;
         return `<div class="vocab-row domain-row">
           <input type="text" data-domain-field="${index}:name" value="${escapeHtml(domain.name)}" aria-label="Domain name" />
           <input type="color" data-domain-field="${index}:colour" value="${escapeHtml(domain.colour || "#b4b4c8")}" aria-label="Colour" />
+          <select data-domain-field="${index}:kind" aria-label="Kind" title="Environment: a kind of Gate world. Origin: the culture an ordinary trade material comes from; never used for Gates.">
+            ${optionList(state.vocabulary.domainKinds || ["environment", "origin"], domain.kind || "environment")}</select>
           <input type="text" data-domain-field="${index}:description" value="${escapeHtml(domain.description || "")}" placeholder="What kind of place it is" aria-label="Description" />
           <span class="vocab-usage">${domain.isNew ? "new" : `${used} in use · key ${escapeHtml(domain.key)}`}</span>
           <span class="roadmap-move">
@@ -1490,7 +1521,7 @@ function renderDomainEditor() {
 async function handleDomainAction(action, button) {
   const index = Number(button.dataset.index);
   const swap = (from, to) => { if (to >= 0 && to < domainDraft.length) [domainDraft[from], domainDraft[to]] = [domainDraft[to], domainDraft[from]]; };
-  if (action === "vocab-domain-add") domainDraft.push({ key: "", name: "", colour: "#b4b4c8", description: "", isNew: true });
+  if (action === "vocab-domain-add") domainDraft.push({ key: "", name: "", colour: "#b4b4c8", description: "", kind: "environment", isNew: true });
   else if (action === "vocab-domain-remove") domainDraft.splice(index, 1);
   else if (action === "vocab-domain-up") swap(index, index - 1);
   else if (action === "vocab-domain-down") swap(index, index + 1);
@@ -1726,7 +1757,7 @@ let formSnapshot = null;
 
 const SPECIAL_VIEWS = {
   home: "Home", outpost: "Outpost Sheet", site: "Site & Launch", tools: "CM Tools · Generators",
-  vocabulary: "CM Tools · Vocabulary", readingpath: "Learning Paths",
+  vocabulary: "CM Tools · Vocabulary", readingpath: "Learning Paths", issues: "CM Tools · Continuity",
 };
 const viewTitle = () => SPECIAL_VIEWS[activeView]
   || (activeView === "archive" ? (activePreset === "gates" ? "Gates" : "Archive (lore)") : collections[activeView]?.title || activeView);
@@ -1742,8 +1773,8 @@ function hasUnsavedChanges() {
   if (activeView === "vocabulary") {
     const savedFunctions = JSON.stringify((state.vocabulary.functions || []).map((group) => [group.name, group.functions.map((fn) => [fn.name, fn.definition || ""])]));
     const draftFunctions = vocabDraft && JSON.stringify(vocabDraft.map((group) => [group.name, group.functions.map((fn) => [fn.name, fn.definition || ""])]));
-    const savedDomains = JSON.stringify(domainList().map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || ""]));
-    const draftDomains = domainDraft && JSON.stringify(domainDraft.map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || ""]));
+    const savedDomains = JSON.stringify(domainList().map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || "", domain.kind || "environment"]));
+    const draftDomains = domainDraft && JSON.stringify(domainDraft.map((domain) => [domain.key, domain.name, domain.colour || "", domain.description || "", domain.kind || "environment"]));
     const interactionKey = (list) => JSON.stringify((list || []).filter((entry) => entry.a && entry.b).map((entry) => [entry.a, entry.b, entry.kind, entry.keyword || "", entry.note || ""]));
     const interactionsChanged = interactionDraft && interactionKey(interactionDraft) !== interactionKey(state.vocabulary.interactions);
     return Boolean((draftFunctions && draftFunctions !== savedFunctions) || (draftDomains && draftDomains !== savedDomains) || interactionsChanged);
@@ -1753,6 +1784,7 @@ function hasUnsavedChanges() {
     return Boolean(pathEditor) && key(pathEditor) !== key(savedPaths());
   }
   if (activeView === "tools") return Boolean(toolView.resource || toolView.gate);
+  if (activeView === "issues") return issueView.dirty;
   return formSnapshot !== null && draftSnapshot() !== formSnapshot;
 }
 
@@ -1773,6 +1805,9 @@ function navigateTo(view, id = null, options = {}) {
     if (navHistory.length > 20) navHistory.shift();
   }
   if (view !== activeView) { vocabDraft = null; domainDraft = null; interactionDraft = null; pathEditor = null; bulkSelection = new Set(); }
+  // Flagging an issue from a record opens the new-issue form already filled in; any other way in shows the issue.
+  if (!issueView.prefill) issueView.editing = null;
+  issueView.dirty = false;
   if (view === "archive") activePreset = options.preset || (id ? (isGateRecord(id) ? "gates" : "lore") : activePreset || "gates");
   else activePreset = "";
   activeView = view;
@@ -1897,7 +1932,7 @@ function sectionRecords(view, preset) {
 
 function renderHome() {
   const navLink = (view, id, label, preset = "") => `<button type="button" class="home-link" data-home-open="${view}" data-home-id="${escapeHtml(id || "")}" data-home-preset="${preset}">${escapeHtml(label)}</button>`;
-  const recordLabel = (view, record) => collections[view]?.name(record) || record.id;
+  const recordLabel = (view, record) => view === "issues" ? record.title : collections[view]?.name(record) || record.id;
   const all = Object.keys(collections).flatMap((view) => state[view].map((record) => ({ view, record })));
   const unpublished = all.filter(({ record }) => !record.published && !record.sample);
   const recent = all.filter(({ record }) => record.updatedAt).sort((left, right) => right.record.updatedAt.localeCompare(left.record.updatedAt)).slice(0, 8);
@@ -1910,6 +1945,8 @@ function renderHome() {
       .map((entry) => ["archive", entry, "Gate has no Domain"]),
     ...state.characters.filter((character) => Number(character.downtime) >= 8)
       .map((character) => ["characters", character, "has 8 Downtime (full)"]),
+    ...state.issues.filter((issue) => issue.status === "open" && issue.severity !== "minor")
+      .map((issue) => ["issues", issue, `${issue.severity} continuity issue`]),
   ];
   const sync = state.sync || {};
   const when = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "never";
@@ -2475,6 +2512,7 @@ async function loadState() {
   if (loaded.vocabulary) state.vocabulary = loaded.vocabulary;
   state.sync = loaded.sync || {};
   state.learningPaths = loaded.learningPaths || [];
+  state.issues = loaded.issues || [];
   renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
@@ -2489,6 +2527,7 @@ function updateNavigation() {
   const gates = state.archive.filter((entry) => entry.type === "gate-record").length;
   document.getElementById("gates-count").textContent = gates;
   document.getElementById("lore-count").textContent = state.archive.length - gates;
+  document.getElementById("issues-count").textContent = openIssueCount();
   document.querySelectorAll(".nav-item").forEach((button) => {
     const active = button.dataset.view === activeView && (button.dataset.preset || "") === activePreset;
     button.classList.toggle("active", active);
@@ -2531,6 +2570,7 @@ function renderContent() {
   else if (activeView === "tools") renderTools();
   else if (activeView === "vocabulary") renderVocabularyEditor();
   else if (activeView === "readingpath") renderReadingPathView();
+  else if (activeView === "issues") renderIssues();
   else renderCollection(activeView);
   afterRender();
   if (preview.open) schedulePreview(0);
@@ -2550,11 +2590,11 @@ const PREVIEW_PAGES = {
   site: () => "index.html",
   characters: (id, data) => `characters.html#${encodeURIComponent(id)}${data?.sheet ? "#sheet" : ""}`,
   jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
-  archive: (id) => `archive.html#${encodeURIComponent(id)}`,
+  archive: (id, data) => `${{ "gate-record": "gates.html", "session-record": "reports.html", newspaper: "reports.html" }[data?.type] || "lore.html"}#${encodeURIComponent(id)}`,
   gear: (id) => `marketplace.html#gear-${encodeURIComponent(id)}`,
   game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`,
-  // A Resource shows on its Gate's Archive page, or in the catalogue in the Resources rule.
-  resources: (id, data) => data?.gateId ? `archive.html#${encodeURIComponent(data.gateId)}` : "game.html#post-resources",
+  // A Resource shows on its Discoveries card (with its icon), and on its Gate's page.
+  resources: (id) => `discoveries.html#resource-${encodeURIComponent(id)}`,
   forms: () => "game.html#post-spellcasting",
   factions: (id) => `factions.html#${encodeURIComponent(id)}`
 };
@@ -2851,6 +2891,7 @@ function recordForm(key, record) {
           <div><h2>${record ? escapeHtml(config.name(record) || `Edit ${singular}`) : `New ${singular}`}</h2><p>${record ? `ID: ${escapeHtml(record.id)}` : "Create a new record"}</p></div>
           <div class="editor-actions">
             ${record ? '<button type="button" class="button button-danger" data-action="delete-record">Delete</button>' : ""}
+            ${record ? '<button type="button" class="button button-secondary" data-action="issue-flag" title="Record a continuity issue about this record. Select the passage in a text box first to quote it.">⚑ Flag issue</button>' : ""}
             <button type="button" class="button button-secondary" data-action="open-preview" title="See this record on the site, including unsaved changes">Preview</button>
             <button type="submit" class="button button-primary">Save ${singular}</button>
           </div>
@@ -2860,6 +2901,7 @@ function recordForm(key, record) {
         <div class="form-grid">
           <label class="publish-toggle field full"><input type="checkbox" name="published" ${published ? "checked" : ""} /><span><strong>Published</strong><span class="helper">When unchecked, Sync data and Export to site leave this record out of the public site.</span></span></label>
           ${state.settings.includeSamples ? `<label class="publish-toggle field full sample-flag"><input type="checkbox" name="sample" ${record?.sample ? "checked" : ""} /><span><strong>Sample content</strong><span class="helper">Preview data, not campaign canon. While <em>Show sample content</em> is off, it is hidden here and left out of Sync data and Export.</span></span></label>` : ""}
+          ${recordIssueBanner(key, record)}
           ${record ? "" : field("ID / URL slug", "recordId", "", { full: true, help: `Optional. ${config.idHelp} It cannot be changed later.` })}
           ${config.fields(record || {})}
           ${record && config.related ? config.related(record) : ""}
@@ -3105,6 +3147,8 @@ async function uploadImage(input) {
       const control = input.closest("[data-image-control]");
       control.querySelector("[data-image-field]").value = result.path;
       control.querySelector("[data-image-preview]").innerHTML = imagePreview(result.path);
+      // Let anything that follows this field (the icon framing previews) see the new image.
+      control.querySelector("[data-image-field]").dispatchEvent(new Event("input", { bubbles: true }));
     }
   }
   input.value = "";
@@ -3180,6 +3224,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   workArea.addEventListener("click", async (event) => {
     const actionButton = event.target.closest("[data-action]");
     const action = actionButton?.dataset.action;
+    if ((activeView === "issues" || action === "issue-flag") && await handleIssueClick(event, actionButton, action)) return;
     const outpostTab = event.target.closest("[data-outpost-tab]");
     if (outpostTab) {
       activeOutpostTab = outpostTab.dataset.outpostTab;
@@ -3486,6 +3531,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (event.target.matches("#record-form")) await saveRecord(event.target);
       else if (event.target.matches("#outpost-form")) await saveOutpost(event.target);
       else if (event.target.matches("#site-form")) await saveSite(event.target);
+      else if (event.target.matches("#issue-form")) await saveIssue(event.target);
     } catch (error) {
       showNotice(error.message, true);
     }
@@ -3507,6 +3553,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   workArea.addEventListener("input", (event) => {
     if (activeView === "vocabulary") handleVocabInput(event.target);
     if (activeView === "readingpath") handlePathInput(event.target);
+    if (activeView === "issues") handleIssueInput(event.target);
     if (event.target.matches('[data-stash-quantity], [data-stash-action], [name="carryLimit"]')) updateCarried();
     if (preview.open) schedulePreview();
   });

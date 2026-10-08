@@ -275,7 +275,7 @@ const joinPhrases = (phrases) => phrases.length < 2 ? phrases[0] || "" : `${phra
 
 /* options: { domain, source, count ("random" | n), mode, hidden, special, harvesting, gateFunctions } */
 function generateResource(options = {}) {
-  const domains = state.vocabulary.domains;
+  const domains = state.vocabulary.environmentDomains || state.vocabulary.domains;
   const domain = options.domain && domains.includes(options.domain) ? options.domain : pick(domains);
   const profile = profileFor(domain);
   const source = ["fauna", "flora", "ground"].includes(options.source) ? options.source : pick(["fauna", "flora", "ground"]);
@@ -345,7 +345,7 @@ const FUNCTION_INFERENCES = {
 
 /* options: { designation, domain, secondDomain, fauna, flora, ground } (counts may be "random") */
 function generateGate(options = {}) {
-  const domains = state.vocabulary.domains;
+  const domains = state.vocabulary.environmentDomains || state.vocabulary.domains;
   const domain = options.domain && domains.includes(options.domain) ? options.domain : pick(domains);
   const second = options.secondDomain && options.secondDomain !== domain && domains.includes(options.secondDomain) ? options.secondDomain : "";
   const profile = profileFor(domain);

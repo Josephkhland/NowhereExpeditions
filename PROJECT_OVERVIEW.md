@@ -16,7 +16,7 @@ The project has two parts:
 
 | Part | What it is | Who uses it |
 | --- | --- | --- |
-| **Public site** (`public-site/`) | The campaign website: rules, the Outpost's current state, Job Board, Archive (lore), Discoveries, Marketplace, characters. It is part handbook, part in-world expedition database. | Players |
+| **Public site** (`public-site/`) | The campaign website: rules, the Outpost's current state, Job Board, Expedition Reports, Gates, Lore, Discoveries, Marketplace, characters. It is part handbook, part in-world expedition database. | Players |
 | **Content manager** (`content-manager/`) | A local app where the GM writes and publishes everything the site shows. | The GM, on a desktop |
 
 - **Live site:** <https://josephkhland.github.io/NowhereExpeditions/>
@@ -67,7 +67,7 @@ The Overview page shows this roadmap with a live countdown, shown in each visito
 └── PROJECT_OVERVIEW.md   This file
 ```
 
-Some older files still use earlier names: the settlement was once **the Island**, Jobs were **Expeditions**, and the Archive held separate **Gates** and **Reports** pages. `instructions.md` still uses the Island wording. The current terms are **Outpost/Endros**, **Job Board** and **Archive**.
+Some older files still use earlier names: the settlement was once **the Island**, Jobs were **Expeditions**, and for a while one **Archive** page held Gates, reports and lore together (`archive.html` now forwards each record to its new page). `instructions.md` still uses the Island wording. The current terms are **Outpost/Endros**, **Job Board**, **Gates**, **Lore** and **Expedition Reports**.
 
 ---
 
@@ -78,11 +78,13 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | Page | What it shows |
 | --- | --- |
 | `index.html`, the **Overview** | Hero carousel, the newest **pinned announcement** featured as a card, a three-step *Start here* (read Onboarding, create a character, find a job), the launch roadmap and countdown (in the visitor's local time), and section tiles. |
-| `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance, Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations, and the Archive entries that name the faction. On phones the essentials and sponsorship come first. |
+| `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance, Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations, and the lore entries that name the faction. On phones the essentials and sponsorship come first. |
 | `outpost.html`, the **Outpost Sheet** | The settlement as a Fate character: High Concept, Trouble, Aspects, six Capabilities with ratings and dice rolls, Stress, Consequences, the Facilities table (filterable by Capability) and ongoing Outpost Projects with Complications. |
 | `jobs.html`, the **Job Board** | Open listings (objective, briefing, schedule, crew size, who posted it), filterable by type, plus closed jobs linked to their Session Records. |
-| `archive.html`, the **Archive** | All lore as a wiki: Gate Records, Session Records, Newspapers and Lore. Lore entries carry **topics** (History, Folklore, Religion, Politics…), and an entry can have several. Search, category filters, a **topic filter** (`archive.html?topic=<name>`), a **faction filter** (`archive.html?faction=<id>`), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view. |
-| `discoveries.html`, **Discoveries** | Four tabs: **Resources** (searchable catalogue), **Functions** (look up a Word, combine two, random Resource, a 30×30 interaction grid), **Domains**, and **Spell Forms**. |
+| `gates.html`, **Gates** | Built from the Factions page's own components, so the two read as siblings. Index: a card grid (painting banner with the designation badge; name, significance, Domain, Status and Core; "Explore Gate"), filterable by status. A Gate page (`gates.html#<id>`): a hero over the painting (designation, status, name, significance, summary); a main column with At a glance (Status, Core, Access, Domain), Environment, the record text and glossary-style Known traits/locations/creatures; a side column with **The painting** (whole, with caption), **Known hazards** as the highlighted panel and the **Resources** as small cards (square icon, name, availability, Functions); then **On record** (jobs, reports and lore about the Gate). |
+| `lore.html`, **Lore** | All lore as a wiki. Lore entries carry **topics** (History, Folklore, Religion, Politics…), and an entry can have several. Search, a **topic filter** (`lore.html?topic=<name>`), a **faction filter** (`lore.html?faction=<id>`), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view (`lore.html#explore/archive/<id>`). |
+| `reports.html`, **Expedition Reports** | Session records ("Expedition Reports") and newspapers ("Bulletins"), newest first, each with its session date, outcome, job, crew and Gate(s). |
+| `discoveries.html`, **Discoveries** | Four tabs: **Resources** (searchable catalogue; each card shows a 44px square icon, the crop of the painting chosen in the manager's **Icon framing** editor), **Functions** (look up a Word, combine two, random Resource, a 30×30 interaction grid), **Domains**, and **Spell Forms**. |
 | `marketplace.html`, the **Marketplace** | Featured Gear carousel and the full price list (grid or list view), with prices in Coins, weights and availability. |
 | `characters.html`, **Characters** | Player characters and NPCs, profiles, Fate sheets (with clickable skill rolls), Personal Stash, Projects, and "Create new character". |
 | `game.html`, **Rules & News** | Announcements and the rules reader. Rules are grouped into **learning paths**, starting with Onboarding, and each rule links to the next. |
@@ -91,14 +93,14 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 
 **Site-wide features:**
 - **Search:** Ctrl+K, `/` or the Search button searches rules, Gates, Resources, characters and pages.
-- **Header and footer:** a sticky header whose **Encyclopedia** dropdown groups Factions, Archive and Discoveries (click to open; on screens 1,100px wide or less the header folds into a Menu button and the three appear under an Encyclopedia heading), and a footer site map.
+- **Header and footer:** a sticky header with two dropdowns: **Expeditions** (Job Board, Expedition Reports) and **Encyclopedia** (Factions, Gates, Lore, Discoveries). Click to open; on screens 1,100px wide or less the header folds into a Menu button and each group appears under its heading, and a footer site map.
 - **Dice:** a Fate dice roller with roll history (`dice.js`, kept in the browser only).
-- **Markdown and links:** authored text supports Markdown (via `vendor/markdown-it`) and wiki links like `[[archive-id]]`.
-- **Deep links:** every record has a stable URL, such as `jobs.html#<id>`, `archive.html#<id>`, `characters.html#<id>#sheet`, `discoveries.html#function-Heat` or `game.html#post-<id>`.
+- **Markdown and links:** authored text supports Markdown (via `vendor/markdown-it`) and wiki links like `[[archive-id]]`, which go to the page for the record's type (Gate, Lore or Report).
+- **Deep links:** every record has a stable URL, such as `jobs.html#<id>`, `gates.html#<id>`, `lore.html#<id>`, `reports.html#<id>`, `characters.html#<id>#sheet`, `discoveries.html#function-Heat` or `game.html#post-<id>`.
 
 **Mobile:** the public site is meant to work well on phones (checked 6 Oct 2026 at 390px wide):
 - the header is one row;
-- list-and-detail pages (Archive, Rules, Jobs, Characters) show either the list or the open item, with a back link;
+- list-and-detail pages (Lore, Expedition Reports, Rules, Jobs, Characters) show either the list or the open item, with a back link;
 - tap targets are enlarged on touch screens;
 - nothing scrolls sideways (the interaction grid scrolls inside its own box).
 
@@ -121,7 +123,7 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 | **Factions** | Countries, powers and sponsors | Name, aliases, descriptor, identity, government, values, Gate attitude, beliefs and history summaries, visual notes, relations to other factions, the Recruitment Faction rule it links to plus a compact Extra, and images (flag, homeland, gallery, clothing). Archive entries name their factions (`factionIds`, many-to-many), and the faction page lists them automatically. Schema v9. |
 | **Characters** | PCs and NPCs | Optional Fate sheet, Personal Stash (Gear × quantity, "brought into action"), Coins, Downtime, Projects. |
 | **Jobs** | Job Board listings | Type, schedule, crew and participants, optional link to a Session Record. |
-| **Archive** | Lore entries | Structural types: gate-record, session-record, newspaper, lore. What a lore entry is about is its **topics** (suggested: History, Folklore, Religion, Politics, Technology, Culture, Notable People, Institutions, Events, Diplomacy; others can be added). Schema v10 turned the old History and Folklore types into lore entries with that topic. Gate Records add a designation, status, Domains, environment, traits, hazards, locations and creatures. Any entry can name the factions it is about. Free-text search tags are separate from topics. |
+| **Archive** | Lore entries | Structural types: gate-record, session-record, newspaper, lore. What a lore entry is about is its **topics** (suggested: History, Folklore, Religion, Politics, Technology, Culture, Notable People, Institutions, Events, Diplomacy; others can be added). Schema v10 turned the old History and Folklore types into lore entries with that topic. Gate Records add a designation, status (incl. restricted, quarantined), Core state, access, significance, Domains (environments only), environment, traits, hazards, locations, creatures, and a poster image with caption. Session records and newspapers can name **Gates** (`details.gateIds`); Jobs have a `gateId`. Any entry can name the factions it is about. Free-text search tags are separate from topics. |
 | **Gear** | Marketplace items | Category, price, sale price, weight, availability, featured flag. |
 | **Facilities** | What Endros has | Assigned to Capabilities, optionally built by a Project. |
 | **Projects** | Progress tracks | Personal, Public, Research, Marketplace, Facility, Recovery, Establish Supply or Spell Innovation. Each has Progress, Requirements (required Functions, Resources, Domain), Complications and a result. |

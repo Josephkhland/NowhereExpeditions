@@ -48,8 +48,11 @@ SCHEMA_VERSION = 10
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
-# collapsed: the Core was recovered; sealed: deliberately closed as an unacceptable threat; emerging: newly opening.
-GATE_STATUSES = ("active", "emerging", "dormant", "collapsed", "sealed", "lost")
+# collapsed: the Core was recovered; sealed: deliberately closed as an unacceptable threat; emerging: newly opening;
+# restricted: open, but entry needs expedition clearance; quarantined: open, but entry is prohibited as a contamination threat.
+GATE_STATUSES = ("active", "emerging", "restricted", "quarantined", "dormant", "collapsed", "sealed", "lost")
+# Where a Gate's Core stands: not yet found, found and still inside, or carried out (which collapses the Gate).
+GATE_CORE_STATES = ("unknown", "not-located", "located", "recovered")
 JOB_TYPES = ("expedition", "recovery", "investigation", "escort", "bounty", "outpost", "other")
 JOB_STATUSES = ("open", "scheduled", "in-progress", "completed", "failed", "cancelled")
 # Structural Archive types: each renders differently. What a lore entry is about (History, Folklore, Religion...) is
@@ -65,6 +68,15 @@ SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
 GAME_POST_TYPES = ("announcement", "rule")
+
+# Continuity issues: discrepancies between pieces of authored content, resolved one by one in the manager. They live
+# only in the database: never synced to the site, and kept when site data is imported.
+ISSUE_STATUSES = ("open", "deferred", "resolved", "dismissed")
+ISSUE_SEVERITIES = ("critical", "major", "minor")
+ISSUE_CATEGORIES = ("contradiction", "soft-spot", "gap", "mechanics", "consistency")
+# How a resolved issue was settled: text edited through the issue, kept as intended, or fixed some other way.
+ISSUE_RESOLUTIONS = ("edited", "intentional", "handled")
+MAX_ISSUE_SIDES = 16
 
 # The shared vocabulary of Resources, Projects and Spellcasting: Resource Functions, manifested as Words.
 # The GM manages it in the content manager (stored in metadata); this is only the starting vocabulary.
@@ -162,11 +174,19 @@ DEFAULT_DOMAINS = [
 ]
 MAX_DOMAINS = 2
 COLOUR_RE = re.compile(r"#[0-9a-fA-F]{6}")
+# environment: a kind of Gate world (Verdant, Frozen...). origin: the culture an ordinary trade material comes from
+# (Vardic Holds, Kharad Compact...). Only environments describe Gates; Resources can carry either.
+DOMAIN_KINDS = ("environment", "origin")
 _active_domains: tuple[str, ...] = tuple(domain["key"] for domain in DEFAULT_DOMAINS)
+_environment_domains: tuple[str, ...] = _active_domains
 
 
 def domain_keys() -> tuple[str, ...]:
     return _active_domains
+
+
+def environment_domain_keys() -> tuple[str, ...]:
+    return _environment_domains
 RESOURCE_SOURCES = ("fauna", "flora", "ground", "constructed", "by-product", "other")
 # sample: research quantities only; limited: a stock that use consumes; available: a dependable supply.
 RESOURCE_AVAILABILITY = ("sample", "limited", "available", "unavailable")
@@ -426,6 +446,7 @@ def clean_job(data: dict[str, Any]) -> dict[str, Any]:
         "participantIds": clean_ids(data, "participantIds", "Participants"),
         "requirements": clean_list(data, "requirements"),
         "sessionRecordId": clean_ref(data, "sessionRecordId"),
+        "gateId": clean_ref(data, "gateId"),
     }
 
 
@@ -451,7 +472,8 @@ def clean_domain_vocabulary(data: Any, existing: tuple[str, ...]) -> list[dict[s
         colour = clean_text(item, "colour")
         if colour and not COLOUR_RE.fullmatch(colour):
             raise ManagerError(f"“{colour}” is not a colour like #7cc47a.")
-        domains.append({"key": key, "name": name, "colour": colour, "description": clean_text(item, "description")})
+        domains.append({"key": key, "name": name, "colour": colour, "description": clean_text(item, "description"),
+                        "kind": clean_choice(item, "kind", DOMAIN_KINDS, "environment")})
     return domains
 
 
@@ -491,12 +513,15 @@ def clean_functions(data: dict[str, Any], key: str, label: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
-def clean_domains(data: dict[str, Any], key: str = "domains") -> list[str]:
-    """One Domain normally; two only when that defines the place."""
+def clean_domains(data: dict[str, Any], key: str = "domains", environments_only: bool = False) -> list[str]:
+    """One Domain normally; two only when that defines the place. A Gate can only have environment Domains."""
     domains = list(dict.fromkeys(item.lower() for item in clean_list(data, key)))
     unknown = [item for item in domains if item not in domain_keys()]
     if unknown:
         raise ManagerError(f"“{unknown[0]}” is not a Domain.")
+    origins = [item for item in domains if item not in environment_domain_keys()] if environments_only else []
+    if origins:
+        raise ManagerError(f"“{origins[0]}” is an origin, not a Gate environment, so a Gate cannot have it.")
     if len(domains) > MAX_DOMAINS:
         raise ManagerError(f"At most {MAX_DOMAINS} Domains.")
     return domains
@@ -514,8 +539,13 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
             "knownTraits": clean_list(details, "knownTraits"),
             "knownHazards": clean_list(details, "knownHazards"),
             "knownLocations": clean_list(details, "knownLocations"),
-            "domains": clean_domains(details),
+            "domains": clean_domains(details, environments_only=True),
             "knownCreatures": clean_list(details, "knownCreatures"),
+            "core": clean_choice(details, "core", GATE_CORE_STATES, "unknown"),
+            # Free text: who may go in (Controlled, Expedition clearance required, Prohibited...).
+            "access": clean_text(details, "access"),
+            # One line on why this Gate matters in the record.
+            "significance": clean_text(details, "significance"),
             # The CM's own notes (the Gate Aspect, generator output); removed from the public export.
             "gmNotes": clean_text(details, "gmNotes"),
         }
@@ -523,7 +553,10 @@ def clean_archive_details(entry_type: str, details: Any) -> dict[str, Any]:
         return {
             "sessionDate": clean_pattern(details, "sessionDate", DATE_RE, "Session date"),
             "outcome": clean_choice(details, "outcome", SESSION_OUTCOMES, "unknown"),
+            "gateIds": clean_ids(details, "gateIds", "Gates"),
         }
+    if entry_type == "newspaper":
+        return {"gateIds": clean_ids(details, "gateIds", "Gates")}
     return {}
 
 
@@ -555,6 +588,8 @@ def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
         "publishedAt": clean_pattern(data, "publishedAt", DATE_RE, "Published date"),
         "eventDate": clean_text(data, "eventDate"),
         "image": clean_text(data, "image") or None,
+        # Shown under the image: what the reader should notice (and, for a Gate poster, what is and isn't confirmed).
+        "imageCaption": clean_text(data, "imageCaption"),
         "tags": clean_list(data, "tags"),
         "topics": clean_topics(data, (legacy,) if legacy else ()),
         # The factions this entry is about. An entry can belong to several (a shared religion, a treaty).
@@ -810,6 +845,27 @@ def split_legacy_outpost(outpost: dict[str, Any]) -> tuple[dict[str, Any], list[
     return outpost, facilities, dropped
 
 
+def clean_image_crop(data: dict[str, Any]) -> dict[str, float]:
+    """The square of an icon's painting that the site shows. x, y (its top-left corner) and size are percentages of the
+    painting's width; ratio is the painting's height / width. The square may reach past the painting's edges (shown as
+    the icons' dark backdrop), so a tall object can be fitted whole."""
+    crop = data.get("imageCrop") if isinstance(data.get("imageCrop"), dict) else {}
+    def number(key: str, default: float, low: float, high: float) -> float:
+        try:
+            value = float(crop.get(key, default))
+        except (TypeError, ValueError) as error:
+            raise ManagerError(f"Icon framing: {key} must be a number.") from error
+        return round(min(high, max(low, value)), 2)
+    ratio = number("ratio", 1, 0.2, 5)
+    if "size" not in crop and "zoom" in crop:
+        # Framing saved before the crop box: a zoom around the middle of a square.
+        zoom = number("zoom", 1, 1, 4)
+        size = round(100 / zoom, 2)
+        return {"x": round((100 - size) / 2, 2), "y": round((100 * ratio - size) / 2, 2), "size": size, "ratio": ratio}
+    size = number("size", 100, 10, 150)
+    return {"x": number("x", 0, -75, 100), "y": number("y", 0, -75, 500), "size": size, "ratio": ratio}
+
+
 def clean_resource(data: dict[str, Any]) -> dict[str, Any]:
     """A Gate Resource. Hidden Functions, the harvesting issue and GM notes never reach the public site."""
     functions = clean_functions(data, "functions", "Known Functions")
@@ -831,8 +887,75 @@ def clean_resource(data: dict[str, Any]) -> dict[str, Any]:
         "harvestingIssue": clean_text(data, "harvestingIssue"),
         "gateId": clean_ref(data, "gateId"),
         "projectId": clean_ref(data, "projectId"),
+        # A small icon of the material, shown on its Resource card, framed in a square by imageCrop.
+        "image": clean_text(data, "image") or None,
+        "imageCrop": clean_image_crop(data),
         "gmNotes": clean_text(data, "gmNotes"),
     }
+
+
+def clean_issue_side(data: Any, index: int) -> dict[str, str]:
+    """One side of a discrepancy: an exact excerpt anchored to a text field of a record, or a free note."""
+    if not isinstance(data, dict):
+        raise ManagerError(f"Side {index + 1} must be an object.")
+    side = {"label": clean_text(data, "label"), "collection": clean_text(data, "collection"),
+            "recordId": clean_text(data, "recordId"), "field": clean_text(data, "field"), "excerpt": clean_text(data, "excerpt")}
+    anchored = side["collection"] or side["recordId"] or side["field"]
+    if anchored:
+        if side["collection"] not in COLLECTIONS:
+            raise ManagerError(f"Side {index + 1}: “{side['collection']}” is not a collection.")
+        if not side["recordId"] or not side["field"]:
+            raise ManagerError(f"Side {index + 1}: an anchored side needs a record and a field.")
+        if not side["excerpt"]:
+            raise ManagerError(f"Side {index + 1}: quote the exact text this side is about.")
+    elif not side["excerpt"]:
+        raise ManagerError(f"Side {index + 1} is empty.")
+    return side
+
+
+def clean_issue(data: dict[str, Any]) -> dict[str, Any]:
+    sides = data.get("sides") or []
+    if not isinstance(sides, list):
+        raise ManagerError("Sides must be a list.")
+    if len(sides) > MAX_ISSUE_SIDES:
+        raise ManagerError(f"An issue can have at most {MAX_ISSUE_SIDES} sides.")
+    return {
+        "title": clean_text(data, "title", "An issue title"),
+        "status": clean_choice(data, "status", ISSUE_STATUSES, "open"),
+        "severity": clean_choice(data, "severity", ISSUE_SEVERITIES, "minor"),
+        "category": clean_choice(data, "category", ISSUE_CATEGORIES, "contradiction"),
+        "summary": clean_text(data, "summary"),
+        "suggestion": clean_text(data, "suggestion"),
+        "sides": [clean_issue_side(side, index) for index, side in enumerate(sides)],
+    }
+
+
+def path_parts(field: str) -> list[str | int]:
+    """A field path such as "content", "details.environment" or "relations.0.text"."""
+    return [int(part) if part.isdigit() else part for part in field.split(".") if part]
+
+
+def path_get(record: Any, field: str) -> Any:
+    value = record
+    for part in path_parts(field):
+        if isinstance(part, int) and isinstance(value, list) and part < len(value):
+            value = value[part]
+        elif isinstance(part, str) and isinstance(value, dict):
+            value = value.get(part)
+        else:
+            return None
+    return value
+
+
+def path_set(record: dict[str, Any], field: str, new_value: str) -> dict[str, Any]:
+    """A copy of the record with the value at the path replaced."""
+    copy = json.loads(json.dumps(record))
+    target: Any = copy
+    parts = path_parts(field)
+    for part in parts[:-1]:
+        target = target[part]
+    target[parts[-1]] = new_value
+    return copy
 
 
 def clean_form(data: dict[str, Any]) -> dict[str, Any]:
@@ -1008,17 +1131,17 @@ COLLECTIONS: dict[str, Collection] = {
                ("factionIds", "archive_factions", "entry_id", "faction_id", "factions")),
         unique=_gate_designation,
         public_fields=("id", "type", "title", "subtitle", "summary", "content", "author", "publishedAt", "eventDate",
-                       "image", "tags", "topics", "participantIds", "factionIds", "details"),
+                       "image", "imageCaption", "tags", "topics", "participantIds", "factionIds", "details"),
         image_fields=("image",), text_fields=("summary", "content"),
     ),
     "jobs": Collection(
         "jobs", "Job", ("designation", "title"), clean_job, lambda record: _designated(record, "title"),
-        refs=(("organizerId", "organizer_id", "characters"), ("sessionRecordId", "session_record_id", "archive")),
+        refs=(("organizerId", "organizer_id", "characters"), ("sessionRecordId", "session_record_id", "archive"), ("gateId", "gate_id", "archive")),
         links=(("participantIds", "job_participants", "job_id", "character_id", "characters"),),
         unique=lambda record: ("designation", record["designation"]) if record.get("designation") else None,
         public_fields=("id", "designation", "title", "type", "status", "summary", "objective", "briefing", "postedBy",
                        "organizerId", "scheduledAt", "expectedDuration", "crewCount", "crewMin", "crewMax",
-                       "participantIds", "requirements", "sessionRecordId"),
+                       "participantIds", "requirements", "sessionRecordId", "gateId"),
         text_fields=("summary", "objective", "briefing"),
     ),
     "resources": Collection(
@@ -1026,8 +1149,8 @@ COLLECTIONS: dict[str, Collection] = {
         refs=(("gateId", "gate_id", "archive"), ("projectId", "project_id", "projects")),
         unique=lambda record: ("name", record["name"]),
         public_fields=("id", "name", "sourceType", "description", "domains", "functions", "specialProperty", "availability",
-                       "supply", "gateId", "projectId"),
-        text_fields=("description", "specialProperty"),
+                       "supply", "gateId", "projectId", "image", "imageCrop"),
+        image_fields=("image",), text_fields=("description", "specialProperty"),
     ),
     "forms": Collection(
         "forms", "Form", ("name",), clean_form, lambda record: str(record.get("name", "")),
@@ -1195,6 +1318,10 @@ class ContentStore:
                     position INTEGER NOT NULL,
                     PRIMARY KEY (entry_id, faction_id)
                 );
+                CREATE TABLE IF NOT EXISTS continuity_issues (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS archive_type ON archive_entries(type);
                 CREATE INDEX IF NOT EXISTS jobs_session_record ON jobs(session_record_id);
                 CREATE INDEX IF NOT EXISTS stash_gear ON character_stash(gear_id);
@@ -1204,6 +1331,9 @@ class ContentStore:
                 columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
                 if "project_id" not in columns:
                     connection.execute(f"ALTER TABLE {table} ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT")
+            # Gate pages: a Job can name the Gate it goes to.
+            if "gate_id" not in {row["name"] for row in connection.execute("PRAGMA table_info(jobs)")}:
+                connection.execute("ALTER TABLE jobs ADD COLUMN gate_id TEXT REFERENCES archive_entries(id) ON DELETE RESTRICT")
             # Schema v8: a Project can name the Gate it relates to.
             if "related_gate_id" not in {row["name"] for row in connection.execute("PRAGMA table_info(projects)")}:
                 connection.execute("ALTER TABLE projects ADD COLUMN related_gate_id TEXT REFERENCES archive_entries(id) ON DELETE RESTRICT")
@@ -1570,6 +1700,11 @@ class ContentStore:
                     blockers.append(f"Faction “{faction.get('name') or row['id']}” (relations)")
                 if name == "game" and faction.get("ruleId") == record_id:
                     blockers.append(f"Faction “{faction.get('name') or row['id']}” (sponsorship rule)")
+        if name == "archive":
+            for row in connection.execute("SELECT id, data FROM archive_entries WHERE type IN ('session-record', 'newspaper')"):
+                entry = json.loads(row["data"])
+                if record_id in ((entry.get("details") or {}).get("gateIds") or []):
+                    blockers.append(f"Archive entry “{entry.get('title') or row['id']}” (Gates)")
         if name == "gear":
             for row in connection.execute(
                 "SELECT c.id, c.data FROM character_stash s JOIN characters c ON c.id = s.character_id WHERE s.gear_id = ?",
@@ -1638,12 +1773,17 @@ class ContentStore:
                     if not connection.execute(f"SELECT 1 FROM {COLLECTIONS[target].table} WHERE id = ?", (target_id,)).fetchone():
                         raise ManagerError(f"Unknown {COLLECTIONS[target].label.lower()}: {target_id}")
             for field in ("gateId", "relatedGateId"):
-                if clean.get(field) and name in ("resources", "projects"):
+                if clean.get(field) and name in ("resources", "projects", "jobs"):
                     row = connection.execute("SELECT type FROM archive_entries WHERE id = ?", (clean[field],)).fetchone()
                     if row["type"] != "gate-record":
                         raise ManagerError("A Gate must be an Archive entry of type gate-record.")
+            if name == "archive":
+                for gate_id in (clean.get("details") or {}).get("gateIds") or []:
+                    row = connection.execute("SELECT type FROM archive_entries WHERE id = ?", (gate_id,)).fetchone()
+                    if not row or row["type"] != "gate-record":
+                        raise ManagerError(f"“{gate_id}” is not a Gate.")
             if name == "archive" and existing and existing.get("type") == "gate-record" and clean["type"] != "gate-record":
-                for table, column in (("resources", "gate_id"), ("projects", "related_gate_id")):
+                for table, column in (("resources", "gate_id"), ("projects", "related_gate_id"), ("jobs", "gate_id")):
                     for row in connection.execute(f"SELECT id FROM {table} WHERE {column} = ?", (chosen_id,)):
                         raise ManagerError(f"“{row['id']}” points at this Gate; detach it before changing the type.")
             if name == "jobs" and clean.get("sessionRecordId"):
@@ -1924,12 +2064,15 @@ class ContentStore:
         result["hiddenSamples"] = [] if include else samples
         result["sync"] = self.sync_status()
         result["learningPaths"] = self.learning_paths()
+        result["issues"] = self.issues()
         vocabulary = self.function_vocabulary()
         result["vocabulary"] = {"functionGroups": {group["name"]: [fn["name"] for fn in group["functions"]] for group in vocabulary},
                                 "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
-                                "domains": domain_keys(), "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
+                                "domains": domain_keys(), "environmentDomains": environment_domain_keys(), "domainKinds": DOMAIN_KINDS, "domainList": self.domain_vocabulary(), "resourceSources": RESOURCE_SOURCES,
                                 "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
-                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "loreTopics": LORE_TOPICS}
+                                "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "gateCoreStates": GATE_CORE_STATES, "loreTopics": LORE_TOPICS}
+        result["vocabulary"].update({"issueStatuses": ISSUE_STATUSES, "issueSeverities": ISSUE_SEVERITIES,
+                                     "issueCategories": ISSUE_CATEGORIES, "issueResolutions": ISSUE_RESOLUTIONS})
         return result
 
     # --- The Function vocabulary (Resource Functions / spell Words) ---------------------------------------
@@ -2006,24 +2149,30 @@ class ContentStore:
 
     @staticmethod
     def _activate_domains(domains: list[dict[str, Any]]) -> None:
-        global _active_domains
+        global _active_domains, _environment_domains
         _active_domains = tuple(domain["key"] for domain in domains)
+        _environment_domains = tuple(domain["key"] for domain in domains if domain.get("kind", "environment") == "environment")
 
     def domain_vocabulary(self) -> list[dict[str, Any]]:
+        """The Domains in order; ones saved before Domains had a kind are environments."""
         with self._connect() as connection:
             row = connection.execute("SELECT value FROM metadata WHERE key = 'domainVocabulary'").fetchone()
-        return json.loads(row["value"]) if row else json.loads(json.dumps(DEFAULT_DOMAINS))
+        domains = json.loads(row["value"]) if row else json.loads(json.dumps(DEFAULT_DOMAINS))
+        return [{**domain, "kind": domain.get("kind") or "environment"} for domain in domains]
 
     def save_domain_vocabulary(self, data: Any) -> dict[str, Any]:
         """Replace the Domains. Renaming keeps every record pointing at the same Domain (they store its key);
         removing a Domain that a Gate, Resource or Project still uses is refused."""
         domains = clean_domain_vocabulary(data, domain_keys())
         removed = set(domain_keys()) - {domain["key"] for domain in domains}
+        origins = {domain["key"] for domain in domains if domain["kind"] == "origin"}
         with self._connect() as connection:
             in_use = []
             for entry in self._records(connection, "archive"):
                 for key in sorted(set((entry.get("details") or {}).get("domains") or []) & removed):
                     in_use.append(f"{key} (Gate “{entry.get('title') or entry['id']}”)")
+                for key in sorted(set((entry.get("details") or {}).get("domains") or []) & origins):
+                    raise ManagerError(f"“{key}” describes the Gate “{entry.get('title') or entry['id']}”, so it must stay an environment.")
             for resource in self._records(connection, "resources"):
                 in_use += [f"{key} (Resource “{resource.get('name')}”)" for key in sorted(set(resource.get("domains") or []) & removed)]
             for project in self._records(connection, "projects"):
@@ -2193,6 +2342,8 @@ class ContentStore:
         for entry in published["archive"].values():
             entry = public_record("archive", entry)
             entry["details"] = {key: value for key, value in (entry.get("details") or {}).items() if key != "gmNotes"}
+            if "gateIds" in entry["details"]:
+                entry["details"]["gateIds"] = [item for item in entry["details"]["gateIds"] if public_gate(item)]
             entry["participantIds"] = [item for item in entry.get("participantIds", []) if item in published["characters"]]
             entry["factionIds"] = [item for item in entry.get("factionIds", []) if item in published["factions"]]
             exported["archive"].append(entry)
@@ -2204,6 +2355,7 @@ class ContentStore:
                 **job,
                 "organizerId": job.get("organizerId") if job.get("organizerId") in published["characters"] else None,
                 "sessionRecordId": job.get("sessionRecordId") if job.get("sessionRecordId") in public_archive else None,
+                "gateId": public_gate(job.get("gateId")),
                 "participantIds": [item for item in participants if item in published["characters"]],
                 "crewCount": len(participants),
             })
@@ -2416,6 +2568,182 @@ class ContentStore:
         }
 
 
+    # --- Continuity issues ----------------------------------------------------------------------------------------
+
+    def _issue_rows(self, connection: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+        return {row["id"]: json.loads(row["data"]) for row in connection.execute("SELECT id, data FROM continuity_issues ORDER BY id")}
+
+    def _anchor_record(self, connection: sqlite3.Connection, side: dict[str, str]) -> dict[str, Any] | None:
+        if not side.get("collection") or side["collection"] not in COLLECTIONS:
+            return None
+        return next((record for record in self._records(connection, side["collection"]) if record["id"] == side["recordId"]), None)
+
+    @staticmethod
+    def _anchor(record: dict[str, Any] | None, side: dict[str, str], context: int = 220) -> dict[str, Any]:
+        """Where a side's excerpt stands now: found once (ok), missing (stale), found several times (ambiguous)."""
+        if not side.get("collection"):
+            return {"state": "note"}
+        if record is None:
+            return {"state": "missing-record"}
+        value = path_get(record, side["field"])
+        if not isinstance(value, str):
+            return {"state": "missing-field"}
+        count = value.count(side["excerpt"])
+        if not count:
+            return {"state": "stale"}
+        start = value.index(side["excerpt"])
+        end = start + len(side["excerpt"])
+        return {"state": "ok" if count == 1 else "ambiguous", "count": count,
+                "before": value[max(0, start - context):start], "after": value[end:end + context],
+                "clippedBefore": start > context, "clippedAfter": end + context < len(value)}
+
+    def issues(self) -> list[dict[str, Any]]:
+        """Every issue, each side annotated with where its excerpt currently stands."""
+        with self._connect() as connection:
+            rows = self._issue_rows(connection)
+            cache: dict[tuple[str, str], dict[str, Any] | None] = {}
+            result = []
+            for issue_id, issue in rows.items():
+                sides = []
+                for side in issue.get("sides", []):
+                    key = (side.get("collection", ""), side.get("recordId", ""))
+                    if key not in cache:
+                        cache[key] = self._anchor_record(connection, side)
+                    sides.append({**side, "anchor": self._anchor(cache[key], side)})
+                result.append({**issue, "id": issue_id, "sides": sides})
+        return result
+
+    def save_issue(self, issue_id: str | None, data: Any, require_anchors: bool = True) -> dict[str, str]:
+        if not isinstance(data, dict):
+            raise ManagerError("Issue data must be an object.")
+        clean = clean_issue(data)
+        with self._connect() as connection:
+            rows = self._issue_rows(connection)
+            if issue_id and issue_id not in rows:
+                raise ManagerError("That issue no longer exists.")
+            if require_anchors:
+                for index, side in enumerate(clean["sides"]):
+                    record = self._anchor_record(connection, side)
+                    anchor = self._anchor(record, side)
+                    if anchor["state"] == "missing-record":
+                        raise ManagerError(f"Side {index + 1}: no {COLLECTIONS[side['collection']].label.lower()} with the id “{side['recordId']}”.")
+                    if anchor["state"] == "missing-field":
+                        raise ManagerError(f"Side {index + 1}: “{side['field']}” is not a text field of that record.")
+                    if anchor["state"] == "stale":
+                        raise ManagerError(f"Side {index + 1}: the quoted text was not found in that field. Copy it exactly.")
+            existing = rows.get(issue_id or "", {})
+            if not issue_id:
+                base = slugify(clean["title"])[:60] or "issue"
+                issue_id, counter = base, 2
+                while issue_id in rows:
+                    issue_id, counter = f"{base}-{counter}", counter + 1
+            stored = {**clean, "resolution": existing.get("resolution"), "history": existing.get("history", []),
+                      "createdAt": existing.get("createdAt") or now_iso(), "updatedAt": now_iso()}
+            if stored["status"] in ("open", "deferred"):
+                stored["resolution"] = None
+            connection.execute("INSERT OR REPLACE INTO continuity_issues (id, data) VALUES (?, ?)",
+                               (issue_id, json.dumps(stored, ensure_ascii=False)))
+        return {"id": issue_id}
+
+    def delete_issue(self, issue_id: str) -> None:
+        with self._connect() as connection:
+            if not connection.execute("DELETE FROM continuity_issues WHERE id = ?", (issue_id,)).rowcount:
+                raise ManagerError("That issue no longer exists.")
+
+    def _apply_text_edits(self, edits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Replace exact excerpts in record fields: [{collection, recordId, field, find, replace}]. Every edit is checked
+        (the text must occur exactly once, the edited record must still be valid) before anything is saved."""
+        with self._connect() as connection:
+            working: dict[tuple[str, str], dict[str, Any]] = {}
+            applied = []
+            for edit in edits:
+                key = (edit["collection"], edit["recordId"])
+                if key not in working:
+                    record = self._anchor_record(connection, edit)
+                    if record is None:
+                        raise ManagerError(f"{edit['label']}: the record “{edit['recordId']}” no longer exists.")
+                    working[key] = record
+                value = path_get(working[key], edit["field"])
+                if not isinstance(value, str):
+                    raise ManagerError(f"{edit['label']}: “{edit['field']}” is not a text field any more.")
+                count = value.count(edit["find"])
+                if count != 1:
+                    raise ManagerError(f"{edit['label']}: the text to replace was {'not found' if not count else f'found {count} times'} "
+                                       f"in “{edit['field']}”. Edit the issue so the excerpt matches exactly once.")
+                working[key] = path_set(working[key], edit["field"], value.replace(edit["find"], edit["replace"], 1))
+                applied.append(edit)
+        for (collection, _), record in working.items():
+            COLLECTIONS[collection].clean(record)  # raises before any save if an edit makes a record invalid
+        for (collection, record_id), record in working.items():
+            self.save_record(collection, record_id, record)
+        return applied
+
+    def resolve_issue(self, issue_id: str, data: Any) -> dict[str, Any]:
+        """Settle an issue: apply replacement text to its sides (kind "edited"), or record that it is intended or was
+        fixed elsewhere. Defer and dismiss are plain status changes."""
+        data = data if isinstance(data, dict) else {}
+        kind = clean_choice(data, "kind", (*ISSUE_RESOLUTIONS, "deferred", "dismissed"), "edited")
+        note = clean_text(data, "note")
+        with self._connect() as connection:
+            issue = self._issue_rows(connection).get(issue_id)
+        if issue is None:
+            raise ManagerError("That issue no longer exists.")
+        sides = issue.get("sides", [])
+        changes = []
+        for item in data.get("edits") or []:
+            index = item.get("side") if isinstance(item, dict) else None
+            if not isinstance(index, int) or not 0 <= index < len(sides):
+                raise ManagerError("An edit names a side that does not exist.")
+            side = sides[index]
+            replacement = str(item.get("replacement") if item.get("replacement") is not None else "")
+            if replacement == side["excerpt"]:
+                continue
+            if not side.get("collection"):
+                raise ManagerError(f"Side {index + 1} is a note, not anchored to a record, so it cannot be edited here.")
+            changes.append({**side, "side": index, "label": side.get("label") or f"Side {index + 1}",
+                            "find": side["excerpt"], "replace": replacement})
+        if kind == "edited" and not changes:
+            raise ManagerError("Nothing was changed. Edit a side's text, or resolve without edits.")
+        if kind != "edited" and changes:
+            raise ManagerError("Edited text is only applied when resolving with edits.")
+        applied = self._apply_text_edits(changes) if changes else []
+        for change in applied:
+            sides[change["side"]] = {**sides[change["side"]], "excerpt": change["replace"]}
+        event = {"at": now_iso(), "kind": kind, "note": note,
+                 "edits": [{"side": change["side"], "collection": change["collection"], "recordId": change["recordId"],
+                            "field": change["field"], "before": change["find"], "after": change["replace"]} for change in applied]}
+        status = kind if kind in ("deferred", "dismissed") else "resolved"
+        issue.update({"sides": sides, "status": status, "updatedAt": now_iso(),
+                      "resolution": None if status == "deferred" else event, "history": [*issue.get("history", []), event]})
+        with self._connect() as connection:
+            connection.execute("UPDATE continuity_issues SET data = ? WHERE id = ?", (json.dumps(issue, ensure_ascii=False), issue_id))
+        return {"id": issue_id, "status": status, "edited": len(applied)}
+
+    def reopen_issue(self, issue_id: str, data: Any) -> dict[str, Any]:
+        """Reopen an issue, optionally undoing the text edits its resolution made."""
+        data = data if isinstance(data, dict) else {}
+        with self._connect() as connection:
+            issue = self._issue_rows(connection).get(issue_id)
+        if issue is None:
+            raise ManagerError("That issue no longer exists.")
+        resolution = issue.get("resolution") or {}
+        undone = []
+        if data.get("undo") and resolution.get("edits"):
+            sides = issue.get("sides", [])
+            undo = [{"collection": edit["collection"], "recordId": edit["recordId"], "field": edit["field"],
+                     "label": sides[edit["side"]].get("label") or f"Side {edit['side'] + 1}" if edit["side"] < len(sides) else "A side",
+                     "find": edit["after"], "replace": edit["before"], "side": edit["side"]} for edit in reversed(resolution["edits"])]
+            undone = self._apply_text_edits(undo)
+            for edit in undone:
+                if edit["side"] < len(sides):
+                    sides[edit["side"]] = {**sides[edit["side"]], "excerpt": edit["replace"]}
+        event = {"at": now_iso(), "kind": "reopened", "note": clean_text(data, "note"), "undone": len(undone)}
+        issue.update({"status": "open", "resolution": None, "updatedAt": now_iso(), "history": [*issue.get("history", []), event]})
+        with self._connect() as connection:
+            connection.execute("UPDATE continuity_issues SET data = ? WHERE id = ?", (json.dumps(issue, ensure_ascii=False), issue_id))
+        return {"id": issue_id, "status": "open", "undone": len(undone)}
+
+
 def scrub_archive_links(text: str, public_ids: set[str]) -> str:
     """Links to Archive entries players cannot see become plain text, so no unpublished ID or title leaks."""
     def replace(match: re.Match[str]) -> str:
@@ -2532,6 +2860,17 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                 elif method == "POST" and path == "/api/import":
                     store.import_site()
                     self._send_json(200, {"imported": True})
+                elif collection == "issues" and method == "POST" and not record_id:
+                    self._send_json(201, store.save_issue(None, self._read_body().get("data")))
+                elif collection == "issues" and method == "POST" and record_id and record_id.endswith("/resolve"):
+                    self._send_json(200, store.resolve_issue(record_id.removesuffix("/resolve"), self._read_body()))
+                elif collection == "issues" and method == "POST" and record_id and record_id.endswith("/reopen"):
+                    self._send_json(200, store.reopen_issue(record_id.removesuffix("/reopen"), self._read_body()))
+                elif collection == "issues" and method == "PUT" and record_id:
+                    self._send_json(200, store.save_issue(record_id, self._read_body().get("data")))
+                elif collection == "issues" and method == "DELETE" and record_id:
+                    store.delete_issue(record_id)
+                    self._send_json(200, {"deleted": True})
                 elif collection in COLLECTIONS and method == "POST" and not record_id:
                     self._send_json(201, store.save_record(collection, None, self._read_body().get("data")))
                 elif collection in COLLECTIONS and method == "PUT" and record_id:
@@ -2543,7 +2882,7 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     return False
                 if method == "POST" and path in ("/api/sync", "/api/export", "/api/import"):
                     store.mark("lastSyncAt")
-                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media"):
+                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media") and not (collection == "issues" and not path.endswith(("/resolve", "/reopen"))):
                     store.mark("lastChangeAt")
             except ManagerError as error:
                 self._send_json(400, {"error": str(error)})

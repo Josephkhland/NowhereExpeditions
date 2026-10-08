@@ -9,7 +9,7 @@
     <script>
       // Expedition IDs became Job IDs unchanged; a report anchor (#e-17#report-x) now points at its Session Record.
       const [jobId, anchor] = window.location.hash.slice(1).split("#");
-      window.location.replace(anchor && anchor.startsWith("report-") ? "archive.html#" + anchor.slice(7) : "jobs.html" + (jobId ? "#" + jobId : ""));
+      window.location.replace(anchor && anchor.startsWith("report-") ? "reports.html#" + anchor.slice(7) : "jobs.html" + (jobId ? "#" + jobId : ""));
     </script>
     <noscript><meta http-equiv="refresh" content="0; url=jobs.html" /></noscript>
   </head>
