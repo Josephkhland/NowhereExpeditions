@@ -1,0 +1,23 @@
+{
+  "id": "dynamite-stick",
+  "name": "Dynamite Stick",
+  "category": "tactical",
+  "description": "One stick of mining dynamite with a fuse.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Explosive",
+    "Breaching",
+    "Loud",
+    "Unstable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

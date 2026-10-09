@@ -1,0 +1,22 @@
+{
+  "id": "wire-reel",
+  "name": "Wire Reel",
+  "category": "exploration",
+  "description": "A reel of insulated copper wire.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Electrical",
+    "Conductive",
+    "Tether"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

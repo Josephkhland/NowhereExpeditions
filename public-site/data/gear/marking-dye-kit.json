@@ -1,0 +1,26 @@
+{
+  "id": "marking-dye-kit",
+  "name": "Marking Dye Kit",
+  "category": "tactical",
+  "description": "Vials of bright dye: mark a route or a creature, trace a current, find a leak.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Marking",
+    "Persistent"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "dye-vial",
+      "quantity": 4
+    }
+  ],
+  "armorBoxes": 0
+}

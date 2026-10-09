@@ -1,0 +1,56 @@
+{
+  "id": "independent-pack",
+  "name": "Independent Pack",
+  "description": "Put together by the Expeditioner rather than issued by anyone: two ropes, a knife and a pack of cigarettes, and nothing for paperwork.",
+  "sponsorId": "faction-independent",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 3,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "rope",
+      "quantity": 2
+    },
+    {
+      "gearId": "knife",
+      "quantity": 1
+    },
+    {
+      "gearId": "cigarette-pack",
+      "quantity": 1
+    }
+  ]
+}

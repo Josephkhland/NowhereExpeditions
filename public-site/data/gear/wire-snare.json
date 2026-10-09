@@ -1,0 +1,22 @@
+{
+  "id": "wire-snare",
+  "name": "Wire Snare",
+  "category": "tactical",
+  "description": "One wire snare with its stake.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Triggered",
+    "Restraining",
+    "Concealable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

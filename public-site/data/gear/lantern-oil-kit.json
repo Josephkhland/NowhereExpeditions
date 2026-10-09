@@ -1,0 +1,26 @@
+{
+  "id": "lantern-oil-kit",
+  "name": "Lantern Oil Kit",
+  "category": "supplies",
+  "description": "Flasks of lamp oil in a padded case.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Fuel",
+    "Flammable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

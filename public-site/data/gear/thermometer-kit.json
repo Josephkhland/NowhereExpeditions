@@ -1,0 +1,20 @@
+{
+  "id": "thermometer-kit",
+  "name": "Thermometer Kit",
+  "category": "scientific",
+  "description": "Thermometers for air, water and ground.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Measurement"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

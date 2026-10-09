@@ -1,0 +1,22 @@
+{
+  "id": "hand-winch",
+  "name": "Hand Winch",
+  "category": "exploration",
+  "description": "A ratchet winch with cable, for hauling and lowering.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Lifting",
+    "Tension",
+    "Mechanical"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

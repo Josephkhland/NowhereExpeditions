@@ -1,0 +1,66 @@
+[
+  {
+    "id": "faction-nowhere-expeditions",
+    "name": "Nowhere Expeditions (the Company)",
+    "factionId": null,
+    "packId": "nowhere-expeditions-pack",
+    "extraName": "Relocation Package",
+    "extraRule": "After each expedition you take part in, gain +1 Coin (added after your Resources refresh)."
+  },
+  {
+    "id": "faction-university-of-verna",
+    "name": "University of Verna",
+    "factionId": "verna",
+    "packId": "university-field-pack",
+    "extraName": "Institutional Access",
+    "extraRule": "Once between expeditions, when you make a Research Project Action, gain +1 additional Progress if the University's laboratories, archives, specialists or equipment could reasonably assist you."
+  },
+  {
+    "id": "faction-independent",
+    "name": "Independent",
+    "factionId": null,
+    "packId": "independent-pack",
+    "extraName": "Self-Directed",
+    "extraRule": "Once between expeditions, when you make a Personal Project Action, gain +1 additional Progress."
+  },
+  {
+    "id": "faction-vardic-holds",
+    "name": "Vardic Holds",
+    "factionId": "vardic-holds",
+    "packId": "vardic-holds-pack",
+    "extraName": "Built to Endure",
+    "extraRule": "Once per session, when you Create an Advantage using **Crafts** by repairing, reinforcing, modifying or improvising equipment, you may treat a tie as a success with one free invoke instead."
+  },
+  {
+    "id": "faction-aurelian-empire",
+    "name": "Aurelian Empire",
+    "factionId": "aurelian-empire",
+    "packId": "aurelian-empire-pack",
+    "extraName": "Properly Provisioned",
+    "extraRule": "Once per session, bring one item from your Personal Stash into action without paying the normal Stress or Fate Point cost."
+  },
+  {
+    "id": "faction-vesper-republic",
+    "name": "Vesper Republic",
+    "factionId": "vesper-republic",
+    "packId": "vesper-republic-pack",
+    "extraName": "Someone Knows Someone",
+    "extraRule": "Once per session, establish that your sponsor or one of its affiliated societies provided a reasonable, useful contact relevant to the problem: information, an introduction or limited assistance. The contact can't solve the main problem for you."
+  },
+  {
+    "id": "faction-kharad-compact",
+    "name": "Kharad Compact",
+    "factionId": "kharad-compact",
+    "packId": "kharad-compact-pack",
+    "extraName": "Established Credit",
+    "extraRule": "An extra Mild Consequence slot, **Minor Obligation**: instead of paying up to 2 Coins, someone covers the cost and you record the debt. You clear it by completing a Project and offering its result to the Kharad Compact."
+  },
+  {
+    "id": "faction-tianzhao-mandate",
+    "name": "Tianzhao Mandate",
+    "factionId": "tianzhao-mandate",
+    "packId": "tianzhao-mandate-pack",
+    "extraName": "Restorative Care",
+    "extraRule": "Once between expeditions, when you make progress on a Recovery Project for one of your own Consequences, gain +1 additional Progress."
+  }
+]

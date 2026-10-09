@@ -1,0 +1,23 @@
+{
+  "id": "sledgehammer",
+  "name": "Sledgehammer",
+  "category": "exploration",
+  "description": "A long-handled sledgehammer.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Close",
+    "Blunt",
+    "Heavy",
+    "Breaching"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

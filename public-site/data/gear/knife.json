@@ -1,0 +1,22 @@
+{
+  "id": "knife",
+  "name": "Knife",
+  "category": "weapon",
+  "description": "A plain working knife.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Close",
+    "Cutting",
+    "Concealable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

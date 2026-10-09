@@ -1,0 +1,21 @@
+{
+  "id": "flamethrower-fuel",
+  "name": "Flamethrower Fuel",
+  "category": "supplies",
+  "description": "One long burst's worth of flamethrower fuel.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Fuel",
+    "Flammable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

@@ -1,0 +1,56 @@
+{
+  "id": "vardic-holds-pack",
+  "name": "Vardic Holds Pack",
+  "description": "Practical kit for long, hard work: a second rope, a knife and fire-making kit.",
+  "sponsorId": "faction-vardic-holds",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 4,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "rope",
+      "quantity": 2
+    },
+    {
+      "gearId": "knife",
+      "quantity": 1
+    },
+    {
+      "gearId": "flint-and-steel",
+      "quantity": 1
+    }
+  ]
+}

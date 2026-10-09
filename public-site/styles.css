@@ -2002,6 +2002,12 @@ h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
 .gear-card:target .gear-card-button { border-color: var(--accent-2); }
 
 .gear-card-name { padding-right: 4.5rem; font-weight: 600; line-height: 1.3; }
+.gear-card-holds { margin-top: -0.4rem; color: var(--muted); font-size: 0.8rem; }
+.gear-tag-list { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+.gear-card-tags { margin-top: -0.3rem; }
+.gear-tag { padding: 0.05rem 0.4rem; border: 1px solid rgba(122, 215, 209, 0.35); color: var(--accent); font-size: 0.68rem; letter-spacing: 0.04em; white-space: nowrap; }
+.gear-detail-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; margin: 0; }
+.armor-boxes { color: var(--accent-2); font-size: 0.85rem; letter-spacing: 0.08em; white-space: nowrap; }
 .gear-card-facts { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; margin-top: auto; }
 .gear-card-price { white-space: nowrap; }
 
@@ -2080,6 +2086,39 @@ h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
   0%, 100% { box-shadow: 0 0 0 rgba(214, 109, 99, 0); }
   50% { box-shadow: 0 0 18px rgba(214, 109, 99, 0.28); }
 }
+
+/* Expedition Packs: one contained panel per Pack, in a tidy grid. A Pack is a carrying setup, not Gear, so its card
+   leads with the Carry Limit and the price rule, then what is packed inside. */
+.pack-section { margin-top: 2rem; }
+.pack-intro { max-width: 60rem; margin: 0.4rem 0 1rem; color: var(--muted); }
+.pack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.pack-card { display: flex; flex-direction: column; gap: 0.8rem; border-top: 2px solid var(--accent); scroll-margin-top: 120px; }
+.pack-card:target { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.pack-card.is-unavailable .pack-card-name { color: var(--muted); }
+.pack-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; }
+.pack-card-name { margin: 0.2rem 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.3rem; font-weight: 500; }
+.pack-card-image { flex: 0 0 auto; width: 4.5rem; height: 4.5rem; object-fit: cover; border: 1px solid var(--line-strong); }
+.pack-card-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: 1px; margin: 0; border: 1px solid var(--line); background: var(--line); }
+.pack-card-facts div { display: flex; flex-direction: column; justify-content: space-between; padding: 0.5rem 0.7rem; background: rgba(9, 14, 16, 0.85); }
+.pack-card-facts dt { color: var(--muted); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.pack-card-facts dd { margin: 0.2rem 0 0; font-size: 1.15rem; line-height: 1.4; }
+.pack-limit { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pack-card-description { color: var(--muted); font-size: 0.92rem; }
+.pack-card-description p { margin: 0; }
+.pack-card-contents h4 { margin: 0 0 0.3rem; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.pack-contents-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; margin: 0; padding: 0; list-style: none; }
+.rich-text .pack-contents-list, .rule-content .rich-text .pack-contents-list { margin: 0; padding: 0; }
+.rich-text .pack-contents-list li + li, .rule-content .rich-text .pack-contents-list li + li { margin-top: 0; }
+.pack-contents-list li { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
+.pack-contents-list li.is-spent > span:first-child { color: var(--muted); text-decoration: line-through; }
+.pack-count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pack-card-link { margin-top: auto; }
+.sponsor-pack { max-width: 34rem; margin: 0.6rem 0 1rem; }
+.sponsor-pack-note { margin: 0.6rem 0 0; font-size: 0.88rem; }
+.stash-pack { margin: 0 0 1.2rem; padding: 0.8rem 0.9rem; border: 1px solid var(--line); border-left: 3px solid var(--accent); background: rgba(9, 14, 16, 0.5); }
+.stash-pack-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1rem; margin: 0 0 0.5rem; }
+.stash-pack-others { margin: 0.6rem 0 0; font-size: 0.88rem; }
+@media (max-width: 520px) { .pack-contents-list { grid-template-columns: 1fr; } }
 
 .stash-list .gear-row { grid-template-columns: minmax(0, 1fr) auto auto; padding: 0.45rem 0.2rem; }
 .stash-group h4 {

@@ -1,0 +1,22 @@
+{
+  "id": "signal-smoke-canister",
+  "name": "Signal Smoke Canister",
+  "category": "tactical",
+  "description": "One canister of coloured signal smoke.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Signal",
+    "Smoke",
+    "Area"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

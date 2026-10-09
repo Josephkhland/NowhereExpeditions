@@ -1,0 +1,27 @@
+{
+  "id": "oxygen-cylinder",
+  "name": "Oxygen Cylinder",
+  "category": "exploration",
+  "description": "Oxygen doesn't burn, but it makes everything else burn fiercely, and a damaged cylinder can rupture violently.",
+  "price": 1,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Breathing",
+    "Pressurized",
+    "Oxidizing"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "oxygen-supply",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

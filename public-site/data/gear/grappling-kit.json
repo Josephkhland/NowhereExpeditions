@@ -1,0 +1,21 @@
+{
+  "id": "grappling-kit",
+  "name": "Grappling Kit",
+  "category": "exploration",
+  "description": "A folding grappling hook with a knotted line.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Climbing",
+    "Retrieval"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

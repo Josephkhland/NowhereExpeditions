@@ -1,0 +1,22 @@
+{
+  "id": "flare",
+  "name": "Flare",
+  "category": "tactical",
+  "description": "One hand flare; a Flare Pistol can fire it high into the air.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Signal",
+    "Light",
+    "Incendiary"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

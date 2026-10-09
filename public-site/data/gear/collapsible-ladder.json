@@ -1,0 +1,21 @@
+{
+  "id": "collapsible-ladder",
+  "name": "Collapsible Ladder",
+  "category": "exploration",
+  "description": "A sectioned steel ladder.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Climbing",
+    "Bulky"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

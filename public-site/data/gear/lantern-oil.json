@@ -1,0 +1,22 @@
+{
+  "id": "lantern-oil",
+  "name": "Lantern Oil",
+  "category": "supplies",
+  "description": "One sealed flask of lamp oil for a lantern.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Fuel",
+    "Flammable",
+    "Consumable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

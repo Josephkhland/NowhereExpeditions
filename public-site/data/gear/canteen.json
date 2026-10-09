@@ -1,0 +1,18 @@
+{
+  "id": "canteen",
+  "name": "Canteen",
+  "category": "exploration",
+  "description": "A stoppered water canteen.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

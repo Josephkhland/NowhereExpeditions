@@ -1,0 +1,22 @@
+{
+  "id": "steel-breastplate",
+  "name": "Steel Breastplate",
+  "category": "protective",
+  "description": "A steel plate under the coat that can stop a bullet.",
+  "price": 1,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Armor",
+    "Ballistic",
+    "Heavy"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 2
+}

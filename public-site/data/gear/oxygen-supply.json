@@ -1,0 +1,21 @@
+{
+  "id": "oxygen-supply",
+  "name": "Oxygen Supply",
+  "category": "supplies",
+  "description": "One cylinder's measure of oxygen.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Breathing",
+    "Oxidizing"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

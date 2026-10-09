@@ -1,0 +1,29 @@
+{
+  "id": "flamethrower",
+  "name": "Flamethrower",
+  "category": "weapon",
+  "description": "A backpack flame projector, filled: three long bursts. Spare fuel comes in a Fuel Cylinder.",
+  "price": 1,
+  "weight": 3,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Ranged",
+    "Incendiary",
+    "Area",
+    "Heavy",
+    "Loud"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "flamethrower-fuel",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

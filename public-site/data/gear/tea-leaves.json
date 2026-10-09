@@ -1,0 +1,22 @@
+{
+  "id": "tea-leaves",
+  "name": "Tea Leaves",
+  "category": "personal",
+  "description": "A day's ration of loose tea.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Consumable",
+    "Comfort",
+    "Social"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

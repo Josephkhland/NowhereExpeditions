@@ -1,0 +1,56 @@
+{
+  "id": "tianzhao-mandate-pack",
+  "name": "Tianzhao Mandate Pack",
+  "description": "Packed with care for the body: two full rolls of bandages in place of rope.",
+  "sponsorId": "faction-tianzhao-mandate",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 8,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "bandage",
+      "quantity": 10
+    },
+    {
+      "gearId": "knife",
+      "quantity": 1
+    },
+    {
+      "gearId": "field-notebook",
+      "quantity": 1
+    }
+  ]
+}

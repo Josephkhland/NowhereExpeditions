@@ -1,0 +1,20 @@
+{
+  "id": "ear-plugs",
+  "name": "Ear Plugs",
+  "category": "protective",
+  "description": "A pair of wax ear plugs: sleep beside machinery, fire a rifle, keep out a song you shouldn't hear. You won't hear much else either.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Hearing Protection"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

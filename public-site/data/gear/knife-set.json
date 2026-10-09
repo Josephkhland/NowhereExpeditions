@@ -1,0 +1,27 @@
+{
+  "id": "knife-set",
+  "name": "Knife Set",
+  "category": "weapon",
+  "description": "Two working knives in a canvas roll.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Close",
+    "Cutting",
+    "Concealable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "knife",
+      "quantity": 2
+    }
+  ],
+  "armorBoxes": 0
+}

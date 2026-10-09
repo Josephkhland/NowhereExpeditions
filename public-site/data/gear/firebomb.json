@@ -1,0 +1,23 @@
+{
+  "id": "firebomb",
+  "name": "Firebomb",
+  "category": "tactical",
+  "description": "One bottle of fuel with a wick.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Incendiary",
+    "Area",
+    "Persistent",
+    "Fragile"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

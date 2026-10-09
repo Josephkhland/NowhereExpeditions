@@ -1,4 +1,4 @@
-const state = { factions: [], gear: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {}, issues: [],
+const state = { factions: [], gear: [], packs: [], characters: [], archive: [], jobs: [], game: [], resources: [], forms: [], outpost: {}, site: {}, issues: [],
   settings: { includeSamples: false, sampleCount: 0 }, hiddenSamples: [],
   // The shared vocabulary (Functions, Domains...), sent by the server so it is defined in one place.
   vocabulary: { loreTopics: [], functionGroups: {}, functions: [], domains: [], resourceSources: [], resourceAvailability: [], formTiers: {}, formStatuses: [], projectResults: [], gateStatuses: [] } };
@@ -38,7 +38,12 @@ const defaultReadingPath = (factionId) => state.archive
   .sort((left, right) => loreKindRank(left) - loreKindRank(right) || (left.factionIds || []).length - (right.factionIds || []).length
     || String(left.title).localeCompare(String(right.title)))
   .map((entry) => entry.id);
-const GEAR_CATEGORIES = ["weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special"];
+const GEAR_CATEGORIES = ["weapon", "tactical", "exploration", "scientific", "communication", "protective", "medical", "supplies", "personal", "special"];
+const GEAR_CATEGORY_LABELS = { weapon: "Weapons", tactical: "Tactical & Demolition", exploration: "Exploration", scientific: "Scientific Instruments",
+  communication: "Communication", protective: "Protective Equipment", medical: "Medical", supplies: "Supplies", personal: "Personal & Miscellaneous",
+  special: "Specialized / Advanced" };
+const gearCategoryLabel = (category) => GEAR_CATEGORY_LABELS[category] || humanize(category);
+const GEAR_CATEGORY_CHOICES = GEAR_CATEGORIES.map((value) => [value, gearCategoryLabel(value)]);
 const GEAR_AVAILABILITY = ["common", "restricted", "rare", "unavailable"];
 const PROMO_LABELS = ["DISCOUNT", "NEW", "LIMITED", "FEATURED"];
 const CURRENCY = "coins";
@@ -134,6 +139,46 @@ function referenceSelect(label, name, value, key, labelFor, options = {}) {
   if (value && !choices.some(([id]) => id === value)) choices.unshift([value, hiddenSampleLabel(key, value) || `Missing record: ${value}`]);
   return selectField(label, name, value || "", choices, { emptyLabel: options.emptyLabel || "— None —", ...options });
 }
+
+// Sponsors are Recruitment Faction rules ticked as a Sponsor; their rule ID is the Sponsor's stable ID.
+const isSponsorRule = (post) => post.type === "rule" && post.sponsor;
+const sponsorName = (id) => findRecord("game", id)?.title || hiddenSampleLabel("game", id) || id || "";
+const sponsorSelect = (label, name, value, help) => referenceSelect(label, name, value, "game", (post) => post.title,
+  { filter: isSponsorRule, emptyLabel: "— No Sponsor —", help });
+// A Sponsor's Extra: its rule's own, else that of the Faction whose sponsorship rule it is (as data/sponsors.json has it).
+function sponsorExtra(id) {
+  const rule = findRecord("game", id);
+  if (!rule) return null;
+  const faction = state.factions.find((item) => item.ruleId === id);
+  const source = rule.extraName || rule.extraRule || !faction ? rule : faction;
+  return { name: rule.title, extraName: source.extraName || "", extraRule: source.extraRule || "" };
+}
+// The same block the public sheet writes (public-site/packs.js applySponsorExtra).
+function applySponsorExtra(extras, previous, next) {
+  const block = (sponsor) => sponsor && (sponsor.extraName || sponsor.extraRule)
+    ? `Recruitment Faction: ${sponsor.name}\n${sponsor.extraName ? `${sponsor.extraName}: ` : ""}${String(sponsor.extraRule || "").replace(/\*\*/g, "")}`.trim() : "";
+  let text = String(extras || "");
+  const old = block(previous);
+  const fresh = block(next);
+  if (old && text.includes(old)) text = text.replace(old, fresh);
+  else if (fresh && !text.includes(fresh)) text = text.trim() ? `${fresh}\n\n${text}` : fresh;
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/* What a Pack's contents are worth, in weight: what bringing the same supplies as additional Gear would cost.
+   Gear sold alone counts its weight; a component counts its share of the lightest kit that holds it (Ration: 1/5);
+   a component no kit holds counts 0.5 (an Expedition Compass), or 0.1 if it is a personal item. Used to keep starting
+   Packs comparable. */
+function gearPackValue(gearId) {
+  const gear = findRecord("gear", gearId);
+  if (!gear) return 0;
+  if (!isComponent(gear)) return Number(gear.weight) || 0;
+  const shares = state.gear.filter((other) => !isComponent(other) && gearSupplies(other.id)[gearId])
+    .map((other) => (Number(other.weight) || 0) / gearSupplies(other.id)[gearId]);
+  // A personal or comfort item (tea, a mug) is character, not capability.
+  return shares.length ? Math.min(...shares) : gear.category === "personal" ? 0.1 : 0.5;
+}
+const packValue = (contents) => Math.round((contents || []).reduce((total, item) => total + gearPackValue(item.gearId) * Number(item.quantity || 0), 0) * 10) / 10;
 
 function participantPicker(selectedIds, labels = {}) {
   const hiddenCount = selectedIds.filter((id) => !findRecord("characters", id) && hiddenSampleLabel("characters", id)).length;
@@ -327,6 +372,7 @@ function readSheet(form) {
 const SHEET_FILE_FORMAT = "nowhere-expeditions/fate-sheet";
 let sheetBeforeImport;
 let stashBeforeImport;
+let packsBeforeImport;
 let fieldsBeforeImport;
 
 // Accepts the editable HTML sheet from the public site (or its JSON). Nothing in the file is executed.
@@ -438,9 +484,52 @@ function describeStashChanges(before, after) {
     else {
       if (previous.quantity !== item.quantity) changes.push(`Stash: ${name(id)} quantity ${previous.quantity} → ${item.quantity}`);
       if (previous.broughtIntoAction !== item.broughtIntoAction) changes.push(`Stash: ${name(id)} ${item.broughtIntoAction ? "brought into action" : "stored"}`);
+      const usedText = (entry) => (entry.used || []).map((supply) => `${name(supply.gearId)} ${supply.quantity}`).sort().join(", ") || "nothing";
+      if (usedText(previous) !== usedText(item)) changes.push(`Stash: used from ${name(id)}: ${usedText(previous)} → ${usedText(item)}`);
+      if ((previous.armorMarked || 0) !== (item.armorMarked || 0)) changes.push(`Stash: ${name(id)} Armor boxes marked ${previous.armorMarked || 0} → ${item.armorMarked || 0}`);
     }
   });
   old.forEach((item, id) => { if (!now.has(id)) changes.push(`Stash: removed ${name(id)}`); });
+  return changes;
+}
+
+// Owned Packs from a sheet file (version 4 on). Older files have none and leave the character's Packs alone.
+function importedPacks(envelope) {
+  if (!Array.isArray(envelope.packs)) return { packs: null, skipped: [] };
+  const packs = [];
+  const skipped = [];
+  envelope.packs.forEach((item) => {
+    if (!item || typeof item.packId !== "string") return;
+    if (!findRecord("packs", item.packId)) { skipped.push(item.packId); return; }
+    const seen = new Set();
+    const contents = (Array.isArray(item.contents) ? item.contents : [])
+      .filter((entry) => entry && typeof entry.gearId === "string" && findRecord("gear", entry.gearId) && !seen.has(entry.gearId) && seen.add(entry.gearId))
+      .map((entry) => {
+        const capacity = Math.max(0, Math.min(99, Math.round(Number(entry.capacity ?? entry.quantity)) || 0));
+        return { gearId: entry.gearId, capacity, quantity: Math.max(0, Math.min(capacity, Math.round(Number(entry.quantity ?? capacity)) || 0)) };
+      });
+    const id = typeof item.id === "string" && item.id && !packs.some((other) => other.id === item.id) ? item.id : nextPackInstanceId(packs);
+    packs.push({ id, packId: item.packId, active: Boolean(item.active) && !packs.some((other) => other.active), contents });
+  });
+  return { packs, skipped };
+}
+const importedSponsor = (envelope) => typeof envelope.sponsorId === "string" && envelope.sponsorId
+  && state.game.some((post) => post.id === envelope.sponsorId && isSponsorRule(post)) ? envelope.sponsorId : null;
+
+function describePackChanges(before, after) {
+  const changes = [];
+  const name = (instance) => `${packLabel(findRecord("packs", instance.packId)) || instance.packId} (${instance.id})`;
+  const old = new Map(before.map((item) => [item.id, item]));
+  after.forEach((item) => {
+    const previous = old.get(item.id);
+    if (!previous || previous.packId !== item.packId) { changes.push(`Pack added: ${name(item)}${item.active ? ", active" : ""}`); return; }
+    if (previous.active !== item.active) changes.push(`Pack ${item.active ? "made active" : "no longer active"}: ${name(item)}`);
+    item.contents.forEach((entry) => {
+      const was = previous.contents.find((other) => other.gearId === entry.gearId);
+      if (!was || was.quantity !== entry.quantity) changes.push(`${name(item)}: ${gearLabel(findRecord("gear", entry.gearId)) || entry.gearId} ${was ? was.quantity : 0} → ${entry.quantity} of ${entry.capacity}`);
+    });
+  });
+  before.filter((item) => !after.some((other) => other.id === item.id && other.packId === item.packId)).forEach((item) => changes.push(`Pack removed: ${name(item)}`));
   return changes;
 }
 
@@ -457,7 +546,7 @@ async function importSheetFile(input) {
     && !confirm(`This is a new-character file for “${envelope.characterName || "an unnamed character"}”. Import it over the existing character ${currentName}? To add it as a new character, press + New first.`)) return;
 
   const identityChanges = [];
-  fieldsBeforeImport = Object.fromEntries(["name", "playerName", "summary", "type", "coins", "carryLimit"].map((name) => [name, form.querySelector(`[name="${name}"]`).value]));
+  fieldsBeforeImport = Object.fromEntries(["name", "playerName", "summary", "type", "coins", "sponsorId", "carryModifier"].map((name) => [name, form.querySelector(`[name="${name}"]`).value]));
   if (envelope.newCharacter) {
     const fill = (name, value, label) => {
       const control = form.querySelector(`[name="${name}"]`);
@@ -479,15 +568,27 @@ async function importSheetFile(input) {
     }
   }
 
-  [["coins", "Coins", 999999], ["carryLimit", "Carry limit", 99]].forEach(([name, label, max]) => {
-    const value = envelope[name];
-    if (!Number.isInteger(value) || value < 0 || value > max) return;
-    const control = form.querySelector(`[name="${name}"]`);
-    if (Number(control.value) !== value) {
-      identityChanges.push(`${label}: ${control.value || 0} → ${value}`);
-      control.value = value;
+  if (Number.isInteger(envelope.coins) && envelope.coins >= 0 && envelope.coins <= 999999) {
+    const control = form.querySelector('[name="coins"]');
+    if (Number(control.value) !== envelope.coins) {
+      identityChanges.push(`Coins: ${control.value || 0} → ${envelope.coins}`);
+      control.value = envelope.coins;
     }
-  });
+  }
+  if (Number.isInteger(envelope.carryModifier) && Math.abs(envelope.carryModifier) <= 20) {
+    const control = form.querySelector('[name="carryModifier"]');
+    if (Number(control.value || 0) !== envelope.carryModifier) {
+      identityChanges.push(`Carry modifier: ${control.value || 0} → ${envelope.carryModifier}`);
+      control.value = envelope.carryModifier;
+    }
+  }
+  // Sheet files from version 4 on name the Sponsor; older files (and their retired carry limit) leave it alone.
+  const sponsor = importedSponsor(envelope);
+  const sponsorControl = form.querySelector('[name="sponsorId"]');
+  if (sponsor && sponsorControl.value !== sponsor) {
+    identityChanges.push(`Sponsor: ${sponsorName(sponsorControl.value) || "none"} → ${sponsorName(sponsor)}`);
+    sponsorControl.value = sponsor;
+  } else if (envelope.sponsorId && !sponsor) identityChanges.push(`Skipped unknown Sponsor “${envelope.sponsorId}” from the file`);
 
   const before = readSheet(form);
   document.getElementById("sheet-editor").innerHTML = sheetEditor({ ...normalizeImportedSheet(envelope.sheet), public: before ? before.public : true });
@@ -497,16 +598,19 @@ async function importSheetFile(input) {
   if (Array.isArray(envelope.stash)) {
     // Version 1 files have no stash; only files that carry one replace it.
     const stashBefore = readStash(form) || [];
-    const imported = envelope.stash.filter((item) => item && typeof item.gearId === "string").map((item) => ({
-      gearId: item.gearId,
-      quantity: Math.max(1, Math.min(999, Math.round(Number(item.quantity)) || 1)),
-      broughtIntoAction: Boolean(item.broughtIntoAction)
-    }));
-    const known = imported.filter((item) => findRecord("gear", item.gearId));
-    imported.filter((item) => !findRecord("gear", item.gearId)).forEach((item) => changes.push(`Skipped unknown Gear “${item.gearId}” from the file`));
+    const { stash: known, skipped } = importedStash(envelope);
+    skipped.forEach((gearId) => changes.push(`Skipped Gear “${gearId}” from the file (unknown, or a component that only comes in Packs and bundles)`));
     changes.push(...describeStashChanges(stashBefore, known));
     stashBeforeImport = stashBefore;
     rerenderStash(known);
+  }
+  packsBeforeImport = null;
+  const { packs, skipped: skippedPacks } = importedPacks(envelope);
+  if (packs) {
+    packsBeforeImport = readOwnedPacks(form) || [];
+    skippedPacks.forEach((packId) => changes.push(`Skipped unknown Pack “${packId}” from the file`));
+    changes.push(...describePackChanges(packsBeforeImport, packs));
+    rerenderOwnedPacks(packs);
   }
   const note = document.getElementById("sheet-import-note");
   const savedAt = envelope.savedAt ? new Date(envelope.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
@@ -530,45 +634,151 @@ let stashView = { tab: "stash", query: "", category: "" };
 
 const priceText = (value) => `<span class="coins">${COIN_ICON}${Number(value) || 0}<span class="sr-only"> ${CURRENCY}</span></span>`;
 
+// The supplies inside one unit of a bundle (Rations Kit → {ration: 5}), expanded down to plain Gear. Same rule as
+// the site's packs.js and the server's bundle_supplies.
+function gearSupplies(gearId, seen = new Set()) {
+  const supplies = {};
+  (findRecord("gear", gearId)?.contents || []).forEach((item) => {
+    if (item.gearId === gearId || seen.has(item.gearId)) return;
+    const inner = gearSupplies(item.gearId, new Set([...seen, gearId]));
+    (Object.keys(inner).length ? Object.entries(inner) : [[item.gearId, 1]])
+      .forEach(([key, quantity]) => { supplies[key] = (supplies[key] || 0) + quantity * Number(item.quantity || 1); });
+  });
+  return supplies;
+}
+const isComponent = (gear) => gear?.marketplaceVisible === false;
+
 function readStash(root = document) {
   const editor = root.querySelector("[data-stash]");
   if (!editor) return null;
-  return [...editor.querySelectorAll("[data-stash-row]")].map((row) => ({
-    gearId: row.dataset.gearId,
-    quantity: Math.max(1, Math.min(999, Math.round(Number(row.querySelector("[data-stash-quantity]").value)) || 1)),
-    broughtIntoAction: row.querySelector("[data-stash-action]").checked
+  return [...editor.querySelectorAll("[data-stash-row]")].map((row) => {
+    // A kit's inputs show what is left; the record keeps what was used.
+    const used = [...row.querySelectorAll("[data-supply]")].map((input) => ({ gearId: input.dataset.gearId,
+      quantity: Math.max(0, Number(input.dataset.capacity) - Math.max(0, Math.round(Number(input.value)) || 0)) })).filter((entry) => entry.quantity);
+    return {
+      gearId: row.dataset.gearId,
+      quantity: Math.max(1, Math.min(999, Math.round(Number(row.querySelector("[data-stash-quantity]").value)) || 1)),
+      broughtIntoAction: row.querySelector("[data-stash-action]").checked,
+      ...(used.length ? { used } : {}),
+      ...(Number(row.querySelector("[data-armor-marked]")?.value) > 0 ? { armorMarked: Math.round(Number(row.querySelector("[data-armor-marked]").value)) } : {})
+    };
+  });
+}
+
+/* ---------- Expedition Packs a character owns ---------- */
+
+// Each owned Pack is its own inventory: what is left of each item out of what it was packed with. The Active Pack
+// sets the Carry Limit. Rows hold the working copy; readOwnedPacks turns them back into data.
+const packLabel = (pack) => pack ? pack.name || pack.id : "";
+const packContentsSummary = (contents) => (contents || []).map((item) => `${gearLabel(findRecord("gear", item.gearId)) || item.gearId} ×${item.quantity}`).join(", ");
+const freshPackInstance = (pack, id, active) => ({ id, packId: pack.id, active,
+  contents: (pack.contents || []).map((item) => ({ gearId: item.gearId, quantity: item.quantity, capacity: item.quantity })) });
+const nextPackInstanceId = (owned) => {
+  let number = owned.length + 1;
+  while (owned.some((item) => item.id === `pack-${number}`)) number += 1;
+  return `pack-${number}`;
+};
+// The Active Pack's Carry Limit plus the character's Carry modifier (stunts, situations); null without an Active Pack.
+const activePackLimit = (owned, modifier = 0) => {
+  const active = (owned || []).find((item) => item.active);
+  const pack = active && findRecord("packs", active.packId);
+  return pack ? Math.max(0, Number(pack.carryLimit) + (Math.round(Number(modifier)) || 0)) : null;
+};
+
+function readOwnedPacks(root = document) {
+  const editor = root.querySelector("[data-owned-packs]");
+  if (!editor) return null;
+  return [...editor.querySelectorAll("[data-pack-instance]")].map((block) => ({
+    id: block.dataset.instanceId, packId: block.dataset.packId,
+    active: block.querySelector("[data-pack-active]").checked,
+    contents: [...block.querySelectorAll("[data-pack-item]")].map((row) => {
+      const capacity = Math.max(0, Math.min(99, Math.round(Number(row.querySelector("[data-pack-capacity]").value)) || 0));
+      return { gearId: row.dataset.gearId, capacity,
+        quantity: Math.max(0, Math.min(capacity, Math.round(Number(row.querySelector("[data-pack-quantity]").value)) || 0)) };
+    })
   }));
 }
 
-// Total weight of the Gear brought into action, against the character's carry limit (6 unless a stunt or situation changes it).
-const DEFAULT_CARRY_LIMIT = 6;
-const carryLimit = () => {
-  const value = document.querySelector('#record-form [name="carryLimit"]')?.value;
-  return value === undefined || value === "" ? DEFAULT_CARRY_LIMIT : Number(value);
-};
+function ownedPacksEditor(owned) {
+  const blocks = owned.map((instance) => {
+    const pack = findRecord("packs", instance.packId);
+    const name = pack ? packLabel(pack) : hiddenSampleLabel("packs", instance.packId) || `Missing Pack: ${instance.packId}`;
+    const items = instance.contents.map((item) => {
+      const gear = findRecord("gear", item.gearId);
+      return `<tr data-pack-item data-gear-id="${escapeHtml(item.gearId)}">
+        <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : `<span class="link-missing">${escapeHtml(hiddenSampleLabel("gear", item.gearId) || `Missing Gear: ${item.gearId}`)}</span>`}</td>
+        <td><input type="number" min="0" max="99" value="${item.quantity}" data-pack-quantity aria-label="${escapeHtml(gearLabel(gear) || item.gearId)} remaining" /></td>
+        <td><input type="number" min="0" max="99" value="${item.capacity}" data-pack-capacity aria-label="${escapeHtml(gearLabel(gear) || item.gearId)} packed with" /></td>
+      </tr>`;
+    }).join("");
+    return `<div class="owned-pack${instance.active ? " is-active" : ""}" data-pack-instance data-instance-id="${escapeHtml(instance.id)}" data-pack-id="${escapeHtml(instance.packId)}">
+      <div class="owned-pack-head">
+        <label class="inline-check"><input type="radio" name="activePack" value="${escapeHtml(instance.id)}" data-pack-active ${instance.active ? "checked" : ""} /> Active</label>
+        <strong>${pack ? referenceLink("packs", pack, name) : `<span class="link-missing">${escapeHtml(name)}</span>`}</strong>
+        <span class="helper">${escapeHtml(instance.id)}${pack ? ` · Carry Limit ${escapeHtml(pack.carryLimit)}` : ""}${pack && !pack.published ? " · unpublished" : ""}</span>
+        <span class="owned-pack-actions">
+          ${pack ? `<button type="button" class="button button-secondary" data-action="restock-pack" title="Refill to the Pack's current contents">Restock</button>` : ""}
+          <button class="remove-record" type="button" data-action="remove-owned-pack" aria-label="Remove ${escapeHtml(name)}" title="Remove this Pack">×</button>
+        </span>
+      </div>
+      ${items ? `<table class="stash-table owned-pack-items"><thead><tr><th>Inside</th><th>Remaining</th><th>Packed with</th></tr></thead><tbody>${items}</tbody></table>`
+        : '<p class="nested-empty">Nothing inside.</p>'}
+    </div>`;
+  }).join("");
+  const choices = [...state.packs].sort((left, right) => packLabel(left).localeCompare(packLabel(right)))
+    .map((pack) => `<option value="${escapeHtml(pack.id)}">${escapeHtml(packLabel(pack))}${pack.published ? "" : " — unpublished"}</option>`).join("");
+  return `<div class="owned-packs" data-owned-packs>
+    ${blocks || '<p class="nested-empty">No Pack owned. Saving with a Sponsor gives the Sponsor’s starting Pack; otherwise there is no Carry Limit.</p>'}
+    <label class="inline-check owned-pack-none"><input type="radio" name="activePack" value="" data-pack-none ${owned.some((item) => item.active) ? "" : "checked"} /> No Active Pack</label>
+    <div class="row-actions">
+      <select data-add-pack aria-label="Pack to give">${choices || '<option value="">No Packs yet</option>'}</select>
+      <button type="button" class="button button-secondary" data-action="add-owned-pack" ${choices ? "" : "disabled"}>+ Give Pack</button>
+      <span class="helper">A freshly packed copy. Players buy Packs on their sheet; here nothing is charged.</span>
+    </div>
+  </div>`;
+}
+
+function rerenderOwnedPacks(owned) {
+  document.querySelector("[data-owned-packs]").outerHTML = ownedPacksEditor(owned);
+  updateCarried();
+}
+
+// Total weight of the Gear brought into action, against the Active Pack's Carry Limit. Pack contents never count.
+const carryLimit = () => activePackLimit(readOwnedPacks() || [], document.querySelector('#record-form [name="carryModifier"]')?.value);
 const carriedWeight = (stash) => stash.filter((item) => item.broughtIntoAction)
   .reduce((total, item) => total + (Number(findRecord("gear", item.gearId)?.weight) || 0) * item.quantity, 0);
 const carriedText = (stash, limit = carryLimit()) => {
   const carried = carriedWeight(stash);
-  return `Carried into action: <strong>${carried} / ${limit}</strong>${carried > limit ? " · over the limit" : ""}`;
+  return `Additional Gear carried into action: <strong>${carried} / ${limit ?? "—"}</strong>${limit === null ? " · no Active Pack" : ""}${carried > (limit ?? 0) ? " · over the limit" : ""}`;
 };
 function updateCarried() {
   const line = document.querySelector("[data-carried]");
   const stash = readStash();
   if (!line || !stash) return;
   line.innerHTML = carriedText(stash);
-  line.classList.toggle("is-over", carriedWeight(stash) > carryLimit());
+  line.classList.toggle("is-over", carriedWeight(stash) > (carryLimit() ?? 0));
 }
 
-// `limit` is passed when the form is being built (its carry limit field is not on the page yet).
+// `limit` is passed when the form is being built (the owned Packs are not on the page yet).
 function stashEditor(stash, limit = carryLimit()) {
   const owned = new Map(stash.map((item) => [item.gearId, item]));
   const rows = stash.map((item) => {
     const gear = findRecord("gear", item.gearId);
+    const supplies = Object.entries(gearSupplies(item.gearId)).map(([gearId, perUnit]) => {
+      const capacity = perUnit * item.quantity;
+      const used = (item.used || []).find((entry) => entry.gearId === gearId)?.quantity || 0;
+      return `<label class="stash-supply">${escapeHtml(gearLabel(findRecord("gear", gearId)) || gearId)}
+        <input type="number" min="0" max="${capacity}" value="${Math.max(0, capacity - used)}" data-supply data-gear-id="${escapeHtml(gearId)}" data-capacity="${capacity}" aria-label="${escapeHtml(gearLabel(findRecord("gear", gearId)) || gearId)} left" /> / ${capacity}</label>`;
+    }).join("");
     return `<tr data-stash-row data-gear-id="${escapeHtml(item.gearId)}">
       <td>${gear ? referenceLink("gear", gear, gearLabel(gear)) : (hiddenSampleLabel("gear", item.gearId) ? `<span class="helper">${escapeHtml(hiddenSampleLabel("gear", item.gearId))}</span>` : `<span class="link-missing">Missing Gear: ${escapeHtml(item.gearId)}</span>`)}
-        ${gear && !gear.published ? '<span class="record-draft">Unpublished</span>' : ""}</td>
-      <td>${escapeHtml(humanize(gear?.category || ""))}</td>
+        ${gear && !gear.published ? '<span class="record-draft">Unpublished</span>' : ""}
+        ${isComponent(gear) ? '<span class="record-draft">Component: only in Packs and bundles</span>' : ""}
+        ${supplies ? `<div class="stash-supplies"><span class="helper">Left inside:</span> ${supplies}</div>` : ""}
+        ${Number(gear?.armorBoxes) ? `<div class="stash-supplies"><label class="stash-supply">Armor boxes marked
+          <input type="number" min="0" max="${gear.armorBoxes * item.quantity}" value="${Math.min(Number(item.armorMarked) || 0, gear.armorBoxes * item.quantity)}" data-armor-marked aria-label="Armor boxes marked" /> / ${gear.armorBoxes * item.quantity}</label>
+          <span class="helper">Set to 0 when it is repaired.</span></div>` : ""}</td>
+      <td>${escapeHtml(gearCategoryLabel(gear?.category || ""))}</td>
       <td class="numeric">${weightText(gear?.weight)}</td>
       <td><input type="number" min="1" max="999" value="${item.quantity}" data-stash-quantity aria-label="Quantity of ${escapeHtml(gearLabel(gear) || item.gearId)}" /></td>
       <td><label class="stash-check"><input type="checkbox" data-stash-action ${item.broughtIntoAction ? "checked" : ""} /><span>In action</span></label></td>
@@ -576,14 +786,14 @@ function stashEditor(stash, limit = carryLimit()) {
     </tr>`;
   }).join("");
   const query = stashView.query.trim().toLowerCase();
-  const catalogue = [...state.gear]
+  const catalogue = state.gear.filter((gear) => !isComponent(gear))
     .filter((gear) => !stashView.category || gear.category === stashView.category)
     .filter((gear) => !query || [gear.name, gear.category, gear.description, ...(gear.tags || [])].join(" ").toLowerCase().includes(query))
     .sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name));
   const market = catalogue.map((gear) => {
     const item = owned.get(gear.id);
     return `<li class="market-row">
-      <span><strong>${escapeHtml(gear.name)}</strong> <span class="helper">${escapeHtml(humanize(gear.category))} · ${priceText(gear.price)} · ${weightText(gear.weight)}${gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}${gear.published ? "" : " · unpublished"}</span></span>
+      <span><strong>${escapeHtml(gear.name)}</strong> <span class="helper">${escapeHtml(gearCategoryLabel(gear.category))} · ${priceText(gear.price)} · ${weightText(gear.weight)}${Object.keys(gearSupplies(gear.id)).length ? ` · holds ${escapeHtml(Object.entries(gearSupplies(gear.id)).map(([id, quantity]) => `${gearLabel(findRecord("gear", id)) || id} ×${quantity}`).join(", "))}` : ""}${gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}${gear.published ? "" : " · unpublished"}</span></span>
       <button type="button" class="button button-secondary" data-action="add-stash-item" data-gear-id="${escapeHtml(gear.id)}">${item ? `In stash (${item.quantity}) · +1` : "+ Add"}</button>
     </li>`;
   }).join("");
@@ -591,15 +801,15 @@ function stashEditor(stash, limit = carryLimit()) {
   return `<div class="stash-editor" data-stash>
     <div class="outpost-tabs" role="tablist" aria-label="Inventory">${tab("stash", `My Stash (${stash.length})`)}${tab("market", "Marketplace")}</div>
     <div class="stash-panel" ${stashView.tab === "stash" ? "" : "hidden"}>
-      <p class="stash-carried${carriedWeight(stash) > limit ? " is-over" : ""}" data-carried>${carriedText(stash, limit)}</p>
+      <p class="stash-carried${carriedWeight(stash) > (limit ?? 0) ? " is-over" : ""}" data-carried>${carriedText(stash, limit)}</p>
       ${stash.length ? `<table class="stash-table"><thead><tr><th>Gear</th><th>Category</th><th class="numeric">Weight</th><th>Qty</th><th>Brought into action</th><th><span class="sr-only">Remove</span></th></tr></thead><tbody>${rows}</tbody></table>`
         : '<p class="nested-empty">The stash is empty. Add Gear from the Marketplace tab.</p>'}
-      <p class="helper">Removing an entry only removes it from this character; the Gear stays in the Marketplace. No Load limit is enforced yet.</p>
+      <p class="helper">Removing an entry only removes it from this character; the Gear stays in the Marketplace. Going over the Carry Limit is shown, not prevented (Forgot something? costs a Fate Point then).</p>
     </div>
     <div class="stash-panel" ${stashView.tab === "market" ? "" : "hidden"}>
       <div class="stash-market-filters">
         <input type="search" data-stash-query value="${escapeHtml(stashView.query)}" placeholder="Search Gear" aria-label="Search Gear" />
-        <select data-stash-category aria-label="Gear category"><option value="">All categories</option>${GEAR_CATEGORIES.map((category) => `<option value="${category}" ${stashView.category === category ? "selected" : ""}>${humanize(category)}</option>`).join("")}</select>
+        <select data-stash-category aria-label="Gear category"><option value="">All categories</option>${GEAR_CATEGORIES.map((category) => `<option value="${category}" ${stashView.category === category ? "selected" : ""}>${gearCategoryLabel(category)}</option>`).join("")}</select>
       </div>
       ${market ? `<ul class="market-list">${market}</ul>` : `<p class="nested-empty">${state.gear.length ? "No Gear matches." : "No Gear yet. Create it in Marketplace / Gear."}</p>`}
       <p class="helper">Adding Gear here does not charge the character anything; handle purchases at the table.</p>
@@ -806,7 +1016,8 @@ const collections = {
       <div class="form-section">Between expeditions</div>
       ${field("Downtime", "downtime", record.downtime ?? 0, { type: "number", min: 0, help: "0 to 8. After each expedition: +2 for the crew, +3 for everyone else, up to 8. Shown on the character's page." })}
       ${field("Coins", "coins", record.coins ?? 0, { type: "number", min: 0, help: "After each expedition, raise to the Resources rating if lower, then add any reward." })}
-      ${field("Carry limit", "carryLimit", record.carryLimit ?? 6, { type: "number", min: 0, help: "Most total weight brought into action. 6 by default; stunts may raise it and situations lower it." })}
+      ${sponsorSelect("Sponsor", "sponsorId", record.sponsorId, "The Recruitment Faction. Its starting Pack is given when the character owns no Pack; its Packs are free to them.")}
+      ${field("Carry modifier", "carryModifier", record.carryModifier ?? 0, { type: "number", help: "Added to the Active Pack's Carry Limit: +1 or +2 for a stunt that lets them carry more, −1 or −2 for something that weighs them down. 0 otherwise." })}
       <div class="form-section">Fate Core character sheet</div>
       <div class="field full sheet-import-bar">
         <label class="button button-secondary">Import sheet file<input type="file" accept=".html,.htm,.json,text/html,application/json" data-sheet-import hidden /></label>
@@ -814,8 +1025,11 @@ const collections = {
       </div>
       <div class="field full" id="sheet-import-note" hidden></div>
       <div class="field full" id="sheet-editor">${sheetEditor(record.sheet)}</div>
+      <div class="form-section">Expedition Packs</div>
+      <div class="field full">${ownedPacksEditor(record.packs || [])}
+        <span class="helper">The Active Pack sets the Carry Limit. Contents are tracked per Pack (used up, lost, left behind) and never count as carried weight; editing a Pack definition doesn't refill owned Packs, Restock does.</span></div>
       <div class="form-section">Inventory</div>
-      <div class="field full">${stashEditor(record.stash || [], record.carryLimit ?? DEFAULT_CARRY_LIMIT)}</div>`,
+      <div class="field full">${stashEditor(record.stash || [], activePackLimit(record.packs, record.carryModifier))}</div>`,
     related: (record) => {
       const jobs = state.jobs.filter((job) => job.organizerId === record.id || job.participantIds.includes(record.id));
       const sessions = state.archive.filter((entry) => entry.participantIds.includes(record.id));
@@ -830,7 +1044,8 @@ const collections = {
       type: formText(formData, "type"), status: formText(formData, "status"),
       portrait: formText(formData, "portrait"), summary: formText(formData, "summary"),
       sheet: readSheet(form), stash: readStash(form) || [], coins: formText(formData, "coins"),
-      downtime: formText(formData, "downtime"), carryLimit: formText(formData, "carryLimit")
+      downtime: formText(formData, "downtime"), sponsorId: formText(formData, "sponsorId") || null, packs: readOwnedPacks(form) || [],
+      carryModifier: formText(formData, "carryModifier")
     })
   },
   jobs: {
@@ -975,22 +1190,32 @@ const collections = {
   gear: {
     title: "Marketplace", panel: "GEAR CATALOGUE", singular: "Gear",
     name: (record) => record.name,
-    meta: (record) => [humanize(record.category), record.featured ? "Featured" : "", record.availability],
-    filters: [["category", "All categories", GEAR_CATEGORIES.map((value) => [value, humanize(value)])],
+    meta: (record) => [gearCategoryLabel(record.category), record.armorBoxes ? `Armor ${record.armorBoxes}` : "", record.marketplaceVisible === false ? "Component" : "",
+      (record.contents || []).length ? "Bundle" : "", record.featured ? "Featured" : "", record.availability],
+    filters: [["category", "All categories", GEAR_CATEGORY_CHOICES],
               ["availability", "Any availability", GEAR_AVAILABILITY.map((value) => [value, humanize(value)])]],
     idHelp: "Generated from the name when left blank. Character stashes reference this ID.",
     fields: (record) => {
       const discount = record.discount || {};
       return `
       ${field("Name", "name", record.name || "", { required: true })}
-      ${selectField("Category", "category", record.category || "tool", GEAR_CATEGORIES.map((value) => [value, humanize(value)]))}
+      ${selectField("Category", "category", record.category || "exploration", GEAR_CATEGORY_CHOICES)}
       ${field(`${COIN_ICON} Price (${CURRENCY})`, "price", record.price ?? 0, { type: "number", min: 0 })}
-      ${field(`${WEIGHT_ICON} Weight`, "weight", record.weight ?? 0, { type: "number", min: 0, help: "Counts toward a future Load limit when brought into action." })}
+      ${field(`${WEIGHT_ICON} Weight`, "weight", record.weight ?? 0, { type: "number", min: 0, help: "Counts toward the Active Pack's Carry Limit when brought into action from the stash. Copies inside a Pack don't count." })}
       ${selectField("Availability", "availability", record.availability || "common", GEAR_AVAILABILITY.map((value) => [value, humanize(value)]), { help: "Unavailable Gear stays listed on the public Marketplace, marked unavailable." })}
-      ${textarea("Tags", "tags", listText(record.tags), { help: "One per line." })}
+      ${field("Armor boxes", "armorBoxes", record.armorBoxes ?? 0, { type: "number", min: 0, help: "0 unless this is Armor. Mark a box instead of Physical Stress it could stop; boxes stay marked until repaired or replaced. Ordinary Armor has at most 2." })}
       ${textarea("Description", "description", record.description || "", { full: true })}
       ${imageField("Image", "image", record.image)}
       ${projectSelect(record)}
+      <div class="form-section">Gear Tags</div>
+      ${gearTagPicker(record.tags || [])}
+      ${gmTagField(record)}
+      <div class="form-section">Marketplace &amp; bundle</div>
+      <label class="publish-toggle field full"><input type="checkbox" name="marketplaceVisible" ${record.marketplaceVisible === false ? "" : "checked"} /><span><strong>Marketplace visible</strong><span class="helper">Sold (or taken) on its own. Untick for components such as a single Ration or Bandage: they still go inside Packs and bundles, but can't be stashed or brought alone. Gear costing 0 with weight 0 normally should be a component.${record.id && record.marketplaceVisible !== false && !Number(record.price) && !Number(record.weight) ? ' <strong class="link-missing">This one is free and weightless: consider a bundle instead.</strong>' : ""}</span></span></label>
+      <div class="field full"><span class="field-label">Bundle contents</span>
+        <div class="checklist-rows" id="bundle-content-rows">${(record.contents || []).map(packContentRow).join("")}</div>
+        <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-pack-content" data-target="bundle-content-rows">+ Add Gear</button>
+          <span class="helper">Optional. A bundle (e.g. Rations Kit, weight 1) holds components (Ration ×5); bringing it makes them available. Gear can't end up containing itself.</span></div></div>
       <div class="form-section">Promotion</div>
       <label class="publish-toggle field full"><input type="checkbox" name="featured" ${record.featured ? "checked" : ""} /><span><strong>Featured</strong><span class="helper">Shown in the Marketplace carousel. About three featured items works best.</span></span></label>
       ${field("Promotional label", "promoLabel", record.promoLabel || "", { placeholder: "NEW", help: `Optional, up to 24 characters. Suggestions: ${PROMO_LABELS.join(", ")}.`, list: "promo-labels" })}
@@ -1000,19 +1225,26 @@ const collections = {
     },
     related: (record) => {
       const owners = state.characters.filter((character) => (character.stash || []).some((item) => item.gearId === record.id));
+      const packs = state.packs.filter((pack) => (pack.contents || []).some((item) => item.gearId === record.id));
       return `<div class="form-section">Derived references</div>
         ${relatedBlock("In the stash of", owners.map((character) => {
           const item = character.stash.find((entry) => entry.gearId === record.id);
           return `${referenceLink("characters", character, character.name)} <span class="helper">× ${item.quantity}${item.broughtIntoAction ? " · in action" : ""}</span>`;
-        }), "No character owns this Gear.")}`;
+        }), "No character owns this Gear.")}
+        ${relatedBlock("Packed in", packs.map((pack) => `${referenceLink("packs", pack, pack.name)} <span class="helper">× ${pack.contents.find((item) => item.gearId === record.id).quantity}</span>`), "No Expedition Pack includes this Gear.")}
+        ${relatedBlock("Inside bundles", state.gear.filter((other) => (other.contents || []).some((item) => item.gearId === record.id))
+          .map((other) => `${referenceLink("gear", other, other.name)} <span class="helper">× ${other.contents.find((item) => item.gearId === record.id).quantity}</span>`), "No bundle holds this Gear.")}`;
     },
     read: (formData) => ({
       name: formText(formData, "name"), category: formText(formData, "category"),
       price: formText(formData, "price"), weight: formText(formData, "weight"), availability: formText(formData, "availability"),
-      tags: linesToArray(formData.get("tags")), description: formText(formData, "description"), image: formText(formData, "image"),
+      tags: [...formData.getAll("gearTags"), ...parseList(formData.get("newGearTags"))], gmTags: parseList(formData.get("gmTags")),
+      armorBoxes: formText(formData, "armorBoxes"),
+      description: formText(formData, "description"), image: formText(formData, "image"),
       featured: formData.get("featured") === "on", promoLabel: formText(formData, "promoLabel"),
       discount: { active: formData.get("discountActive") === "on", salePrice: formText(formData, "salePrice") },
-      projectId: formText(formData, "projectId") || null
+      projectId: formText(formData, "projectId") || null,
+      marketplaceVisible: formData.get("marketplaceVisible") === "on", contents: readContentRows(form)
     })
   },
   game: {
@@ -1041,6 +1273,9 @@ const collections = {
         <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
       ${section("rule", `
         ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}
+        <label class="publish-toggle field"><input type="checkbox" name="sponsor" ${record.sponsor ? "checked" : ""} /><span><strong>Sponsor</strong><span class="helper">A Recruitment Faction players can choose. Characters and Expedition Packs name it as their Sponsor; put <code>{{expedition-pack}}</code> on its own line to show its Pack.</span></span></label>
+        ${field("Sponsor Extra name", "extraName", record.extraName || "", { placeholder: "e.g. Self-Directed", help: "Sponsors only. Written into a character's Extras when they choose this Sponsor. Leave both blank to use the Extra of the Faction that links to this rule." })}
+        ${textarea("Sponsor Extra (short)", "extraRule", record.extraRule || "", { rows: 2, help: "One or two sentences; the full rule stays in the Details." })}
         <div class="field"><span class="field-label">Learning path</span><p class="path-status">${(() => {
           const place = record.id ? pathOfRule(record.id) : null;
           return place ? `Step ${place.index + 1} of ${place.path.ruleIds.length} on “${escapeHtml(place.path.title)}”.` : "Not on a learning path.";
@@ -1063,6 +1298,8 @@ const collections = {
         publishedAt: type === "announcement" ? formText(formData, "publishedAt") : "",
         showUntil: type === "announcement" ? formText(formData, "showUntil") : "",
         pinned: type === "announcement" && formData.get("pinned") === "on",
+        sponsor: type === "rule" && formData.get("sponsor") === "on",
+        extraName: formText(formData, "extraName"), extraRule: formText(formData, "extraRule"),
         summary: formText(formData, "summary"), details: formText(formData, "details"),
         tags: linesToArray(formData.get("tags")), image: formText(formData, "image")
       };
@@ -1104,6 +1341,31 @@ function topicPicker(selected) {
     <input type="text" name="newTopics" placeholder="Add other topics, separated by commas" aria-label="New topics" />
     <span class="helper">What the entry is about. An entry can have several, e.g. History and Religion. The public Archive filters by them.</span></div>`;
 }
+
+// Gear Tags: the suggested vocabulary by group, plus Tags other Gear already uses, plus free additions.
+// A Tag spelled like a Resource Function (Anchor, Filter, Heat) would read like one to players: GM tags only.
+const isFunctionWord = (tag) => (state.vocabulary.functions || []).some((group) => (group.functions || [])
+  .some((fn) => fn.name.toLowerCase() === String(tag).trim().toLowerCase()));
+
+function gearTagPicker(selected) {
+  const groups = Object.entries(state.vocabulary.gearTagGroups || {})
+    .map(([group, tags]) => [group, tags.filter((tag) => !isFunctionWord(tag))]);
+  const suggested = new Set(groups.flatMap(([, tags]) => tags));
+  const inUse = [...new Set(state.gear.flatMap((gear) => gear.tags || []))].filter((tag) => !suggested.has(tag) && !isFunctionWord(tag));
+  const other = [...new Set([...inUse, ...selected.filter((tag) => !suggested.has(tag))])].sort();
+  const options = (tags) => tags.map((tag) => `<label><input type="checkbox" name="gearTags" value="${escapeHtml(tag)}" ${selected.includes(tag) ? "checked" : ""} />${escapeHtml(tag)}</label>`).join("");
+  return `<div class="field full gear-tag-picker"><span class="field-label">Tags <span class="helper">(${selected.length} chosen)</span></span>
+    ${groups.map(([group, tags]) => `<details ${tags.some((tag) => selected.includes(tag)) ? "open" : ""}><summary>${escapeHtml(group)}${tags.filter((tag) => selected.includes(tag)).length ? ` · ${escapeHtml(tags.filter((tag) => selected.includes(tag)).join(", "))}` : ""}</summary>
+      <div class="domain-options topic-options">${options(tags)}</div></details>`).join("")}
+    ${other.length ? `<details open><summary>Other Tags in use</summary><div class="domain-options topic-options">${options(other)}</div></details>` : ""}
+    <input type="text" name="newGearTags" placeholder="Add other Tags, separated by commas" aria-label="New Gear Tags" />
+    <span class="helper">What the item can do and how it behaves in the fiction. Players see these. Tags grant no numbers; creatures, hazards and Gates may refer to them (resists Cutting, needs Breaching, hears anything Loud). A Tag can't share a name with a Resource Function: use the GM tags for that.</span></div>`;
+}
+
+// GM tags: notes for encounter design, never published. Function-like words (Anchor, Filter, Heat) belong here.
+const gmTagField = (record) => `<div class="form-section cm-only">CM only · never published</div>
+  ${field("GM tags", "gmTags", listInput(record.gmTags), { full: true, placeholder: "e.g. Anchor, Heat",
+    help: "Separated by commas. Hooks for your own creature, hazard and Gate notes that players never see, including words that are also Resource Functions." })}`;
 
 // A filterable list of records to tick. Read with formData.getAll(name).
 function recordChecklist(name, selectedIds, key, labelFor, label, help = "") {
@@ -1274,6 +1536,81 @@ collections.factions = {
     visualSummary: formText(formData, "visualSummary"), palette: formText(formData, "palette"), materials: formText(formData, "materials"),
     beliefs: formText(formData, "beliefs"), history: formText(formData, "history"), relations: readRelations(form),
     readingPath: readReadingPath(form)
+  })
+};
+
+const readContentRows = (form) => [...form.querySelectorAll("[data-pack-content-row]")].map((row) => ({
+  gearId: row.querySelector('[data-pack-content="gearId"]').value, quantity: row.querySelector('[data-pack-content="quantity"]').value
+})).filter((item) => item.gearId);
+
+function refreshPackValue() {
+  const line = document.querySelector("[data-pack-value]");
+  if (line) line.innerHTML = packValueText(readContentRows(document.getElementById("record-form")));
+}
+const packValueText = (contents) => {
+  const others = state.packs.filter((pack) => pack.starting).map((pack) => `${pack.name.replace(/ Pack$/, "")} ${packValue(pack.contents)}`);
+  return `<strong>Packed value: ${packValue(contents)}</strong> <span class="helper">The weight these contents would take as additional Gear (a component counts its share of a kit: Ration 0.2; one no kit holds counts 0.5, a personal item 0.1). Starting Packs: ${escapeHtml(others.join(" · ") || "none yet")}.</span>`;
+};
+
+// A Pack definition's or bundle's contents: Gear references (never free text, so Pack Rope is the same Rope sold alone).
+function packContentRow(item = { gearId: "", quantity: 1 }) {
+  const gear = [...state.gear].sort((left, right) => gearLabel(left).localeCompare(gearLabel(right)));
+  const known = !item.gearId || gear.some((entry) => entry.id === item.gearId);
+  return `<div class="checklist-row pack-content-row" data-pack-content-row>
+    <select data-pack-content="gearId" aria-label="Gear"><option value="">— Choose Gear —</option>
+      ${known ? "" : `<option value="${escapeHtml(item.gearId)}" selected>${escapeHtml(hiddenSampleLabel("gear", item.gearId) || `Missing Gear: ${item.gearId}`)}</option>`}
+      ${gear.map((entry) => `<option value="${escapeHtml(entry.id)}" ${entry.id === item.gearId ? "selected" : ""}>${escapeHtml(gearLabel(entry))} · weight ${escapeHtml(entry.weight ?? 0)} · ${entry.marketplaceVisible === false ? "component" : `${escapeHtml(entry.price ?? 0)} coins`}${entry.published ? "" : " — unpublished"}</option>`).join("")}
+    </select>
+    <input type="number" min="1" max="99" value="${escapeHtml(item.quantity ?? 1)}" data-pack-content="quantity" aria-label="Quantity" />
+    <button class="remove-record" type="button" data-action="remove-pack-content" aria-label="Remove from the Pack" title="Remove">×</button>
+  </div>`;
+}
+
+collections.packs = {
+  title: "Expedition Packs", panel: "EXPEDITION PACKS", singular: "Pack",
+  name: (record) => record.name,
+  meta: (record) => [`Value ${packValue(record.contents)}`, `Carry ${record.carryLimit ?? 6}`, record.starting ? "Starting" : "",
+    record.featured ? "Featured" : "", record.sponsorId ? sponsorName(record.sponsorId) : "No Sponsor"],
+  sortKey: (record) => `${String(record.order ?? 999).padStart(3, "0")} ${record.name || ""}`,
+  idHelp: "Generated from the name when left blank. Owned Packs on characters reference this ID; the Marketplace links it as marketplace.html#pack-<id>.",
+  fields: (record) => `
+    <div class="form-section">Identity</div>
+    ${field("Name", "name", record.name || "", { required: true, placeholder: "e.g. University Field Pack" })}
+    ${sponsorSelect("Sponsor", "sponsorId", record.sponsorId, "The Sponsor whose recruits pay the Sponsor price. Tick a Recruitment Faction rule as a Sponsor to list it here.")}
+    <label class="publish-toggle field"><input type="checkbox" name="starting" ${record.starting ? "checked" : ""} /><span><strong>Sponsor's starting Pack</strong><span class="helper">New characters with this Sponsor receive it. One per Sponsor.</span></span></label>
+    ${selectField("Availability", "availability", record.availability || "common", GEAR_AVAILABILITY.map((value) => [value, humanize(value)]), { help: "Unavailable Packs stay listed, marked unavailable, and can't be bought." })}
+    ${textarea("Description", "description", record.description || "", { full: true, rows: 3, help: "What kind of kit this is and what it says about who packed it. Fictional traits (inconspicuous, bulky, waterproof) go here; they are not mechanical bonuses." })}
+    ${imageField("Image", "image", record.image, "image", "Optional. Shown small on the Pack's card.")}
+    <div class="form-section">Mechanics</div>
+    ${field("Carry Limit", "carryLimit", record.carryLimit ?? 6, { type: "number", min: 0, help: "The most additional Gear weight the character can bring into action with this Pack active. Starting Packs: 6." })}
+    ${field(`${COIN_ICON} Price (${CURRENCY})`, "price", record.price ?? 1, { type: "number", min: 0, help: "What everyone else pays. Default 1." })}
+    ${field(`${COIN_ICON} Sponsor price (${CURRENCY})`, "sponsorPrice", record.sponsorPrice ?? 0, { type: "number", min: 0, help: "What the Sponsor's own recruits pay. Default 0." })}
+    <div class="form-section">Contents</div>
+    <div class="field full"><span class="field-label">Included Gear</span>
+      <div class="checklist-rows" id="pack-content-rows">${(record.contents || []).map(packContentRow).join("")}</div>
+      <div class="row-actions"><button type="button" class="button button-secondary" data-action="add-pack-content">+ Add Gear</button>
+        <span class="helper">Only what is listed is in the Pack. Contents weigh nothing extra while the Pack is active; extra copies from the stash do. Empty rows are dropped on save.</span></div>
+      <p class="pack-value" data-pack-value>${packValueText(record.contents)}</p></div>
+    <div class="form-section">Promotion</div>
+    <label class="publish-toggle field"><input type="checkbox" name="featured" ${record.featured ? "checked" : ""} /><span><strong>Featured</strong><span class="helper">Listed first among the Expedition Packs.</span></span></label>
+    ${field("Sort order", "order", record.order ?? "", { type: "number", min: 1, help: "Optional. Lower numbers come first." })}`,
+  related: (record) => {
+    const owners = state.characters.filter((character) => (character.packs || []).some((item) => item.packId === record.id));
+    const sponsor = findRecord("game", record.sponsorId);
+    return `<div class="form-section">Derived references</div>
+      ${relatedBlock("Sponsor rule", sponsor ? [referenceLink("game", sponsor, sponsor.title)] : [], "No Sponsor: everyone pays the normal price.")}
+      ${relatedBlock("Owned by", owners.map((character) => {
+        const owned = character.packs.filter((item) => item.packId === record.id);
+        return `${referenceLink("characters", character, character.name)} <span class="helper">${owned.length > 1 ? `× ${owned.length}` : ""}${owned.some((item) => item.active) ? " · active" : ""}</span>`;
+      }), "No character owns this Pack.")}
+      ${linkCheck([record.description])}`;
+  },
+  read: (formData, form) => ({
+    name: formText(formData, "name"), sponsorId: formText(formData, "sponsorId") || null, starting: formData.get("starting") === "on",
+    availability: formText(formData, "availability"), description: formText(formData, "description"), image: formText(formData, "image"),
+    carryLimit: formText(formData, "carryLimit"), price: formText(formData, "price"), sponsorPrice: formText(formData, "sponsorPrice"),
+    featured: formData.get("featured") === "on", order: formText(formData, "order"),
+    contents: readContentRows(form)
   })
 };
 
@@ -1752,7 +2089,8 @@ async function handleVocabAction(action, button) {
     vocabDraft = null;
     await loadState();
     showNotice(`Vocabulary saved${result.recordsUpdated ? `; ${result.recordsUpdated} record${result.recordsUpdated > 1 ? "s" : ""} updated` : ""}.`
-      + (result.ruleMentions.length ? ` Rules still mention old names: ${result.ruleMentions.join(", ")}.` : ""), Boolean(result.ruleMentions.length));
+      + (result.ruleMentions.length ? ` Rules still mention old names: ${result.ruleMentions.join(", ")}.` : "")
+      + ((result.gearTagsMoved || []).length ? ` ${result.gearTagsMoved.join(" ")}` : ""), Boolean(result.ruleMentions.length));
     return;
   }
   renderVocabularyEditor();
@@ -1965,6 +2303,7 @@ async function runBulkAction(action) {
 
 const HOME_SECTIONS = [
   ["factions", "", "Factions"], ["outpost", "", "Outpost Sheet"], ["facilities", "", "Facilities"], ["projects", "", "Projects"], ["gear", "", "Marketplace"],
+  ["packs", "", "Expedition Packs"],
   ["jobs", "", "Job Board"], ["archive", "gates", "Gates"], ["resources", "", "Resources"], ["characters", "", "Characters"],
   ["archive", "lore", "Archive (lore)"], ["forms", "", "Spell Forms"], ["game", "", "Announcements & Rules"],
 ];
@@ -2185,12 +2524,16 @@ function comparableSheet(sheet) {
 
 function importedStash(envelope) {
   if (!Array.isArray(envelope.stash)) return { stash: null, skipped: [] };
-  const items = envelope.stash.filter((item) => item && typeof item.gearId === "string").map((item) => ({
-    gearId: item.gearId,
-    quantity: Math.max(1, Math.min(999, Math.round(Number(item.quantity)) || 1)),
-    broughtIntoAction: Boolean(item.broughtIntoAction)
-  }));
-  return { stash: items.filter((item) => findRecord("gear", item.gearId)), skipped: items.filter((item) => !findRecord("gear", item.gearId)).map((item) => item.gearId) };
+  const items = envelope.stash.filter((item) => item && typeof item.gearId === "string").map((item) => {
+    const used = (Array.isArray(item.used) ? item.used : []).filter((entry) => entry && typeof entry.gearId === "string")
+      .map((entry) => ({ gearId: entry.gearId, quantity: Math.max(0, Math.round(Number(entry.quantity)) || 0) })).filter((entry) => entry.quantity);
+    return { gearId: item.gearId, quantity: Math.max(1, Math.min(999, Math.round(Number(item.quantity)) || 1)),
+      broughtIntoAction: Boolean(item.broughtIntoAction), ...(used.length ? { used } : {}),
+      ...(Math.round(Number(item.armorMarked)) > 0 ? { armorMarked: Math.round(Number(item.armorMarked)) } : {}) };
+  });
+  // Components (one Ration) can't sit in a stash on their own; the server would refuse them.
+  const usable = (item) => findRecord("gear", item.gearId) && !isComponent(findRecord("gear", item.gearId));
+  return { stash: items.filter(usable), skipped: items.filter((item) => !usable(item)).map((item) => item.gearId) };
 }
 
 // One file: either a ready import (with its change list) or the reason it cannot be imported.
@@ -2224,13 +2567,20 @@ async function validateBatchFile(file) {
   if (stash) changes.push(...describeStashChanges(existing?.stash || [], stash));
   const coins = Number.isInteger(envelope.coins) && envelope.coins >= 0 && envelope.coins <= 999999 ? envelope.coins : null;
   if (coins !== null && coins !== (existing?.coins ?? 0)) changes.push(`Coins: ${existing?.coins ?? 0} → ${coins}`);
-  const carryLimit = Number.isInteger(envelope.carryLimit) && envelope.carryLimit >= 0 && envelope.carryLimit <= 99 ? envelope.carryLimit : null;
-  if (carryLimit !== null && carryLimit !== (existing?.carryLimit ?? 6)) changes.push(`Carry limit: ${existing?.carryLimit ?? 6} → ${carryLimit}`);
+  // Version 4 files carry the Sponsor and owned Packs; older ones (with their retired carry limit) change neither.
+  const sponsorId = importedSponsor(envelope);
+  if (sponsorId && sponsorId !== (existing?.sponsorId || null)) changes.push(`Sponsor: ${sponsorName(existing?.sponsorId) || "none"} → ${sponsorName(sponsorId)}`);
+  if (envelope.sponsorId && !sponsorId) changes.push(`Skipped unknown Sponsor “${envelope.sponsorId}”`);
+  const carryModifier = Number.isInteger(envelope.carryModifier) && Math.abs(envelope.carryModifier) <= 20 ? envelope.carryModifier : null;
+  if (carryModifier !== null && carryModifier !== (existing?.carryModifier ?? 0)) changes.push(`Carry modifier: ${existing?.carryModifier ?? 0} → ${carryModifier}`);
+  const { packs, skipped: skippedPacks } = importedPacks(envelope);
+  if (packs) changes.push(...describePackChanges(existing?.packs || [], packs));
+  skippedPacks.forEach((packId) => changes.push(`Skipped unknown Pack “${packId}”`));
   skipped.forEach((gearId) => changes.push(`Skipped unknown Gear “${gearId}”`));
   // New-character files carry no ID, so importing the same file twice would create a second character.
   const namesake = isNew ? state.characters.find((character) => String(character.name || "").trim().toLowerCase() === name.toLowerCase()) : null;
   return {
-    file: file.name, envelope, isNew, existing, stash, coins, carryLimit, changes,
+    file: file.name, envelope, isNew, existing, stash, coins, sponsorId, packs, carryModifier, changes,
     warning: namesake ? `A character named “${namesake.name}” already exists (${namesake.id}). Approving creates a second one; deny it if this file was already imported.` : "",
     character: isNew ? name : existing.name,
     key: isNew ? `new:${name.toLowerCase()}` : `id:${existing.id}`,
@@ -2273,13 +2623,15 @@ async function decideBatch(approve) {
       if (item.isNew) {
         await api("/api/characters", { method: "POST", body: JSON.stringify({ data: {
           name: item.character, playerName: String(envelope.playerName || "").trim(), type: "player", status: "active",
-          summary, sheet, stash: item.stash || [], coins: item.coins ?? 0, carryLimit: item.carryLimit ?? 6, published: false
+          summary, sheet, stash: item.stash || [], coins: item.coins ?? 0, sponsorId: item.sponsorId, packs: item.packs || [],
+          carryModifier: item.carryModifier ?? 0, published: false
         } }) });
       } else {
         const { id, legacy, sample, ...record } = item.existing;
         await api(`/api/characters/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ data: {
           ...record, summary, sheet, ...(item.stash ? { stash: item.stash } : {}), ...(item.coins !== null ? { coins: item.coins } : {}),
-          ...(item.carryLimit !== null ? { carryLimit: item.carryLimit } : {})
+          ...(item.sponsorId ? { sponsorId: item.sponsorId } : {}), ...(item.packs ? { packs: item.packs } : {}),
+          ...(item.carryModifier !== null ? { carryModifier: item.carryModifier } : {})
         } }) });
       }
       batch.results.push({ file: item.file, character: item.character, status: "imported", reason: item.isNew ? "Created (unpublished)." : "Updated." });
@@ -2637,6 +2989,7 @@ const PREVIEW_PAGES = {
   jobs: (id) => `jobs.html#${encodeURIComponent(id)}`,
   archive: (id, data) => `${{ "gate-record": "gates.html", "session-record": "reports.html", newspaper: "reports.html" }[data?.type] || "lore.html"}#${encodeURIComponent(id)}`,
   gear: (id) => `marketplace.html#gear-${encodeURIComponent(id)}`,
+  packs: (id) => `marketplace.html#pack-${encodeURIComponent(id)}`,
   game: (id, data) => `game.html#${data?.type === "announcement" || data?.type === "rule" ? `post-${encodeURIComponent(id)}` : ""}`,
   // A Resource shows on its Discoveries card (with its icon), and on its Gate's page.
   resources: (id) => `discoveries.html#resource-${encodeURIComponent(id)}`,
@@ -3201,7 +3554,7 @@ async function uploadImage(input) {
   showNotice(`${files.length > 1 ? `${files.length} images` : "Image"} uploaded. Save the record to keep ${files.length > 1 ? "them" : "it"}.`);
 }
 
-const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.game} Game posts${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}${result.samplesHidden ? `; ${result.samplesHidden} hidden sample records left out` : ""}`;
+const publishSummary = (result) => `${result.characters} characters, ${result.jobs} jobs, ${result.archive} Archive entries, ${result.gear} Gear, ${result.packs ?? 0} Packs, ${result.game} Game posts${result.unpublished ? `; ${result.unpublished} unpublished records left out` : ""}${result.samplesHidden ? `; ${result.samplesHidden} hidden sample records left out` : ""}`;
 
 async function exportToSite() {
   const result = await api("/api/export", { method: "POST", body: "{}" });
@@ -3335,6 +3688,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       return;
     }
+    if (action === "add-owned-pack") {
+      const pack = findRecord("packs", workArea.querySelector("[data-add-pack]").value);
+      if (!pack) return;
+      const owned = readOwnedPacks();
+      owned.push(freshPackInstance(pack, nextPackInstanceId(owned), !owned.some((item) => item.active)));
+      rerenderOwnedPacks(owned);
+      showNotice(`${packLabel(pack)} given. Save the character to keep it.`);
+      return;
+    }
+    if (action === "remove-owned-pack" || action === "restock-pack") {
+      const block = actionButton.closest("[data-pack-instance]");
+      const pack = findRecord("packs", block.dataset.packId);
+      const owned = readOwnedPacks();
+      const index = owned.findIndex((item) => item.id === block.dataset.instanceId);
+      if (action === "remove-owned-pack") {
+        if (!confirm(`Remove ${packLabel(pack) || block.dataset.packId} and its contents from this character? The Pack itself stays in the Marketplace.`)) return;
+        owned.splice(index, 1);
+      } else {
+        if (!confirm(`Refill ${packLabel(pack)} to what the Pack holds now (${packContentsSummary(pack.contents) || "nothing"})?`)) return;
+        owned[index] = freshPackInstance(pack, owned[index].id, owned[index].active);
+      }
+      rerenderOwnedPacks(owned);
+      return;
+    }
+    if (action === "add-pack-content") {
+      const list = document.getElementById(actionButton.dataset.target || "pack-content-rows");
+      list.insertAdjacentHTML("beforeend", packContentRow());
+      list.lastElementChild.querySelector("select")?.focus();
+      return;
+    }
+    if (action === "remove-pack-content") {
+      actionButton.closest("[data-pack-content-row]").remove();
+      refreshPackValue();
+      if (preview.open) schedulePreview();
+      return;
+    }
     if (action === "add-sheet") {
       document.getElementById("sheet-editor").innerHTML = sheetEditor(defaultSheet());
       return;
@@ -3348,6 +3737,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (action === "undo-sheet-import") {
       document.getElementById("sheet-editor").innerHTML = sheetEditor(sheetBeforeImport);
       if (stashBeforeImport) rerenderStash(stashBeforeImport);
+      if (packsBeforeImport) rerenderOwnedPacks(packsBeforeImport);
       const form = document.getElementById("record-form");
       Object.entries(fieldsBeforeImport || {}).forEach(([name, value]) => { form.querySelector(`[name="${name}"]`).value = value; });
       const note = document.getElementById("sheet-import-note");
@@ -3599,7 +3989,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (activeView === "vocabulary") handleVocabInput(event.target);
     if (activeView === "readingpath") handlePathInput(event.target);
     if (activeView === "issues") handleIssueInput(event.target);
-    if (event.target.matches('[data-stash-quantity], [data-stash-action], [name="carryLimit"]')) updateCarried();
+    if (event.target.matches('[data-stash-quantity], [data-stash-action], #record-form [name="carryModifier"]')) updateCarried();
+    if (event.target.closest("#pack-content-rows")) refreshPackValue();
+    // Choosing a Sponsor writes its Extra into the sheet's Extras, as the player's sheet does.
+    if (event.target.matches('#record-form [name="sponsorId"]')) {
+      const extras = workArea.querySelector('[data-sheet-field="extras"]');
+      const previous = event.target.dataset.previous ?? [...event.target.options].find((option) => option.defaultSelected)?.value ?? "";
+      if (extras) extras.value = applySponsorExtra(extras.value, sponsorExtra(previous), sponsorExtra(event.target.value));
+      event.target.dataset.previous = event.target.value;
+    }
     if (preview.open) schedulePreview();
   });
   workArea.addEventListener("change", (event) => {
@@ -3615,6 +4013,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const picker = select.closest(".asset-picker");
       picker.querySelector(".asset-list").insertAdjacentHTML("beforeend", assetChip({ type, id: rest.join(":") }));
       refreshAssetPicker(picker);
+    }
+    // Switching the Active Pack changes the Carry Limit at once.
+    if (event.target.matches("[data-pack-active], [data-pack-none]")) {
+      workArea.querySelectorAll("[data-pack-instance]").forEach((block) => block.classList.toggle("is-active", block.querySelector("[data-pack-active]").checked));
+      updateCarried();
     }
     if (preview.open) schedulePreview();
   });

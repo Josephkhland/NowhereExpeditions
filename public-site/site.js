@@ -441,7 +441,9 @@ const renderGame = async () => {
     }).join("");
   };
   // Markers on their own line in a post: {{reading-path}} (the Onboarding list) and {{function-picker}} (Random Resource).
-  const postText = (text) => richText(text, campaign)
+  // {{expedition-pack}} in a Sponsor's rule shows that Sponsor's Pack, as the Marketplace lists it.
+  const postText = (text, post = null) => richText(text, campaign)
+    .replace(/<p>\s*\{\{\s*expedition-pack\s*\}\}\s*<\/p>/g, () => post ? sponsorPackBlock(post.id, campaign) : "")
     .replace(/<p>\s*\{\{\s*reading-path\s*\}\}\s*<\/p>/g, readingPathList)
     .replace(/<p>\s*\{\{\s*function-picker\s*\}\}\s*<\/p>/g, '<p><a class="discovery-button" href="discoveries.html#functions">Try the Functions explorer →</a></p>')
     .replace(/<p>\s*\{\{\s*resource-catalogue\s*\}\}\s*<\/p>/g, resourceCatalogue)
@@ -556,7 +558,7 @@ const renderGame = async () => {
           <span><strong>Learn more about ${escapeHtml(faction.name)}</strong>${faction.tagline ? `<span>${escapeHtml(faction.tagline)}</span>` : ""}</span>
           <span class="rule-faction-arrow" aria-hidden="true">→</span></a>` : "";
       })()}
-      ${rule.details ? `<div class="rule-content">${postText(rule.details)}</div>` : ""}
+      ${rule.details ? `<div class="rule-content">${postText(rule.details, rule)}</div>` : ""}
       ${pathNav(rule)}
       ${tagList(rule.tags, "Related topics")}`;
   };
@@ -828,9 +830,9 @@ let campaignPromise = null;
 
 const loadCampaign = () => {
   if (!campaignPromise) {
-    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms", "factions"].map(fetchCollection),
-      fetchJson("data/vocabulary.json").catch(() => null)])
-      .then(([characters, jobs, archive, gear, projects, resources, forms, factions, vocabulary]) => {
+    campaignPromise = Promise.all([...["characters", "jobs", "archive", "gear", "projects", "resources", "forms", "factions", "packs"].map(fetchCollection),
+      fetchJson("data/vocabulary.json").catch(() => null), fetchJson("data/sponsors.json").catch(() => [])])
+      .then(([characters, jobs, archive, gear, projects, resources, forms, factions, packs, vocabulary, sponsors]) => {
         DOMAIN_INFO = new Map((vocabulary?.domains || []).map((domain) => [domain.key, domain]));
         ARCHIVE_INDEX = new Map(archive.map((entry) => [entry.id, entry]));
         VOCABULARY_WORDS = new Set((vocabulary?.functionGroups || []).flatMap((group) => group.functions.map((fn) => fn.name)));
@@ -852,6 +854,12 @@ const loadCampaign = () => {
           jobById: byId(jobs),
           archiveById: byId(archive),
           gearById: byId(gear),
+          // Expedition Packs (featured first, then by sort order and name) and the Sponsors whose recruits get one free.
+          packs: [...packs].sort((left, right) => Number(Boolean(right.featured)) - Number(Boolean(left.featured))
+            || (left.order ?? 999) - (right.order ?? 999) || String(left.name).localeCompare(String(right.name))),
+          packById: byId(packs),
+          sponsors: Array.isArray(sponsors) ? sponsors : [],
+          sponsorById: byId(Array.isArray(sponsors) ? sponsors : []),
           // Relationships are derived from references, never stored on the referenced record.
           jobForSessionRecord: (entryId) => jobs.find((job) => job.sessionRecordId === entryId),
           // A Gate's expedition record: the jobs sent there, and the reports and bulletins about it.
@@ -2039,7 +2047,16 @@ const renderGates = async () => {
 /* ---------- Marketplace: an in-world price list, not a shop ---------- */
 
 const CURRENCY = "coins";
-const GEAR_CATEGORIES = ["weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special"];
+const GEAR_CATEGORIES = ["weapon", "tactical", "exploration", "scientific", "communication", "protective", "medical", "supplies", "personal", "special"];
+const GEAR_CATEGORY_LABELS = { weapon: "Weapons", tactical: "Tactical & Demolition", exploration: "Exploration", scientific: "Scientific Instruments",
+  communication: "Communication", protective: "Protective Equipment", medical: "Medical", supplies: "Supplies", personal: "Personal & Miscellaneous",
+  special: "Specialized / Advanced", armor: "Protective Equipment", tool: "Exploration", consumable: "Supplies", utility: "Personal & Miscellaneous" };
+const gearCategoryLabel = (category) => GEAR_CATEGORY_LABELS[category] || humanize(category);
+// Gear Tags: what an item can do and how it behaves in the fiction. Chips, never numbers.
+const gearTagChips = (gear, className = "gear-tag-list") => (gear.tags || []).length
+  ? `<span class="${className}" aria-label="Gear Tags">${gear.tags.map((tag) => `<span class="gear-tag">${escapeHtml(tag)}</span>`).join("")}</span>` : "";
+const armorTrack = (boxes, marked = 0, label = "Armor ") => boxes
+  ? `<span class="armor-boxes" title="Armor: mark a box instead of Physical Stress it could stop" aria-label="Armor ${boxes - marked} of ${boxes} boxes free">${label}${"■".repeat(marked)}${"□".repeat(Math.max(0, boxes - marked))}</span>` : "";
 const onSale = (gear) => Boolean(gear.discount?.active && Number.isFinite(gear.discount.salePrice));
 
 // A coin stands in for the currency; screen readers hear "coins".
@@ -2059,6 +2076,61 @@ const availabilityFlag = (gear) => gear.availability && gear.availability !== "c
   ? `<span class="gear-flag ${formatStatus(gear.availability).className}">${escapeHtml(humanize(gear.availability))}</span>` : "";
 
 const promoClass = (gear) => gear.promoLabel ? ` promo-${slugify(gear.promoLabel)}` : "";
+const soldAlone = (gear) => gear.marketplaceVisible !== false;
+// What a bundle holds, expanded to its supplies ("Ration ×5"). Plain Gear holds nothing.
+const bundleText = (gear, campaign) => window.NowherePacks
+  ? Object.entries(window.NowherePacks.bundleSupplies(gear.id, campaign.gearById))
+    .map(([gearId, quantity]) => `${campaign.gearById.get(gearId)?.name || humanize(gearId)} ×${quantity}`).join(", ") : "";
+
+/* Expedition Packs: a carrying setup, not a piece of Gear. The Active Pack sets a character's Carry Limit and holds
+   the supplies listed here; a Sponsor's own recruits pay the Sponsor price (free), everyone else the normal price. */
+const PACK_INTRO = "Your active Pack determines your Carry Limit and provides its listed field supplies. Your Sponsor's Pack is free. Packs supplied by other Sponsors cost 1 Coin.";
+const packSponsorName = (pack, campaign) => campaign.sponsorById.get(pack.sponsorId)?.name || "";
+const packPriceFacts = (pack, campaign) => `
+  <div><dt>Price</dt><dd><span class="price">${coins(pack.price ?? 1)}</span></dd></div>
+  ${packSponsorName(pack, campaign) ? `<div title="What ${escapeHtml(packSponsorName(pack, campaign))} recruits pay"><dt>Own recruits</dt><dd><span class="price">${Number(pack.sponsorPrice ?? 0) ? coins(pack.sponsorPrice) : "Free"}</span></dd></div>` : ""}`;
+// The contents as Gear names; in the Marketplace each opens that Gear's details.
+const packContentsList = (contents, campaign, { openGear = false, remaining = false } = {}) => (contents || []).length
+  ? `<ul class="pack-contents-list">${contents.map((item) => {
+    const gear = campaign.gearById.get(item.gearId);
+    const name = escapeHtml(gear?.name || humanize(item.gearId));
+    return `<li class="${remaining && !item.quantity ? "is-spent" : ""}"><span>${openGear && gear ? `<button type="button" class="gear-open" data-gear-open="${escapeHtml(gear.id)}">${name}</button>` : name}</span>
+      <span class="pack-count">${remaining ? `${escapeHtml(item.quantity)} / ${escapeHtml(item.capacity)}` : `×${escapeHtml(item.quantity)}`}</span></li>`;
+  }).join("")}</ul>`
+  : '<p class="muted">No supplies listed.</p>';
+const packCard = (pack, campaign, { inMarketplace = false, headingLevel = 3 } = {}) => {
+  const sponsor = packSponsorName(pack, campaign);
+  const heading = `h${headingLevel}`;
+  return `
+    <article class="card pack-card${pack.availability === "unavailable" ? " is-unavailable" : ""}" id="pack-${escapeHtml(pack.id)}">
+      <header class="pack-card-head">
+        <div>
+          <span class="board-kicker">Expedition Pack${sponsor ? ` · ${escapeHtml(sponsor)}` : ""}</span>
+          <${heading} class="pack-card-name">${escapeHtml(pack.name)}</${heading}>
+        </div>
+        ${pack.image ? `<img class="pack-card-image" src="${escapeHtml(pack.image)}" alt="" loading="lazy" />` : ""}
+      </header>
+      <dl class="pack-card-facts">
+        <div><dt>Carry Limit</dt><dd class="pack-limit">${escapeHtml(pack.carryLimit)}</dd></div>
+        ${packPriceFacts(pack, campaign)}
+      </dl>
+      ${pack.availability && pack.availability !== "common" ? `<p class="meta-row">${statusPill(pack.availability, "pill pill-small")}</p>` : ""}
+      ${pack.description ? `<div class="pack-card-description">${richText(pack.description, campaign, "")}</div>` : ""}
+      <div class="pack-card-contents"><h4>Included</h4>${packContentsList(pack.contents, campaign, { openGear: inMarketplace })}</div>
+      ${inMarketplace ? "" : `<a class="inline-link pack-card-link" href="marketplace.html#pack-${encodeURIComponent(pack.id)}">See it in the Marketplace →</a>`}
+    </article>`;
+};
+// A Sponsor's Pack on its rule or faction page: what it is, that it is free for this Sponsor's recruits, and the 1 Coin rule.
+const sponsorPackBlock = (sponsorId, campaign) => {
+  const sponsor = campaign.sponsorById.get(sponsorId);
+  const pack = sponsor?.packId ? campaign.packById.get(sponsor.packId) : null;
+  if (!pack) return '<p class="muted">This Sponsor\'s Expedition Pack has not been published yet.</p>';
+  return `<div class="sponsor-pack">
+      ${packCard(pack, campaign, { headingLevel: 4 })}
+      <p class="muted sponsor-pack-note">Provided free to Expeditioners sponsored by ${escapeHtml(sponsor.name)}. Packs from other Sponsors can be bought for 1 Coin.
+        How Packs work: <a class="inline-link" href="game.html#post-coins-marketplace-and-personal-stash">Coins, Marketplace &amp; Personal Stash</a>.</p>
+    </div>`;
+};
 
 const renderMarketplace = async () => {
   const root = document.getElementById("marketplace");
@@ -2066,14 +2138,15 @@ const renderMarketplace = async () => {
 
   try {
     const campaign = await loadCampaign();
-    const gear = [...campaign.gear].sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    // Only Gear sold on its own is listed. Components (one Ration, one Bandage) come inside Packs and kits.
+    const gear = campaign.gear.filter(soldAlone).sort((left, right) => String(left.name).localeCompare(String(right.name)));
     const featured = gear.filter((item) => item.featured);
     let category = "";
     let query = "";
     let view = "grid";
     try { view = localStorage.getItem("marketplace-view") === "list" ? "list" : "grid"; } catch { /* storage unavailable */ }
 
-    if (!gear.length) {
+    if (!gear.length && !campaign.packs.length) {
       root.innerHTML = '<div class="card"><p class="muted">The Marketplace has not published a price list yet.</p></div>';
       return;
     }
@@ -2082,7 +2155,7 @@ const renderMarketplace = async () => {
       <article class="card feature-card${promoClass(item)}${item.availability === "unavailable" ? " is-unavailable" : ""}" data-feature-card>
         ${item.promoLabel ? `<span class="promo-label">${escapeHtml(item.promoLabel)}</span>` : ""}
         ${item.image ? `<img class="feature-image" src="${escapeHtml(item.image)}" alt="" loading="lazy" />` : `<span class="feature-glyph" aria-hidden="true">${escapeHtml(humanize(item.category).slice(0, 2).toUpperCase())}</span>`}
-        <span class="board-kicker">${escapeHtml(humanize(item.category))}</span>
+        <span class="board-kicker">${escapeHtml(gearCategoryLabel(item.category))}</span>
         <h3><button type="button" class="gear-open" data-gear-open="${escapeHtml(item.id)}">${escapeHtml(item.name)}</button></h3>
         ${item.description ? `<p class="muted">${escapeHtml(item.description)}</p>` : ""}
         <p class="feature-price">${priceMarkup(item)}</p>
@@ -2094,6 +2167,9 @@ const renderMarketplace = async () => {
         <button type="button" class="gear-card-button" data-gear-open="${escapeHtml(item.id)}" aria-haspopup="dialog">
           ${availabilityFlag(item)}
           <span class="gear-card-name">${escapeHtml(item.name)}</span>
+          ${bundleText(item, campaign) ? `<span class="gear-card-holds">Holds ${escapeHtml(bundleText(item, campaign))}</span>` : ""}
+          ${item.armorBoxes ? `<span class="gear-card-holds">${armorTrack(item.armorBoxes)}</span>` : ""}
+          ${gearTagChips(item, "gear-tag-list gear-card-tags")}
           <span class="gear-card-facts"><span class="gear-card-price">${priceMarkup(item)}</span>${weightMarkup(item.weight)}</span>
         </button>
       </li>`;
@@ -2101,7 +2177,9 @@ const renderMarketplace = async () => {
     const listRow = (item) => `
       <li class="gear-row${item.availability === "unavailable" ? " is-unavailable" : ""}" id="gear-${escapeHtml(item.id)}">
         <span class="gear-name"><button type="button" class="gear-open" data-gear-open="${escapeHtml(item.id)}" aria-haspopup="dialog">${escapeHtml(item.name)}</button>${item.promoLabel ? ` <span class="promo-label promo-inline">${escapeHtml(item.promoLabel)}</span>` : ""}
-          ${item.description ? `<span class="gear-description">${escapeHtml(item.description)}</span>` : ""}</span>
+          ${bundleText(item, campaign) ? `<span class="gear-description">Holds ${escapeHtml(bundleText(item, campaign))}</span>` : ""}
+          ${item.description ? `<span class="gear-description">${escapeHtml(item.description)}</span>` : ""}
+          ${item.armorBoxes || (item.tags || []).length ? `<span class="gear-description">${armorTrack(item.armorBoxes)} ${gearTagChips(item)}</span>` : ""}</span>
         <span class="gear-price">${priceMarkup(item)}</span>
         <span class="gear-weight">${weightMarkup(item.weight)}</span>
         <span class="gear-availability">${item.availability !== "common" ? statusPill(item.availability, "pill pill-small") : ""}</span>
@@ -2117,7 +2195,7 @@ const renderMarketplace = async () => {
         .filter(([, items]) => items.length);
       target.innerHTML = groups.length ? groups.map(([name, items]) => `
         <section class="gear-group" aria-labelledby="gear-group-${name}">
-          <h3 id="gear-group-${name}" class="gear-group-title">${escapeHtml(humanize(name))}</h3>
+          <h3 id="gear-group-${name}" class="gear-group-title">${escapeHtml(gearCategoryLabel(name))}</h3>
           ${view === "grid"
             ? `<ul class="gear-grid">${items.map(gridCard).join("")}</ul>`
             : `<ul class="gear-list">${items.map(listRow).join("")}</ul>`}
@@ -2137,9 +2215,15 @@ const renderMarketplace = async () => {
           </div>
           <div class="feature-track" tabindex="0" aria-label="Featured equipment, scroll horizontally">${featured.map(featureCard).join("")}</div>
         </section>` : ""}
+      ${campaign.packs.length ? `
+        <section class="archive-section pack-section" aria-labelledby="packs-head">
+          <h2 id="packs-head" class="board-section-title">Expedition Packs</h2>
+          <p class="pack-intro">${PACK_INTRO} <a class="inline-link" href="game.html#post-coins-marketplace-and-personal-stash">How Packs work</a></p>
+          <div class="pack-grid">${campaign.packs.map((pack) => packCard(pack, campaign, { inMarketplace: true })).join("")}</div>
+        </section>` : ""}
       <section class="archive-section" aria-labelledby="catalogue-head">
         <div class="catalogue-head">
-          <h2 id="catalogue-head" class="board-section-title">Available Equipment</h2>
+          <h2 id="catalogue-head" class="board-section-title">Gear · Full Price List</h2>
           <div class="view-toggle" role="group" aria-label="Catalogue layout">
             <button type="button" class="filter-chip" data-gear-view="grid" aria-pressed="${view === "grid"}">Grid</button>
             <button type="button" class="filter-chip" data-gear-view="list" aria-pressed="${view === "list"}">List</button>
@@ -2147,7 +2231,7 @@ const renderMarketplace = async () => {
         </div>
         <div class="catalogue-tools">
           <div class="filter-bar" role="group" aria-label="Gear categories">
-            ${[["", "All"], ...usedCategories.map((name) => [name, humanize(name)])].map(([name, label]) => `
+            ${[["", "All"], ...usedCategories.map((name) => [name, gearCategoryLabel(name)])].map(([name, label]) => `
               <button type="button" class="filter-chip" data-gear-category="${name}" aria-pressed="${name === category}">${escapeHtml(label)}</button>`).join("")}
           </div>
           <label class="sr-only" for="gear-search">Search equipment</label>
@@ -2166,20 +2250,26 @@ const renderMarketplace = async () => {
         <article class="gear-detail${promoClass(item)}">
           <header class="gear-detail-head">
             <div>
-              <span class="board-kicker">${escapeHtml(humanize(item.category))}</span>
+              <span class="board-kicker">${escapeHtml(gearCategoryLabel(item.category))}</span>
               <h2 id="gear-dialog-title">${escapeHtml(item.name)}</h2>
             </div>
             <button type="button" class="carousel-arrow" data-gear-close aria-label="Close">&#10005;</button>
           </header>
           ${item.image ? `<img class="feature-image" src="${escapeHtml(item.image)}" alt="" />` : ""}
-          <p class="gear-detail-price">${priceMarkup(item)} ${item.promoLabel ? `<span class="promo-label promo-inline">${escapeHtml(item.promoLabel)}</span>` : ""}</p>
+          <p class="gear-detail-price"${soldAlone(item) ? "" : " hidden"}>${priceMarkup(item)} ${item.promoLabel ? `<span class="promo-label promo-inline">${escapeHtml(item.promoLabel)}</span>` : ""}</p>
           <dl class="fact-strip">
             <div><dt>Weight</dt><dd>${weightMarkup(item.weight)}</dd></div>
-            <div><dt>Availability</dt><dd>${statusPill(item.availability, "pill pill-small")}</dd></div>
+            ${soldAlone(item) ? `<div><dt>Availability</dt><dd>${statusPill(item.availability, "pill pill-small")}</dd></div>` : ""}
+            ${bundleText(item, campaign) ? `<div><dt>Holds</dt><dd>${escapeHtml(bundleText(item, campaign))}</dd></div>` : ""}
+            ${item.armorBoxes ? `<div><dt>Armor boxes</dt><dd>${armorTrack(item.armorBoxes, 0, "")}</dd></div>` : ""}
           </dl>
+          ${(item.tags || []).length ? `<p class="gear-detail-tags">${gearTagChips(item)} <a class="inline-link" href="game.html#post-gear-tags-and-armor">What Tags mean</a></p>` : ""}
+          ${soldAlone(item) ? "" : (() => {
+            const kits = campaign.gear.filter((other) => soldAlone(other) && (other.contents || []).some((entry) => entry.gearId === item.id));
+            return `<p class="muted">Not sold on its own: it comes inside Expedition Packs${kits.length ? ` and in ${kits.map((other) => `<button type="button" class="gear-open inline-link" data-gear-open="${escapeHtml(other.id)}">${escapeHtml(other.name)}</button>`).join(", ")}` : ""}.</p>`;
+          })()}
           ${richText(item.description, campaign, "No description posted.")}
           ${fromProject(item.projectId, campaign)}
-          ${(item.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         </article>`;
       if (!dialog.open) dialog.showModal();
       window.history.replaceState(null, "", `#gear-${encodeURIComponent(id)}`);
@@ -2226,12 +2316,14 @@ const renderMarketplace = async () => {
       renderCatalogue();
     });
     renderCatalogue();
-    // Links such as marketplace.html#gear-rope (from character stashes) open that item.
+    // Links such as marketplace.html#gear-rope (from character stashes) open that item; #pack-<id> shows that Pack.
     const linked = /^#gear-(.+)$/.exec(window.location.hash);
     if (linked) {
       document.getElementById(`gear-${decodeURIComponent(linked[1])}`)?.scrollIntoView({ block: "center" });
       openGear(decodeURIComponent(linked[1]));
     }
+    const linkedPack = /^#pack-(.+)$/.exec(window.location.hash);
+    if (linkedPack) document.getElementById(`pack-${decodeURIComponent(linkedPack[1])}`)?.scrollIntoView({ block: "center" });
   } catch (error) {
     root.innerHTML = '<div class="card"><p>Marketplace data could not be loaded.</p></div>';
     console.error(error);
@@ -2304,32 +2396,55 @@ const renderFateSheet = (sheet, characterName = "Character") => {
     </div>`;
 };
 
-/* Stash: the character's Coins and the Gear they own, split by whether it is brought into action.
-   What is brought into action counts against the character's carry limit (6 unless a stunt or situation changes it). */
-const DEFAULT_CARRY_LIMIT = 6;
+/* Stash: the character's Coins, their Expedition Packs and the Gear they own, split by whether it is brought into
+   action. Gear brought into action counts against the Active Pack's Carry Limit; what is inside the Pack never does. */
 const MAX_DOWNTIME = 8;
-const carryLimitOf = (character) => Number.isInteger(character.carryLimit) ? character.carryLimit : DEFAULT_CARRY_LIMIT;
 const renderStash = (character, campaign) => {
-  const limit = carryLimitOf(character);
   const rows = (character.stash || []).map((item) => ({ ...item, gear: campaign.gearById.get(item.gearId) })).filter((item) => item.gear);
   const carried = rows.filter((item) => item.broughtIntoAction).reduce((total, item) => total + (Number(item.gear.weight) || 0) * item.quantity, 0);
+  const owned = character.packs || [];
+  const active = owned.find((item) => item.active);
+  const activeDefinition = active ? campaign.packById.get(active.packId) : null;
+  // A stunt or situation can add to (or take from) the Active Pack's Carry Limit.
+  const modifier = Number.isInteger(character.carryModifier) ? character.carryModifier : 0;
+  const limit = activeDefinition ? Math.max(0, Number(activeDefinition.carryLimit) + modifier) : null;
+  const sponsor = campaign.sponsorById.get(character.sponsorId);
+  const packName = (instance) => campaign.packById.get(instance.packId)?.name || "Unknown Pack";
+  const packBlock = owned.length || character.type !== "npc" ? `
+    <section class="stash-group stash-pack">
+      <h4>Active Pack</h4>
+      ${active ? `<p class="stash-pack-name"><a class="inline-link" href="marketplace.html#pack-${encodeURIComponent(active.packId)}">${escapeHtml(packName(active))}</a>
+          <span class="muted">Carry Limit ${escapeHtml(limit ?? "unknown")}${modifier && limit !== null ? ` (Pack ${escapeHtml(activeDefinition.carryLimit)} ${modifier > 0 ? "+" : "−"}${Math.abs(modifier)})` : ""}</span></p>
+        ${packContentsList(active.contents, campaign, { remaining: true })}`
+        : `<p class="muted">${owned.length ? "No Active Pack chosen." : "No Pack on record."}</p>`}
+      ${owned.filter((item) => !item.active).length ? `<p class="muted stash-pack-others">Also owns: ${owned.filter((item) => !item.active).map((item) => escapeHtml(packName(item))).join(", ")}</p>` : ""}
+    </section>` : "";
   const group = (title, items, emptyText) => `
     <section class="stash-group">
       <h4>${title}</h4>
-      ${items.length ? `<ul class="gear-list stash-list">${items.map(({ gear, quantity }) => `
+      ${items.length ? `<ul class="gear-list stash-list">${items.map((item) => {
+        const { gear, quantity } = item;
+        // A kit shows what is left in it (Rations Kit: Ration 4 / 5).
+        const supplies = window.NowherePacks ? window.NowherePacks.stashSupplies(item, campaign.gearById) : [];
+        return `
         <li class="gear-row">
-          <span class="gear-name"><a class="inline-link" href="marketplace.html#gear-${encodeURIComponent(gear.id)}">${escapeHtml(gear.name)}</a>${quantity > 1 ? ` <span class="muted">× ${escapeHtml(quantity)}</span>` : ""}</span>
-          <span class="gear-category muted">${escapeHtml(humanize(gear.category))}</span>
+          <span class="gear-name"><a class="inline-link" href="marketplace.html#gear-${encodeURIComponent(gear.id)}">${escapeHtml(gear.name)}</a>${quantity > 1 ? ` <span class="muted">× ${escapeHtml(quantity)}</span>` : ""}
+            ${supplies.length ? `<span class="gear-description">${supplies.map((supply) => `${escapeHtml(campaign.gearById.get(supply.gearId)?.name || humanize(supply.gearId))} ${supply.quantity} / ${supply.capacity}`).join(", ")}</span>` : ""}
+            ${gear.armorBoxes ? `<span class="gear-description">${armorTrack(gear.armorBoxes * quantity, Math.min(Number(item.armorMarked) || 0, gear.armorBoxes * quantity))}</span>` : ""}</span>
+          <span class="gear-category muted">${escapeHtml(gearCategoryLabel(gear.category))}</span>
           <span class="gear-weight">${weightMarkup(gear.weight, quantity > 1 ? " each" : "")}</span>
-        </li>`).join("")}</ul>` : `<p class="muted">${emptyText}</p>`}
+        </li>`;
+      }).join("")}</ul>` : `<p class="muted">${emptyText}</p>`}
     </section>`;
   return `
     <section class="detail-block stash-block">
       <h3>Stash</h3>
       <div class="stash-summary">
         <span class="stash-coins"><span class="muted">Coins</span> ${coins(Number(character.coins) || 0)}</span>
-        <span class="stash-carried${carried > limit ? " is-over" : ""}"><span class="muted">Carried into action</span> ${weightMarkup(`${carried} / ${limit}`)}</span>
+        ${sponsor ? `<span><span class="muted">Sponsor</span> ${sponsor.factionId ? `<a class="inline-link" href="factions.html#${encodeURIComponent(sponsor.factionId)}">${escapeHtml(sponsor.name)}</a>` : escapeHtml(sponsor.name)}</span>` : ""}
+        <span class="stash-carried${carried > (limit ?? 0) ? " is-over" : ""}"><span class="muted">Additional Gear carried</span> ${weightMarkup(`${carried} / ${limit ?? "—"}`)}</span>
       </div>
+      ${packBlock}
       ${rows.length ? `<div class="detail-grid">
         ${group("Brought into Action", rows.filter((item) => item.broughtIntoAction), "Nothing marked for the next job.")}
         ${group("Stored in Stash", rows.filter((item) => !item.broughtIntoAction), "Nothing in storage.")}
@@ -2380,7 +2495,7 @@ const renderCharacterRoster = async () => {
       const jobs = campaign.jobsForCharacter(character.id);
       const sessions = campaign.sessionRecordsForCharacter(character.id);
       // Known Figures carry no stash unless the GM gives them one.
-      const stash = character.type === "npc" && !(character.stash || []).length ? "" : renderStash(character, campaign);
+      const stash = character.type === "npc" && !(character.stash || []).length && !(character.packs || []).length ? "" : renderStash(character, campaign);
       const projects = campaign.projectsForCharacter(character.id).sort((left, right) => String(left.name).localeCompare(String(right.name)));
       const ongoing = projects.filter((project) => !projectComplete(project));
       const completed = projects.filter(projectComplete);
@@ -2955,7 +3070,9 @@ const buildSearchIndex = () => searchIndexPromise ||= Promise.all([loadCampaign(
   ...[...DOMAIN_INFO.values()].map((domain) => ({ label: domain.name, href: `discoveries.html#domain-${encodeURIComponent(domain.key)}`, kind: isEnvironment(domain) ? "Domain" : "Trade origin", text: domain.description || "" })),
   ...campaign.characters.map((character) => ({ label: character.name, href: `characters.html#${encodeURIComponent(character.id)}`, kind: "Character", text: character.summary || "" })),
   ...campaign.jobs.map((job) => ({ label: jobLabel(job), href: `jobs.html#${encodeURIComponent(job.id)}`, kind: "Job", text: [job.summary, job.objective].join(" ") })),
-  ...campaign.gear.map((gear) => ({ label: gear.name, href: `marketplace.html#gear-${encodeURIComponent(gear.id)}`, kind: "Gear", text: gear.description || "" })),
+  ...campaign.gear.filter(soldAlone).map((gear) => ({ label: gear.name, href: `marketplace.html#gear-${encodeURIComponent(gear.id)}`, kind: "Gear", text: gear.description || "" })),
+  ...campaign.packs.map((pack) => ({ label: pack.name, href: `marketplace.html#pack-${encodeURIComponent(pack.id)}`, kind: "Expedition Pack",
+    text: [pack.description, campaign.sponsorById.get(pack.sponsorId)?.name, "pack carry limit sponsor"].join(" ") })),
 ]);
 
 const siteSearch = { index: PAGE_ENTRIES.map(([label, href, text]) => ({ label, href, kind: "Page", text })), results: [], active: 0 };
@@ -3121,12 +3238,21 @@ const renderFactions = async () => {
       ["Common visuals", escapeHtml([faction.palette, faction.materials].filter(Boolean).join(" · "))],
     ].filter(([, value]) => value);
     const rule = faction.ruleId;
+    // The Sponsor's Expedition Pack (its rule is the Sponsor), free to this faction's recruits.
+    const sponsorPackId = campaign.sponsorById.get(rule)?.packId;
+    const sponsorPack = sponsorPackId ? campaign.packById.get(sponsorPackId) : null;
     const sponsorship = faction.extraName || faction.extraRule || rule ? `
       ${faction.sponsorFraming ? richText(faction.sponsorFraming, campaign, "") : ""}
       ${faction.extraName || faction.extraRule ? `<div class="faction-extra">
         <span class="kicker">Recruitment Extra</span>
         ${faction.extraName ? `<strong>${escapeHtml(faction.extraName)}</strong>` : ""}
         ${faction.extraRule ? richText(faction.extraRule, campaign, "") : ""}
+      </div>` : ""}
+      ${sponsorPack ? `<div class="faction-extra">
+        <span class="kicker">Expedition Pack · free to their recruits</span>
+        <strong>${escapeHtml(sponsorPack.name)}</strong>
+        <p>Carry Limit ${escapeHtml(sponsorPack.carryLimit)} · ${(sponsorPack.contents || []).map((item) => `${escapeHtml(campaign.gearById.get(item.gearId)?.name || humanize(item.gearId))} ×${escapeHtml(item.quantity)}`).join(", ") || "no supplies listed"}</p>
+        <a class="inline-link" href="marketplace.html#pack-${encodeURIComponent(sponsorPack.id)}">See it in the Marketplace →</a>
       </div>` : ""}
       ${faction.expectations ? `<h4>Expectations</h4>${richText(faction.expectations, campaign, "")}` : ""}
       <p class="faction-note">A Recruitment Faction is who sponsored your character, not where they are from: you can be sponsored by ${escapeHtml(faction.shortName || faction.name)} without being one of their people, and you can disagree with them.</p>

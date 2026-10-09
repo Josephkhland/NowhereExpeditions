@@ -44,7 +44,7 @@ PREVIEW_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset
                  ".json": "application/json; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
                  ".webp": "image/webp", ".gif": "image/gif", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
 MAX_IMAGE_BYTES = 8_000_000
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 13
 
 CHARACTER_TYPES = ("player", "npc")
 CHARACTER_STATUSES = ("active", "inactive", "missing", "deceased")
@@ -69,7 +69,29 @@ MAX_TOPICS = 12
 LORE_KINDS = ("overview", "society", "faith", "folklore", "institution", "event", "endros")
 MAX_READING_PATH = 24
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
-GEAR_CATEGORIES = ("weapon", "armor", "tool", "medical", "consumable", "exploration", "utility", "special")
+GEAR_CATEGORIES = ("weapon", "tactical", "exploration", "scientific", "communication", "protective", "medical", "supplies",
+                   "personal", "special")
+# Categories before the Base Gear expansion (schema v13) and where they went.
+LEGACY_GEAR_CATEGORIES = {"armor": "protective", "tool": "exploration", "consumable": "supplies", "utility": "personal"}
+# Gear Tags say what an item can do and how it behaves in the fiction; they grant no numbers. Suggested, not a closed list.
+# Players see them, so none may read like a Resource Function (Anchor, Filter, Heat): those go in the GM tags.
+GEAR_TAG_GROUPS = {
+    "Range / Combat": ("Close", "Reach", "Ranged", "Long Range"),
+    "Damage / Physical": ("Cutting", "Piercing", "Blunt", "Ballistic", "Incendiary", "Explosive", "Shrapnel"),
+    "Handling": ("Concealable", "Heavy", "Bulky", "Precise", "Scatter", "Two-Handed", "Reloading", "Loud", "Durable", "Fragile",
+                 "Unstable", "Controlled", "Placed"),
+    "Utility": ("Breaching", "Clearing", "Tether", "Brace", "Retrieval", "Digging", "Lifting", "Restraining", "Leverage",
+                "Climbing", "Storage", "Suppression"),
+    "Exploration": ("Navigation", "Gate-Sense", "Mapping", "Detection", "Measurement", "Sampling", "Optical", "Acoustic", "Observation",
+                    "Light", "Analysis"),
+    "Environmental / Protective": ("Breathing", "Waterproof", "Weatherproof", "Insulated", "Heat-Resistant", "Protective",
+                                   "Pressurized", "Diving", "Hearing Protection", "Head Protection", "Armor"),
+    "Technical": ("Electrical", "Mechanical", "Steam", "Magnetic", "Conductive", "Wired", "Communication", "Fuel"),
+    "Tactical": ("Area", "Smoke", "Signal", "Triggered", "Concealment", "Disorienting", "Persistent", "Flammable", "Oxidizing",
+                 "Hindering", "Marking", "Distraction"),
+    "Social / Miscellaneous": ("Social", "Trade", "Consumable", "Comfort"),
+}
+MAX_ARMOR_BOXES = 4
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
 GAME_POST_TYPES = ("announcement", "rule")
 
@@ -397,19 +419,166 @@ def clean_stash(value: Any) -> list[dict[str, Any]]:
             raise ManagerError("Every stash entry needs a Gear ID.")
         quantity = clean_int(item.get("quantity", 1), "Stash quantity", 1, 999)
         in_action = bool(item.get("broughtIntoAction", False))
+        # A bundle (a Rations Kit...) remembers how much of each supply inside it has been used up.
+        used = clean_supply_counts(item.get("used"), "Used supplies")
+        # Armor remembers how many of its boxes are marked (until it is repaired or replaced).
+        marked = clean_int(item.get("armorMarked") if item.get("armorMarked") not in (None, "") else 0, "Marked Armor boxes", 0, 999)
         if gear_id in merged:
             merged[gear_id]["quantity"] = min(999, merged[gear_id]["quantity"] + quantity)
             merged[gear_id]["broughtIntoAction"] = merged[gear_id]["broughtIntoAction"] or in_action
+            if marked:
+                merged[gear_id]["armorMarked"] = merged[gear_id].get("armorMarked", 0) + marked
+            for entry in used:
+                previous = next((other for other in merged[gear_id].setdefault("used", []) if other["gearId"] == entry["gearId"]), None)
+                if previous:
+                    previous["quantity"] += entry["quantity"]
+                else:
+                    merged[gear_id]["used"].append(entry)
         else:
-            merged[gear_id] = {"gearId": gear_id, "quantity": quantity, "broughtIntoAction": in_action}
+            merged[gear_id] = {"gearId": gear_id, "quantity": quantity, "broughtIntoAction": in_action, **({"used": used} if used else {}),
+                               **({"armorMarked": marked} if marked else {})}
     return list(merged.values())
 
 
+def clean_supply_counts(value: Any, label: str) -> list[dict[str, Any]]:
+    """[{gearId, quantity}] with positive quantities, each Gear once."""
+    if value in (None, ""):
+        return []
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ManagerError(f"{label} must be a list of Gear entries.")
+    counts: dict[str, int] = {}
+    for item in value:
+        gear_id = clean_ref(item, "gearId")
+        if gear_id:
+            counts[gear_id] = counts.get(gear_id, 0) + clean_int(item.get("quantity", 0), label, 0, 99999)
+    return [{"gearId": gear_id, "quantity": quantity} for gear_id, quantity in counts.items() if quantity]
+
+
+def bundle_supplies(gear_id: str, gear_by_id: dict[str, dict[str, Any]], seen: frozenset[str] = frozenset()) -> dict[str, int]:
+    """The usable supplies inside one unit of a Gear: its bundle contents, expanded down to Gear that holds nothing
+    else. Plain Gear (Rope, a Lantern) supplies nothing extra. A loop is refused on save; here it is just cut."""
+    supplies: dict[str, int] = {}
+    for item in (gear_by_id.get(gear_id) or {}).get("contents") or []:
+        component = item["gearId"]
+        if component in seen or component == gear_id:
+            continue
+        inner = bundle_supplies(component, gear_by_id, seen | {gear_id})
+        for key, quantity in (inner.items() if inner else [(component, 1)]):
+            supplies[key] = supplies.get(key, 0) + quantity * item["quantity"]
+    return supplies
+
+
 MAX_DOWNTIME = 8
-DEFAULT_CARRY_LIMIT = 6
+# Expedition Packs: the Active Pack sets the Carry Limit and holds field supplies that weigh nothing extra.
+DEFAULT_PACK_CARRY_LIMIT = 6
+DEFAULT_PACK_PRICE = 1
+DEFAULT_SPONSOR_PACK_PRICE = 0
+MAX_PACK_ITEMS = 24
+MAX_PACK_QUANTITY = 99
+MAX_OWNED_PACKS = 12
+MAX_CARRY_MODIFIER = 20
+
+
+def clean_pack_contents(value: Any, label: str = "Pack contents") -> list[dict[str, Any]]:
+    """What a Pack definition (or a bundle Gear) holds: Gear references with a quantity. The same Gear is listed once."""
+    if value is None or value == "":
+        return []
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ManagerError(f"{label} must be a list of Gear entries.")
+    merged: dict[str, dict[str, Any]] = {}
+    for item in value:
+        gear_id = clean_ref(item, "gearId")
+        if not gear_id:
+            raise ManagerError(f"Every entry in {label} needs a Gear.")
+        quantity = clean_int(item.get("quantity", 1), f"{label} quantity", 1, MAX_PACK_QUANTITY)
+        if gear_id in merged:
+            merged[gear_id]["quantity"] = min(MAX_PACK_QUANTITY, merged[gear_id]["quantity"] + quantity)
+        else:
+            merged[gear_id] = {"gearId": gear_id, "quantity": quantity}
+    if len(merged) > MAX_PACK_ITEMS:
+        raise ManagerError(f"{label}: at most {MAX_PACK_ITEMS} kinds of Gear.")
+    return list(merged.values())
+
+
+def clean_pack(data: dict[str, Any]) -> dict[str, Any]:
+    """A Pack definition: a carrying setup with a Carry Limit and a fixed list of ordinary Gear inside it.
+    Characters own instances of it (see clean_character_packs); editing the definition never refills those."""
+    price = clean_count(data, "price", "Price")
+    sponsor_price = clean_count(data, "sponsorPrice", "Sponsor price")
+    sponsor_id = clean_ref(data, "sponsorId")
+    return {
+        "name": clean_text(data, "name", "A Pack name"),
+        "description": clean_text(data, "description"),
+        # The Sponsor is a Recruitment Faction rule marked as a Sponsor; see clean_game_post.
+        "sponsorId": sponsor_id,
+        # The Pack a character sponsored by sponsorId receives at creation. One per Sponsor.
+        "starting": bool(data.get("starting")) and bool(sponsor_id),
+        "carryLimit": clean_int(data.get("carryLimit") if data.get("carryLimit") not in (None, "") else DEFAULT_PACK_CARRY_LIMIT,
+                                "Carry Limit", 0, 99),
+        "price": price if price is not None else DEFAULT_PACK_PRICE,
+        "sponsorPrice": sponsor_price if sponsor_price is not None else DEFAULT_SPONSOR_PACK_PRICE,
+        "availability": clean_choice(data, "availability", GEAR_AVAILABILITY, "common"),
+        "image": clean_text(data, "image") or None,
+        "featured": bool(data.get("featured", False)),
+        "order": clean_int(data.get("order"), "Sort order", 1, 999, allow_none=True),
+        "contents": clean_pack_contents(data.get("contents")),
+    }
+
+
+def new_pack_instance(pack: dict[str, Any], instance_id: str, active: bool = False) -> dict[str, Any]:
+    """A freshly packed copy of a Pack definition: every item at its starting quantity. Restocking uses it too."""
+    return {"id": instance_id, "packId": pack["id"], "active": active,
+            "contents": [{"gearId": item["gearId"], "quantity": item["quantity"], "capacity": item["quantity"]}
+                         for item in pack.get("contents") or []]}
+
+
+def next_pack_instance_id(instances: list[dict[str, Any]]) -> str:
+    used = {item.get("id") for item in instances}
+    number = len(instances) + 1
+    while f"pack-{number}" in used:
+        number += 1
+    return f"pack-{number}"
+
+
+def clean_character_packs(value: Any) -> list[dict[str, Any]]:
+    """The Packs a character owns. Each is its own physical inventory: what is left of every item it was packed with
+    (quantity out of capacity). At most one is the Active Pack."""
+    if value is None or value == "":
+        return []
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise ManagerError("Owned Packs must be a list.")
+    if len(value) > MAX_OWNED_PACKS:
+        raise ManagerError(f"A character can own at most {MAX_OWNED_PACKS} Packs.")
+    instances: list[dict[str, Any]] = []
+    for item in value:
+        pack_id = clean_ref(item, "packId")
+        if not pack_id:
+            raise ManagerError("Every owned Pack needs a Pack.")
+        instance_id = slugify(str(item.get("id") or "")) or next_pack_instance_id(instances)
+        if any(other["id"] == instance_id for other in instances):
+            raise ManagerError(f"Two owned Packs share the ID “{instance_id}”.")
+        contents, seen = [], set()
+        raw_contents = item.get("contents") or []
+        if not isinstance(raw_contents, list) or any(not isinstance(entry, dict) for entry in raw_contents):
+            raise ManagerError("A Pack's contents must be a list of Gear entries.")
+        for entry in raw_contents:
+            gear_id = clean_ref(entry, "gearId")
+            if not gear_id or gear_id in seen:
+                raise ManagerError("Every item in an owned Pack needs a Gear, listed once.")
+            seen.add(gear_id)
+            capacity = clean_int(entry.get("capacity", entry.get("quantity", 0)), "Pack item capacity", 0, MAX_PACK_QUANTITY)
+            quantity = clean_int(entry.get("quantity", capacity), "Pack item quantity", 0, MAX_PACK_QUANTITY)
+            if quantity > capacity:
+                raise ManagerError(f"{gear_id}: a Pack holds at most {capacity} (it was packed with that many).")
+            contents.append({"gearId": gear_id, "quantity": quantity, "capacity": capacity})
+        instances.append({"id": instance_id, "packId": pack_id, "active": bool(item.get("active")), "contents": contents})
+    if sum(item["active"] for item in instances) > 1:
+        raise ManagerError("Only one Pack can be the Active Pack.")
+    return instances
 
 
 def clean_character(data: dict[str, Any]) -> dict[str, Any]:
+    # Retired: the per-character "carryLimit" (always 6 by default). The Active Pack sets the Carry Limit now.
     return {
         "name": clean_text(data, "name", "A character name"),
         "type": clean_choice(data, "type", CHARACTER_TYPES, "player"),
@@ -423,8 +592,12 @@ def clean_character(data: dict[str, Any]) -> dict[str, Any]:
         "coins": clean_int(data.get("coins") if data.get("coins") not in (None, "") else 0, "Coins", 0, 999999),
         # Time between expeditions, spent on Project Actions; a character holds at most 8.
         "downtime": clean_int(data.get("downtime") if data.get("downtime") not in (None, "") else 0, "Downtime", 0, MAX_DOWNTIME),
-        # Most total weight brought into action: 6 unless a stunt raises it or a situation lowers it.
-        "carryLimit": clean_int(data.get("carryLimit") if data.get("carryLimit") not in (None, "") else DEFAULT_CARRY_LIMIT, "Carry limit", 0, 99),
+        # The Recruitment Faction (a Sponsor rule): decides which Pack is free and which one the character starts with.
+        "sponsorId": clean_ref(data, "sponsorId"),
+        "packs": clean_character_packs(data.get("packs")),
+        # Added to the Active Pack's Carry Limit: a stunt that lets you carry more (+1), or something that weighs you down (-1).
+        "carryModifier": clean_int(data.get("carryModifier") if data.get("carryModifier") not in (None, "") else 0,
+                                   "Carry modifier", -MAX_CARRY_MODIFIER, MAX_CARRY_MODIFIER),
     }
 
 
@@ -610,6 +783,31 @@ def clean_archive_entry(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def unique_tags(tags: list[str]) -> list[str]:
+    """Tags in order, each once (the first spelling wins: "cutting" after "Cutting" is dropped)."""
+    seen: set[str] = set()
+    kept = []
+    for tag in tags:
+        if tag.lower() not in seen:
+            seen.add(tag.lower())
+            kept.append(tag)
+    return kept
+
+
+def function_like(tag: str) -> bool:
+    return tag.strip().lower() in {name.lower() for name in function_names()}
+
+
+def player_gear_tags(tags: list[str]) -> list[str]:
+    """Gear Tags players see. A Tag that is also a Resource Function's name would read like one, so it is refused."""
+    tags = unique_tags(tags)
+    clashing = [tag for tag in tags if function_like(tag)]
+    if clashing:
+        raise ManagerError(f"{', '.join(clashing)}: the same as a Resource Function, which would confuse players. "
+                           "Put it in the GM tags instead, or choose another word.")
+    return tags
+
+
 def clean_gear(data: dict[str, Any]) -> dict[str, Any]:
     price = clean_count(data, "price", "Price")
     discount = data.get("discount")
@@ -627,19 +825,30 @@ def clean_gear(data: dict[str, Any]) -> dict[str, Any]:
     label = clean_text(data, "promoLabel").upper()
     if len(label) > 24:
         raise ManagerError("Promotional labels must be 24 characters or fewer.")
+    category = str(data.get("category") or "").strip().lower()
     return {
         "name": clean_text(data, "name", "A Gear name"),
-        "category": clean_choice(data, "category", GEAR_CATEGORIES, "tool"),
+        "category": clean_choice({"category": LEGACY_GEAR_CATEGORIES.get(category, category)}, "category", GEAR_CATEGORIES, "exploration"),
         "description": clean_text(data, "description"),
         "price": price if price is not None else 0,
         "weight": clean_count(data, "weight", "Weight") or 0,
         "availability": clean_choice(data, "availability", GEAR_AVAILABILITY, "common"),
         "image": clean_text(data, "image") or None,
-        "tags": clean_list(data, "tags"),
+        # Gear Tags (Cutting, Breaching, Loud...), each once whatever its capitals.
+        "tags": player_gear_tags(clean_list(data, "tags")),
+        # GM tags: notes for encounter design that players never see (never exported), including Function-like words.
+        "gmTags": unique_tags(clean_list(data, "gmTags")),
+        # Mundane Armor: when Physical Stress comes from something it could stop, mark a box instead. Boxes stay marked
+        # until the Armor is repaired or replaced. 0: not Armor.
+        "armorBoxes": clean_int(data.get("armorBoxes") if data.get("armorBoxes") not in (None, "") else 0, "Armor boxes", 0, MAX_ARMOR_BOXES),
         "featured": bool(data.get("featured", False)),
         "promoLabel": label,
         "discount": clean_discount,
         "projectId": clean_ref(data, "projectId"),
+        # No: a component (one Ration, one Bandage) that only comes inside Packs and bundles; never sold or stashed alone.
+        "marketplaceVisible": bool(data.get("marketplaceVisible", True)),
+        # A bundle: the Gear it holds (a Rations Kit holds Ration ×5). Bringing the bundle brings those supplies.
+        "contents": clean_pack_contents(data.get("contents"), "Bundle contents"),
     }
 
 
@@ -1074,6 +1283,13 @@ def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
         "showUntil": show_until,
         # Rules with a reading order come first, in that order (the onboarding path); the rest follow by title.
         "order": None if announcement else clean_int(data.get("order"), "Reading order", 1, 999, allow_none=True),
+        # A Recruitment Faction rule that is a Sponsor players can choose. Its ID is the Sponsor's stable ID
+        # (characters and Packs point at it); not every Sponsor is a Faction record (Independent, the Company).
+        "sponsor": bool(data.get("sponsor")) and not announcement,
+        # The Sponsor's Extra in short, written into a new character's Extras when they choose it. Blank: the Extra
+        # of the Faction whose sponsorship rule this is (Sponsors without a Faction record fill it in here).
+        "extraName": clean_text(data, "extraName") if data.get("sponsor") and not announcement else "",
+        "extraRule": clean_text(data, "extraRule") if data.get("sponsor") and not announcement else "",
     }
 
 
@@ -1123,7 +1339,16 @@ COLLECTIONS: dict[str, Collection] = {
         "gear", "Gear", ("name",), clean_gear, lambda record: str(record.get("name", "")),
         refs=(("projectId", "project_id", "projects"),),
         public_fields=("id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
-                       "featured", "promoLabel", "discount", "projectId"),
+                       "featured", "promoLabel", "discount", "projectId", "marketplaceVisible", "contents", "armorBoxes"),
+        image_fields=("image",), text_fields=("description",),
+    ),
+    # Expedition Packs. Contents stay in the JSON (Gear references, checked on save and when Gear is deleted).
+    "packs": Collection(
+        "packs", "Pack", ("name",), clean_pack, lambda record: str(record.get("name", "")),
+        refs=(("sponsorId", "sponsor_id", "game"),),
+        unique=lambda record: ("name", record["name"]),
+        public_fields=("id", "name", "description", "sponsorId", "starting", "carryLimit", "price", "sponsorPrice",
+                       "availability", "image", "featured", "order", "contents"),
         image_fields=("image",), text_fields=("description",),
     ),
     "facilities": Collection(
@@ -1142,7 +1367,9 @@ COLLECTIONS: dict[str, Collection] = {
     ),
     "characters": Collection(
         "characters", "Character", ("name",), clean_character, lambda record: str(record.get("name", "")),
-        public_fields=("id", "name", "type", "status", "portrait", "summary", "playerName", "sheet", "stash", "coins", "downtime", "carryLimit"),
+        refs=(("sponsorId", "sponsor_id", "game"),),
+        public_fields=("id", "name", "type", "status", "portrait", "summary", "playerName", "sheet", "stash", "coins", "downtime",
+                       "sponsorId", "packs", "carryModifier"),
         image_fields=("portrait",),
     ),
     "archive": Collection(
@@ -1185,8 +1412,9 @@ COLLECTIONS: dict[str, Collection] = {
         image_fields=("image",), text_fields=("summary", "details"),
     ),
 }
-PAGE_COLLECTIONS = ("factions", "gear", "characters", "projects", "archive", "jobs", "resources", "forms")
-GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image")
+PAGE_COLLECTIONS = ("factions", "gear", "packs", "characters", "projects", "archive", "jobs", "resources", "forms")
+GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image",
+               "sponsor")
 
 
 # --- Store ------------------------------------------------------------------
@@ -1213,6 +1441,9 @@ class ContentStore:
         self.migration_report += self._migrate_outpost_facilities()
         self.migration_report += self._migrate_outpost_projects()
         self.migration_report += self._migrate_lore_types()
+        self.migration_report += self._migrate_carry_limits()
+        self.migration_report += self._migrate_gear_categories()
+        self.migration_report += self._move_function_like_tags()
         with self._connect() as connection:
             initialized = connection.execute("SELECT value FROM metadata WHERE key = 'initialized'").fetchone()
         if not initialized:
@@ -1338,6 +1569,11 @@ class ContentStore:
                     position INTEGER NOT NULL,
                     PRIMARY KEY (entry_id, faction_id)
                 );
+                CREATE TABLE IF NOT EXISTS packs (
+                    id TEXT PRIMARY KEY,
+                    sponsor_id TEXT REFERENCES game_posts(id) ON DELETE RESTRICT,
+                    data TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS continuity_issues (
                     id TEXT PRIMARY KEY,
                     data TEXT NOT NULL
@@ -1357,6 +1593,16 @@ class ContentStore:
             # Schema v8: a Project can name the Gate it relates to.
             if "related_gate_id" not in {row["name"] for row in connection.execute("PRAGMA table_info(projects)")}:
                 connection.execute("ALTER TABLE projects ADD COLUMN related_gate_id TEXT REFERENCES archive_entries(id) ON DELETE RESTRICT")
+            # Schema v12: a stashed bundle remembers which of its supplies were used ([{gearId, quantity}] as JSON).
+            stash_columns = {row["name"] for row in connection.execute("PRAGMA table_info(character_stash)")}
+            if "used" not in stash_columns:
+                connection.execute("ALTER TABLE character_stash ADD COLUMN used TEXT")
+            # Schema v13: marked Armor boxes.
+            if "armor_marked" not in stash_columns:
+                connection.execute("ALTER TABLE character_stash ADD COLUMN armor_marked INTEGER NOT NULL DEFAULT 0")
+            # Schema v11: a character names its Sponsor (a Recruitment Faction rule).
+            if "sponsor_id" not in {row["name"] for row in connection.execute("PRAGMA table_info(characters)")}:
+                connection.execute("ALTER TABLE characters ADD COLUMN sponsor_id TEXT REFERENCES game_posts(id) ON DELETE RESTRICT")
             connection.execute("INSERT OR REPLACE INTO metadata (key, value) VALUES ('schemaVersion', ?)", (str(SCHEMA_VERSION),))
 
     # --- Migration from the v3 schema (Island, Gates, Expeditions, Reports) --
@@ -1591,6 +1837,55 @@ class ContentStore:
                                    (json.dumps({**data, "type": "lore", "topics": topics}, ensure_ascii=False), row["id"]))
         return [f"History and Folklore became topics: {len(rows)} Archive entries are now lore entries (backup: {backup.name})."]
 
+    def _migrate_carry_limits(self) -> list[str]:
+        """Schema v11: the Active Pack sets the Carry Limit, so the per-character carryLimit is retired. Characters
+        keep loading; a value other than the old default 6 is kept in legacy_records (source 'carry-limit') so the GM
+        can honour it (for example with a bigger Pack). Characters get no Pack here: one is granted when their Sponsor
+        is known (see ContentStore._grant_starting_pack)."""
+        with self._connect() as connection:
+            rows = [row for row in connection.execute("SELECT id, data FROM characters") if "carryLimit" in json.loads(row["data"])]
+            kept = 0
+            for row in rows:
+                data = json.loads(row["data"])
+                limit = data.pop("carryLimit")
+                if limit not in (None, "", DEFAULT_PACK_CARRY_LIMIT):
+                    kept += 1
+                    connection.execute("INSERT OR REPLACE INTO legacy_records (source, id, data) VALUES ('carry-limit', ?, ?)",
+                                       (row["id"], json.dumps({"carryLimit": limit}, ensure_ascii=False)))
+                connection.execute("UPDATE characters SET data = ? WHERE id = ?", (json.dumps(data, ensure_ascii=False), row["id"]))
+        if not rows:
+            return []
+        return [f"Carry limits now come from each character's Active Pack: retired the old carry limit on {len(rows)} characters"
+                + (f" ({kept} non-default values kept in legacy_records, source 'carry-limit')." if kept else ".")]
+
+    def _migrate_gear_categories(self) -> list[str]:
+        """Schema v13: the Marketplace categories became Weapons, Tactical & Demolition, Exploration... Old ones move
+        (armor → protective, tool → exploration, consumable → supplies, utility → personal)."""
+        moved = 0
+        with self._connect() as connection:
+            for row in connection.execute("SELECT id, data FROM gear").fetchall():
+                data = json.loads(row["data"])
+                if data.get("category") in LEGACY_GEAR_CATEGORIES:
+                    data["category"] = LEGACY_GEAR_CATEGORIES[data["category"]]
+                    connection.execute("UPDATE gear SET data = ? WHERE id = ?", (json.dumps(data, ensure_ascii=False), row["id"]))
+                    moved += 1
+        return [f"Gear categories updated for the new Marketplace sections: {moved} Gear moved."] if moved else []
+
+    def _move_function_like_tags(self) -> list[str]:
+        """Gear Tags that are also Resource Function names (Anchor, Filter, Heat) move to the GM tags, where players
+        don't see them. Runs at startup and whenever the Function vocabulary changes."""
+        moved = []
+        with self._connect() as connection:
+            for row in connection.execute("SELECT id, data FROM gear").fetchall():
+                data = json.loads(row["data"])
+                clashing = [tag for tag in data.get("tags") or [] if function_like(tag)]
+                if clashing:
+                    data["tags"] = [tag for tag in data["tags"] if tag not in clashing]
+                    data["gmTags"] = unique_tags([*(data.get("gmTags") or []), *clashing])
+                    connection.execute("UPDATE gear SET data = ? WHERE id = ?", (json.dumps(data, ensure_ascii=False), row["id"]))
+                    moved.append(f"{data.get('name') or row['id']} ({', '.join(clashing)})")
+        return [f"Gear Tags that read like Resource Functions moved to GM tags: {'; '.join(moved)}."] if moved else []
+
     def _migrate_outpost_projects(self) -> list[str]:
         """Schema v7: the Outpost Sheet's active projects became Outpost projects in the Projects collection, and
         persistent conditions were retired (consequences and aspects already cover them). The sheet as it was is
@@ -1657,8 +1952,10 @@ class ContentStore:
             connection.execute("DELETE FROM character_stash WHERE character_id = ?", (record_id,))
             for position, item in enumerate(record.get("stash") or []):
                 connection.execute(
-                    "INSERT INTO character_stash (character_id, gear_id, quantity, brought_into_action, position) VALUES (?, ?, ?, ?, ?)",
-                    (record_id, item["gearId"], item["quantity"], int(bool(item["broughtIntoAction"])), position),
+                    "INSERT INTO character_stash (character_id, gear_id, quantity, brought_into_action, position, used, armor_marked)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (record_id, item["gearId"], item["quantity"], int(bool(item.get("broughtIntoAction"))), position,
+                     json.dumps(item["used"], ensure_ascii=False) if item.get("used") else None, int(item.get("armorMarked") or 0)),
                 )
 
     def _records(self, connection: sqlite3.Connection, name: str) -> list[dict[str, Any]]:
@@ -1672,7 +1969,9 @@ class ContentStore:
         if name == "characters":
             for row in connection.execute("SELECT * FROM character_stash ORDER BY position"):
                 stashes.setdefault(row["character_id"], []).append(
-                    {"gearId": row["gear_id"], "quantity": row["quantity"], "broughtIntoAction": bool(row["brought_into_action"])})
+                    {"gearId": row["gear_id"], "quantity": row["quantity"], "broughtIntoAction": bool(row["brought_into_action"]),
+                     **({"used": json.loads(row["used"])} if row["used"] else {}),
+                     **({"armorMarked": row["armor_marked"]} if row["armor_marked"] else {})})
         columns = ", ".join(["id", "data", *(column for _, column, _ in spec.refs)])
         records = []
         for row in connection.execute(f"SELECT {columns} FROM {spec.table} ORDER BY id"):
@@ -1685,6 +1984,7 @@ class ContentStore:
                 data[field] = linked[field].get(row["id"], [])
             if name == "characters":
                 data["stash"] = stashes.get(row["id"], [])
+                data.setdefault("packs", [])  # characters from before Packs own none
             records.append({"id": row["id"], **data})
         return records
 
@@ -1731,6 +2031,21 @@ class ContentStore:
                 (record_id,),
             ):
                 blockers.append(f"Character “{json.loads(row['data']).get('name') or row['id']}” (stash)")
+            for row in connection.execute("SELECT id, data FROM packs"):
+                pack = json.loads(row["data"])
+                if any(item.get("gearId") == record_id for item in pack.get("contents") or []):
+                    blockers.append(f"Pack “{pack.get('name') or row['id']}” (contents)")
+            for row in connection.execute("SELECT id, data FROM gear WHERE id != ?", (record_id,)):
+                bundle = json.loads(row["data"])
+                if any(item.get("gearId") == record_id for item in bundle.get("contents") or []):
+                    blockers.append(f"Gear “{bundle.get('name') or row['id']}” (bundle contents)")
+        if name in ("gear", "packs"):
+            for row in connection.execute("SELECT id, data FROM characters"):
+                character = json.loads(row["data"])
+                owned = character.get("packs") or []
+                if any(item.get("packId") == record_id if name == "packs" else
+                       any(entry.get("gearId") == record_id for entry in item.get("contents") or []) for item in owned):
+                    blockers.append(f"Character “{character.get('name') or row['id']}” (owned Packs)")
         return blockers
 
     def _prune_media(self, connection: sqlite3.Connection, path: Any) -> None:
@@ -1823,9 +2138,17 @@ class ContentStore:
                     row = connection.execute("SELECT data FROM game_posts WHERE id = ?", (clean["ruleId"],)).fetchone()
                     if not row or json.loads(row["data"]).get("type") != "rule":
                         raise ManagerError(f"The sponsorship rule must be an existing rule: {clean['ruleId']}")
-            for item in clean.get("stash") or [] if name == "characters" else []:
-                if not connection.execute("SELECT 1 FROM gear WHERE id = ?", (item["gearId"],)).fetchone():
-                    raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
+            if name == "characters":
+                self._check_stash(connection, clean, existing)
+            if name == "gear":
+                self._check_bundle(connection, chosen_id, clean)
+            if name in ("packs", "characters"):
+                self._check_packs(connection, name, chosen_id, clean)
+            if name == "game" and existing and existing.get("sponsor") and not clean["sponsor"]:
+                for table, label in (("packs", "Pack"), ("characters", "Character")):
+                    for row in connection.execute(f"SELECT id, data FROM {table} WHERE sponsor_id = ?", (chosen_id,)):
+                        raise ManagerError(f"{label} “{json.loads(row['data']).get('name') or row['id']}” has this Sponsor; "
+                                           "change it before this rule stops being a Sponsor.")
 
             clean["sample"] = bool(data["sample"]) if "sample" in data else bool(existing and existing.get("sample"))
             clean["updatedAt"] = now_iso()
@@ -1835,6 +2158,98 @@ class ContentStore:
                 for path in set(image_paths(existing.get(field))) - set(image_paths(clean.get(field))):
                     self._prune_media(connection, path)
         return {"id": chosen_id}
+
+    # --- Expedition Packs ----------------------------------------------------------------------------
+
+    def _check_packs(self, connection: sqlite3.Connection, name: str, record_id: str, clean: dict[str, Any]) -> None:
+        """Pack definitions and owned Packs only point at real Gear, Packs and Sponsors. A character whose Sponsor is
+        known and who owns no Pack receives that Sponsor's starting Pack (new characters, and older ones migrating)."""
+        def gear_exists(gear_id: str, where: str) -> None:
+            if connection.execute("SELECT 1 FROM gear WHERE id = ?", (gear_id,)).fetchone():
+                return
+            if connection.execute("SELECT 1 FROM packs WHERE id = ?", (gear_id,)).fetchone():
+                raise ManagerError(f"A Pack cannot contain another Pack ({gear_id}).")
+            raise ManagerError(f"Unknown Gear in {where}: {gear_id}")
+
+        if clean.get("sponsorId"):
+            row = connection.execute("SELECT data FROM game_posts WHERE id = ?", (clean["sponsorId"],)).fetchone()
+            post = json.loads(row["data"]) if row else {}
+            if post.get("type") != "rule" or not post.get("sponsor"):
+                raise ManagerError(f"The Sponsor must be a Recruitment Faction rule marked as a Sponsor: {clean['sponsorId']}")
+        if name == "packs":
+            for item in clean["contents"]:
+                gear_exists(item["gearId"], "Pack contents")
+            if clean["starting"]:
+                for row in connection.execute("SELECT id, data FROM packs WHERE sponsor_id = ? AND id != ?", (clean["sponsorId"], record_id)):
+                    if json.loads(row["data"]).get("starting"):
+                        raise ManagerError(f"“{json.loads(row['data']).get('name') or row['id']}” is already this Sponsor's starting Pack.")
+            return
+        for instance in clean["packs"]:
+            if not connection.execute("SELECT 1 FROM packs WHERE id = ?", (instance["packId"],)).fetchone():
+                raise ManagerError(f"Unknown Pack: {instance['packId']}")
+            for item in instance["contents"]:
+                gear_exists(item["gearId"], "an owned Pack")
+        if clean.get("sponsorId") and not clean["packs"]:
+            starting = self._starting_pack(connection, clean["sponsorId"])
+            if starting:
+                clean["packs"] = [new_pack_instance(starting, "pack-1", active=True)]
+
+    def _gear_by_id(self, connection: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+        return {row["id"]: json.loads(row["data"]) for row in connection.execute("SELECT id, data FROM gear")}
+
+    def _check_bundle(self, connection: sqlite3.Connection, record_id: str, clean: dict[str, Any]) -> None:
+        """A bundle holds real Gear (never a Pack), and no Gear may end up containing itself."""
+        gear = self._gear_by_id(connection)
+        for item in clean["contents"]:
+            if item["gearId"] in gear:
+                continue
+            if connection.execute("SELECT 1 FROM packs WHERE id = ?", (item["gearId"],)).fetchone():
+                raise ManagerError(f"Gear cannot contain a Pack ({item['gearId']}).")
+            raise ManagerError(f"Unknown Gear in bundle contents: {item['gearId']}")
+        gear[record_id] = clean
+
+        def reaches(start: str, path: tuple[str, ...]) -> tuple[str, ...] | None:
+            for item in (gear.get(start) or {}).get("contents") or []:
+                if item["gearId"] == record_id:
+                    return (*path, record_id)
+                if item["gearId"] not in path:
+                    found = reaches(item["gearId"], (*path, item["gearId"]))
+                    if found:
+                        return found
+            return None
+        loop = reaches(record_id, (record_id,))
+        if loop:
+            names = " → ".join(str((gear.get(part) or {}).get("name") or part) for part in loop)
+            raise ManagerError(f"A Gear item cannot contain itself: {names}.")
+
+    def _check_stash(self, connection: sqlite3.Connection, clean: dict[str, Any], existing: dict[str, Any] | None) -> None:
+        """Stashed Gear is real Gear that can be had on its own: components (one Ration) only come inside Packs and
+        bundles, so weightless supplies can't be piled up. What a bundle has used stays within what it holds."""
+        gear = self._gear_by_id(connection)
+        kept = {item["gearId"] for item in (existing or {}).get("stash") or []}
+        for item in clean["stash"]:
+            record = gear.get(item["gearId"])
+            if not record:
+                raise ManagerError(f"Unknown Gear in stash: {item['gearId']}")
+            # A hidden component already stashed before it was hidden may stay; it can't be added anew.
+            if record.get("marketplaceVisible") is False and item["gearId"] not in kept:
+                raise ManagerError(f"{record.get('name') or item['gearId']} only comes inside Packs and bundles; add a bundle that holds it instead.")
+            supplies = bundle_supplies(item["gearId"], gear)
+            used = [{"gearId": entry["gearId"], "quantity": min(entry["quantity"], supplies[entry["gearId"]] * item["quantity"])}
+                    for entry in item.get("used") or [] if supplies.get(entry["gearId"])]
+            item.pop("used", None)
+            if any(entry["quantity"] for entry in used):
+                item["used"] = [entry for entry in used if entry["quantity"]]
+            marked = min(item.pop("armorMarked", 0), int(record.get("armorBoxes") or 0) * item["quantity"])
+            if marked:
+                item["armorMarked"] = marked
+
+    def _starting_pack(self, connection: sqlite3.Connection, sponsor_id: str) -> dict[str, Any] | None:
+        for row in connection.execute("SELECT id, data FROM packs WHERE sponsor_id = ? ORDER BY id", (sponsor_id,)):
+            pack = json.loads(row["data"])
+            if pack.get("starting"):
+                return {**pack, "id": row["id"]}
+        return None
 
     # --- Learning paths: Onboarding first, then optional paths that each teach one area -------------
 
@@ -1963,8 +2378,8 @@ class ContentStore:
     def _read_site(self) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
         outpost_path = self.data_dir / "outpost.json"
         outpost = read_json(outpost_path) if outpost_path.exists() else {}
-        # Fields the export derives (crew counts) are not stored.
-        derived = {"jobs": {"crewCount"}}
+        # Fields the export derives (crew counts) are not stored, nor retired ones (the per-character carry limit).
+        derived = {"jobs": {"crewCount"}, "characters": {"carryLimit"}}
         records: dict[str, list[dict[str, Any]]] = {}
         for plural in PAGE_COLLECTIONS:
             folder = self.data_dir / plural
@@ -1989,7 +2404,7 @@ class ContentStore:
             connection.execute("PRAGMA defer_foreign_keys = ON")
             for table in ("character_stash", "job_participants", "archive_participants", "archive_factions", "project_characters",
                           "project_resources", "jobs", "resources", "forms", "archive_entries", "facilities", "gear", "projects",
-                          "characters", "factions", "media", "outpost_state", "game_posts"):
+                          "characters", "packs", "factions", "media", "outpost_state", "game_posts"):
                 connection.execute(f"DELETE FROM {table}")
 
             for name in PAGE_COLLECTIONS:
@@ -2065,6 +2480,13 @@ class ContentStore:
         if "stash" in clean:
             owned = {item["gearId"] for item in clean["stash"]}
             clean["stash"] += [item for item in existing.get("stash") or [] if item["gearId"] in hidden["gear"] and item["gearId"] not in owned]
+        if "packs" in clean:
+            kept_ids = {item["id"] for item in clean["packs"]}
+            clean["packs"] += [{**item, "active": False} for item in existing.get("packs") or []
+                               if item["packId"] in hidden["packs"] and item["id"] not in kept_ids]
+        if "contents" in clean:
+            listed = {item["gearId"] for item in clean["contents"]}
+            clean["contents"] += [item for item in existing.get("contents") or [] if item["gearId"] in hidden["gear"] and item["gearId"] not in listed]
 
     # --- State --------------------------------------------------------------
 
@@ -2092,6 +2514,7 @@ class ContentStore:
                                 "resourceAvailability": RESOURCE_AVAILABILITY, "formTiers": FORM_TIERS, "formStatuses": FORM_STATUSES,
                                 "projectResults": PROJECT_RESULTS, "gateStatuses": GATE_STATUSES, "gateCoreStates": GATE_CORE_STATES, "loreTopics": LORE_TOPICS,
                                 "loreKinds": LORE_KINDS}
+        result["vocabulary"].update({"gearCategories": GEAR_CATEGORIES, "gearTagGroups": GEAR_TAG_GROUPS, "maxArmorBoxes": MAX_ARMOR_BOXES})
         result["vocabulary"].update({"issueStatuses": ISSUE_STATUSES, "issueSeverities": ISSUE_SEVERITIES,
                                      "issueCategories": ISSUE_CATEGORIES, "issueResolutions": ISSUE_RESOLUTIONS})
         return result
@@ -2164,7 +2587,10 @@ class ContentStore:
             mentions = sorted({f"{fn} ({post.get('title') or post['id']})" for post in self._records(connection, "game")
                                for fn in [*renames, *removed] if f"`{fn}`" in f"{post.get('summary') or ''}{post.get('details') or ''}"})
         self._activate_vocabulary(groups)
-        return {"saved": True, "recordsUpdated": changed, "ruleMentions": mentions, "interactionsRemoved": len(interactions) - len(kept)}
+        # A new or renamed Function may now share a name with a Gear Tag: that Tag becomes a GM tag.
+        tags_moved = self._move_function_like_tags()
+        return {"saved": True, "recordsUpdated": changed, "ruleMentions": mentions, "interactionsRemoved": len(interactions) - len(kept),
+                "gearTagsMoved": tags_moved}
 
     # --- Domains -------------------------------------------------------------------------------------
 
@@ -2331,7 +2757,12 @@ class ContentStore:
             })
 
         public_project = lambda project_id: project_id if project_id in published["projects"] else None
-        exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId"))}
+        exported["gear"] = [{**public_record("gear", gear), "projectId": public_project(gear.get("projectId")),
+                             "marketplaceVisible": gear.get("marketplaceVisible", True) is not False,
+                             "armorBoxes": int(gear.get("armorBoxes") or 0),
+                             # GM tags are never exported; a Tag that reads like a Function never reaches players either.
+                             "tags": [tag for tag in gear.get("tags") or [] if not function_like(tag)],
+                             "contents": [item for item in gear.get("contents") or [] if item["gearId"] in published["gear"]]}
                             for gear in published["gear"].values()]
         public_gate = lambda gate_id: gate_id if gate_id in public_archive and published["archive"][gate_id].get("type") == "gate-record" else None
         exported["projects"] = [
@@ -2354,12 +2785,26 @@ class ContentStore:
         exported["forms"] = [{**public_record("forms", form), "projectId": public_project(form.get("projectId"))}
                              for form in published["forms"].values()]
 
+        # Packs and Sponsors: a Sponsor is a published rule marked as one; references to anything unpublished are dropped.
+        public_sponsors = {post_id for post_id in public_rules if published["game"][post_id].get("sponsor")}
+        public_sponsor = lambda sponsor_id: sponsor_id if sponsor_id in public_sponsors else None
+        public_contents = lambda contents: [item for item in contents or [] if item["gearId"] in published["gear"]]
+        for pack in published["packs"].values():
+            pack = public_record("packs", pack)
+            sponsor_id = public_sponsor(pack.get("sponsorId"))
+            exported["packs"].append({**pack, "sponsorId": sponsor_id, "starting": bool(pack.get("starting") and sponsor_id),
+                                      "contents": public_contents(pack.get("contents"))})
+
         for character in published["characters"].values():
             character = public_record("characters", character)
             sheet = character.get("sheet")
             public_sheet = {key: value for key, value in sheet.items() if key != "public"} if sheet and sheet.get("public", True) else None
             stash = [item for item in character.get("stash", []) if item["gearId"] in published["gear"]]
-            exported["characters"].append({**character, "sheet": public_sheet, "stash": stash})
+            packs = [{**item, "contents": public_contents(item.get("contents"))}
+                     for item in character.get("packs") or [] if item["packId"] in published["packs"]]
+            exported["characters"].append({**character, "sheet": public_sheet, "stash": stash, "packs": packs,
+                                           "sponsorId": public_sponsor(character.get("sponsorId")),
+                                           "carryModifier": int(character.get("carryModifier") or 0)})
 
         for entry in published["archive"].values():
             entry = public_record("archive", entry)
@@ -2430,6 +2875,16 @@ class ContentStore:
                 credit["logo"] = None
         output["site.json"] = json_bytes(site)
         output["game.json"] = json_bytes([{field: post.get(field) for field in GAME_FIELDS} for post in game])
+        # Sponsor -> starting Pack, for character creation and pricing (a character's own Sponsor's Packs are cheaper).
+        starting = {pack["sponsorId"]: pack["id"] for pack in sorted(exported["packs"], key=lambda pack: pack["id"]) if pack["starting"]}
+        def sponsor_entry(post: dict[str, Any]) -> dict[str, Any]:
+            faction = next((faction for faction in exported["factions"] if faction.get("ruleId") == post["id"]), None)
+            own = bool(post.get("extraName") or post.get("extraRule"))
+            source = post if own or not faction else faction
+            return {"id": post["id"], "name": post.get("title") or post["id"], "factionId": faction["id"] if faction else None,
+                    "packId": starting.get(post["id"]), "extraName": source.get("extraName") or "",
+                    "extraRule": scrub_archive_links(source.get("extraRule") or "", public_archive)}
+        output["sponsors.json"] = json_bytes([sponsor_entry(post) for post in game if post["id"] in public_sponsors])
         output["learning-paths.json"] = json_bytes([{**path, "ruleIds": [rule_id for rule_id in path["ruleIds"] if rule_id in public_rules]}
                                                     for path in self.learning_paths()])
         output["vocabulary.json"] = json_bytes({"functionGroups": self.function_vocabulary(), "interactions": self.function_interactions(),
