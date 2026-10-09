@@ -14,7 +14,8 @@
     "pinned": true,
     "showUntil": "",
     "order": null,
-    "image": null
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "nowhere-expeditions",
@@ -38,7 +39,8 @@
     "pinned": false,
     "showUntil": "",
     "order": 1,
-    "image": null
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "creating-an-expeditioner",
@@ -46,7 +48,7 @@
     "title": "Creating an Expeditioner",
     "category": "Campaign",
     "summary": "An Expeditioner is anyone with a reason to go through a Gate and a skill worth bringing. You don't need to be a fighter, and you don't need a long backstory: a clear idea of who you are, and why a crew would want you, is enough to start.",
-    "details": "### Start with three questions\n\n- **Why are you in Endros?** Work, faith, debt, curiosity, exile, family, opportunity.\n- **Why do you enter Gates?** What are you hoping to find, prove or escape?\n- **Why would other Expeditioners want you in their crew?** This matters most in a campaign without a permanent party. Crews form around the skills a job needs.\n\nYour answers become your **character concept**: one or two sentences that sum up who you are. For example, *\"A disgraced harbor surveyor who maps Gates because nobody else will hire her\"* or *\"A field medic who keeps a ledger of every Expeditioner he couldn't save.\"*\n\n### Specialists are encouraged\n\nCharacters don't need to be combat specialists. Cartographers, medics, linguists, riggers, cooks, mechanics and Gate scholars all earn their place on an expedition. Being excellent at one thing gives a crew a clear reason to invite you.\n\n### Choose a Recruitment Faction\n\nMost Expeditioners didn't simply appear in Endros on their own. A company, institution, government, employer, sponsor or personal arrangement usually helped them reach the Outpost and settle there.\n\nYour **Recruitment Faction** represents that relationship.\n\n- It grants a small **Extra**.\n- It may decide who your character knows, what they can access and what others expect of them.\n- It does **not** decide your profession, your Skills or your role on an expedition.\n\nChoose one from the [Recruitment Factions](game.html#path-recruitment-factions) learning path on the Rules tab. If none of them fit your character, you can be **Independent**. To see who the world's major powers are before you choose, browse the [Factions](factions.html) page. Write your faction and its Extra in the Extras section of your character sheet.\n\n### Your character sheet\n\nNowhere Expeditions uses Fate. The [character sheet](sheet.html) has a space for each of these. The detailed Fate rules explain how each one works in play.\n\n- **Aspects** are short phrases that are true about your character, such as their concept, their trouble, a relationship or a belief. You invoke them for a bonus, and they can be compelled to complicate your life.\n- **Skills** are what your character is good at, like Crafts, Lore, Notice or Physique, each with a rating. You roll them when the outcome is uncertain.\n- **Stunts** are special tricks: narrow situations where your character gets a bonus or can do something unusual.\n- **Stress and Consequences** show how much punishment your character can take. Stress is short-term and clears quickly. Consequences are lasting injuries or problems that need time and treatment. See [Consequences & Recovery](game.html#post-consequences-and-recovery).\n\n### Equipment and your Personal Stash\n\nEverything your character owns is kept in their **Personal Stash**. You buy equipment from the [Marketplace](marketplace.html) with **Coins**, and your Resources skill tops your Coins up after every expedition. You start with Coins equal to your Resources rating (none if it's +0 or lower). See [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash).\n\n### Backstory\n\nA few sentences are plenty. You don't need to know your character's whole history: things you discover in play can fill in the rest, and a blank space in your past can become a hook later.\n\n### How Much Lore Should I Read?\n\nOnly read what your character would actually know. Pick the parts of the [Archive](archive.html) and the [Outpost Sheet](outpost.html) that relate to your concept and leave the rest for later.\n\n- **A religion-focused character:** read about the faiths and folklore your character follows. Other beliefs can stay strange to you.\n- **An artificer or engineer:** look at the [Marketplace](marketplace.html), the Facilities on the [Outpost Sheet](outpost.html), and [Resources](game.html#post-resources).\n- **A Gate researcher:** read the Gate records in the Archive and the [Research](game.html#post-research) rules.\n- **A spellcaster:** read [Spellcasting](game.html#post-spellcasting) and [Domains](game.html#post-domains).\n- **A newly arrived outsider:** read almost nothing. Your character doesn't know how Endros works yet, and finding out is part of playing them.\n\nNot knowing things can suit your character, and discovering the world through play is intended. The Archive will still be there when your character needs it.",
+    "details": "### Start with three questions\n\n- **Why are you in Endros?** Work, faith, debt, curiosity, exile, family, opportunity.\n- **Why do you enter Gates?** What are you hoping to find, prove or escape?\n- **Why would other Expeditioners want you in their crew?** This matters most in a campaign without a permanent party. Crews form around the skills a job needs.\n\nYour answers become your **character concept**: one or two sentences that sum up who you are. For example, *\"A disgraced harbor surveyor who maps Gates because nobody else will hire her\"* or *\"A field medic who keeps a ledger of every Expeditioner he couldn't save.\"*\n\n### Specialists are encouraged\n\nCharacters don't need to be combat specialists. Cartographers, medics, linguists, riggers, cooks, mechanics and Gate scholars all earn their place on an expedition. Being excellent at one thing gives a crew a clear reason to invite you.\n\n### Choose a Recruitment Faction\n\nMost Expeditioners didn't simply appear in Endros on their own. A company, institution, government, employer, sponsor or personal arrangement usually helped them reach the Outpost and settle there.\n\nYour **Recruitment Faction** represents that relationship.\n\n- It grants a small **Extra**.\n- It gives you its **Expedition Pack**: the kit you carry on every expedition.\n- It may decide who your character knows, what they can access and what others expect of them.\n- It does **not** decide your profession, your Skills or your role on an expedition.\n\nChoose one from the [Recruitment Factions](game.html#path-recruitment-factions) learning path on the Rules tab. If none of them fit your character, you can be **Independent**. To see who the world's major powers are before you choose, browse the [Factions](factions.html) page. On your [character sheet](sheet.html), choose it as your **Sponsor**: you receive its Pack, and its Extra is written into your Extras for you.\n\n### Your character sheet\n\nNowhere Expeditions uses Fate. The [character sheet](sheet.html) has a space for each of these. The detailed Fate rules explain how each one works in play.\n\n- **Aspects** are short phrases that are true about your character, such as their concept, their trouble, a relationship or a belief. You invoke them for a bonus, and they can be compelled to complicate your life.\n- **Skills** are what your character is good at, like Crafts, Lore, Notice or Physique, each with a rating. You roll them when the outcome is uncertain.\n- **Stunts** are special tricks: narrow situations where your character gets a bonus or can do something unusual.\n- **Stress and Consequences** show how much punishment your character can take. Stress is short-term and clears quickly. Consequences are lasting injuries or problems that need time and treatment. See [Consequences & Recovery](game.html#post-consequences-and-recovery).\n\n### Equipment and your Personal Stash\n\nEverything your character owns is kept in their **Personal Stash**. You buy equipment from the [Marketplace](marketplace.html) with **Coins**, and your Resources skill tops your Coins up after every expedition. You start with Coins equal to your Resources rating (none if it's +0 or lower), and with your Sponsor's **Expedition Pack**: it holds your basic supplies, and its **Carry Limit** decides how much extra Gear you can bring on an expedition. See [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash).\n\n### Backstory\n\nA few sentences are plenty. You don't need to know your character's whole history: things you discover in play can fill in the rest, and a blank space in your past can become a hook later.\n\n### How Much Lore Should I Read?\n\nOnly read what your character would actually know. Pick the parts of the [Archive](archive.html) and the [Outpost Sheet](outpost.html) that relate to your concept and leave the rest for later.\n\n- **A religion-focused character:** read about the faiths and folklore your character follows. Other beliefs can stay strange to you.\n- **An artificer or engineer:** look at the [Marketplace](marketplace.html), the Facilities on the [Outpost Sheet](outpost.html), and [Resources](game.html#post-resources).\n- **A Gate researcher:** read the Gate records in the Archive and the [Research](game.html#post-research) rules.\n- **A spellcaster:** read [Spellcasting](game.html#post-spellcasting) and [Domains](game.html#post-domains).\n- **A newly arrived outsider:** read almost nothing. Your character doesn't know how Endros works yet, and finding out is part of playing them.\n\nNot knowing things can suit your character, and discovering the world through play is intended. The Archive will still be there when your character needs it.",
     "tags": [
       "Character Creation",
       "Recruitment Faction",
@@ -67,7 +69,8 @@
     "pinned": false,
     "showUntil": "",
     "order": 2,
-    "image": null
+    "image": null,
+    "sponsor": false
   },
   {
     "id": "expeditions",
@@ -75,7 +78,7 @@
     "title": "Expeditions",
     "category": "Campaign",
     "summary": "An expedition is one crew taking on one job beyond a Gate, and every expedition session follows the same three parts: **Preparation**, **Exploration** and **Return**.",
-    "details": "### Before the session: the Job Board\n\nExpeditions are posted on the [Job Board](jobs.html). Each listing gives what is known: the objective, a briefing, who posted it, when it is scheduled and how many crew it needs. Players sign up for the jobs that interest them, and the crew is whoever signed up for that job.\n\n- Players choose which expeditions to pursue. Nobody is assigned.\n- Not every job has to be completed. Some will be abandoned, some will fail, and some will be overtaken by events.\n- Places that were already explored can be revisited, for example to finish a survey, recover what was left behind or follow a new lead.\n\n### 1. Preparation\n\nThe crew reviews what is known and decides how to approach the job. This can include:\n\n- reading reports and Gate records in the [Archive](archive.html);\n- choosing what to bring from your Personal Stash, within your carry limit, and buying anything missing from the [Marketplace](marketplace.html) (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash));\n- discussing the environment and likely dangers, starting with the Gate's Domain (see [Domains](game.html#post-domains));\n- using the settlement's Facilities and Capabilities (see the [Outpost Sheet](outpost.html)).\n\nPreparation should matter, but it shouldn't turn into a long shopping trip or endless planning. Decide what matters, then go. Something you leave behind can still turn up later, at a cost (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\nWhat Endros has built shapes the options here. Finished Projects, completed Research, new Marketplace items, Facilities and Resource properties people have discovered can all give a crew options the last crew didn't have.\n\n### 2. Exploration\n\nThis is the main part of the expedition. The crew enters the Gate, learns how the place works, deals with threats, pursues the objective and recovers whatever they can.\n\nFighting is one tool among many. Observing, experimenting and understanding the environment matter just as much. A Gate whose rules you understand is far less dangerous than one you only know how to fight.\n\nSomewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so the crew may need to decide whether that is the goal or a step too far.\n\n### 3. Return\n\nThe expedition is resolved and its results are recorded:\n\n- discoveries and observations;\n- recovered Resources and artifacts, with names for any new Resources you discovered (you name what you find; see [Resources](game.html#post-resources));\n- Cores, if one was recovered;\n- consequences of the expedition, for the crew and for Endros;\n- new Research and Project opportunities;\n- changes to Endros;\n- rewards;\n- Downtime gained (see [Downtime](game.html#post-downtime));\n- Coins refreshed from Resources, then reward Coins added (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\nReturn feeds straight into the Settlement Loop. What the crew brings back becomes material for Research, Projects and new jobs.\n\n### Why reports matter\n\nKnowledge stays in the world after a crew goes home. A session's report in the Archive tells the next crew what to expect, what to bring and what not to touch. Writing down what you learned is a way of helping players you may never share a table with.",
+    "details": "### Before the session: the Job Board\n\nExpeditions are posted on the [Job Board](jobs.html). Each listing gives what is known: the objective, a briefing, who posted it, when it is scheduled and how many crew it needs. Players sign up for the jobs that interest them, and the crew is whoever signed up for that job.\n\n- Players choose which expeditions to pursue. Nobody is assigned.\n- Not every job has to be completed. Some will be abandoned, some will fail, and some will be overtaken by events.\n- Places that were already explored can be revisited, for example to finish a survey, recover what was left behind or follow a new lead.\n\n### 1. Preparation\n\nThe crew reviews what is known and decides how to approach the job. This can include:\n\n- reading reports and Gate records in the [Archive](archive.html);\n- getting your equipment ready: choose your **Active Pack**, check what is left inside it, then pick the additional Gear you bring within its **Carry Limit**, buying anything missing from the [Marketplace](marketplace.html) (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash));\n- discussing the environment and likely dangers, starting with the Gate's Domain (see [Domains](game.html#post-domains));\n- using the settlement's Facilities and Capabilities (see the [Outpost Sheet](outpost.html)).\n\nPreparation should matter, but it shouldn't turn into a long shopping trip or endless planning. Decide what matters, then go. Something you leave behind can still turn up later, at a cost (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\nWhat Endros has built shapes the options here. Finished Projects, completed Research, new Marketplace items, Facilities and Resource properties people have discovered can all give a crew options the last crew didn't have.\n\n### 2. Exploration\n\nThis is the main part of the expedition. The crew enters the Gate, learns how the place works, deals with threats, pursues the objective and recovers whatever they can.\n\nFighting is one tool among many. Observing, experimenting and understanding the environment matter just as much. A Gate whose rules you understand is far less dangerous than one you only know how to fight.\n\nSomewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so the crew may need to decide whether that is the goal or a step too far.\n\n### 3. Return\n\nThe expedition is resolved and its results are recorded:\n\n- discoveries and observations;\n- recovered Resources and artifacts, with names for any new Resources you discovered (you name what you find; see [Resources](game.html#post-resources));\n- Cores, if one was recovered;\n- consequences of the expedition, for the crew and for Endros;\n- new Research and Project opportunities;\n- changes to Endros;\n- rewards;\n- Downtime gained (see [Downtime](game.html#post-downtime));\n- Coins refreshed from Resources, then reward Coins added (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\nReturn feeds straight into the Settlement Loop. What the crew brings back becomes material for Research, Projects and new jobs.\n\n### Why reports matter\n\nKnowledge stays in the world after a crew goes home. A session's report in the Archive tells the next crew what to expect, what to bring and what not to touch. Writing down what you learned is a way of helping players you may never share a table with.",
     "tags": [
       "Expeditions",
       "Gates",
@@ -93,7 +96,8 @@
     "pinned": false,
     "showUntil": "",
     "order": 3,
-    "image": null
+    "image": null,
+    "sponsor": false
   },
   {
     "id": "downtime",
@@ -118,34 +122,59 @@
     "pinned": false,
     "showUntil": "",
     "order": 4,
-    "image": null
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "coins-marketplace-and-personal-stash",
     "type": "rule",
     "title": "Coins, Marketplace & Personal Stash",
     "category": "Campaign Systems",
-    "summary": "Your character's equipment lives in their **Personal Stash**. You buy it at the Marketplace with **Coins**, your **Resources** skill tops your Coins up after every expedition, and before each expedition you choose what to carry, up to your **carry limit** (6 by default).",
-    "details": "### Coins\n\nYour Coins are shown on your character's page and on your [character sheet](sheet.html).\n\n- **Starting Coins:** a new Expeditioner starts with Coins equal to their Resources rating (none if it's +0 or lower).\n- **Buying:** pay an item's [Marketplace](marketplace.html) price (its sale price, if it's discounted) and add it to your Personal Stash.\n- Buying doesn't cost Downtime.\n- **Availability:** an item's availability (Common, Restricted or Rare) doesn't change its price. Only items marked *Unavailable* can't be bought right now.\n- **Rewards:** jobs and the GM can also give you Coins.\n\n### Resources refreshes your Coins\n\nAfter each expedition, every Expeditioner **refreshes** their Coins against their **Resources** skill:\n\n- If you have **fewer** Coins than your Resources rating, raise them to that rating.\n- If you have **as many or more**, keep what you have.\n- If your character **took part** in the expedition, refresh first, **then** add any reward Coins.\n\nA Resources rating of +0 or lower doesn't refresh anything.\n\n> **Example.** Ines spent all her Coins and has Resources at Fair (+2). The next expedition ends, so she refreshes to **2**. Tomas also had 0 Coins and has Resources at Average (+1). He was on that expedition, which paid each crew member 3 Coins. He refreshes to 1, then adds the reward, for **4** Coins.\n\n### Your Personal Stash\n\nYour Personal Stash holds everything your character owns: what you bought, what Projects made for you (see [Personal Stash & Crafting](game.html#post-personal-stash-and-crafting)) and what you were given. It's listed on your character's page.\n\n### Bringing Gear on an expedition\n\nDuring Preparation (see [Expeditions](game.html#post-expeditions)), mark the items you're taking as **Brought into action**.\n\n- Their total weight (each item's weight × how many you bring) can be at most your **carry limit**.\n- Your carry limit is **6** by default. A stunt can raise it, and some situations can lower it. Set it on your character sheet when that happens.\n- Each item's weight is listed in the Marketplace.\n\n**Weight isn't how heavy something is.** It combines size, bulk, fragility, upkeep and how awkward the item is to keep at hand: how hard it is to bring with you. A sheet of paper can weigh more than a hammer if it has to stay perfectly dry.\n\n> **Example.** Mira brings a climbing kit (weight 3), two lanterns (weight 1 each) and a field journal (weight 0): 5 of her 6. A second climbing kit would put her over the limit.\n\n### Forgot something?\n\nGear you didn't bring isn't completely out of reach. During the expedition, you can declare that you had an item from your Personal Stash with you after all:\n\n| If adding it would… | It costs |\n| --- | --- |\n| keep you **within** your carry limit | **1 stress**, on a stress track of your choice |\n| take you **over** your carry limit | **1 Fate Point** |\n\nMark the item as brought into action. It stays with you for the rest of the expedition. You can only produce items you own: anything not in your Personal Stash is still back in Endros, or still in the Marketplace.\n\n> **Example.** Halfway up a cliff, Mira realises she left her second rope behind. She is carrying 5 of her 6 and the rope weighs 1, so she takes 1 stress and the rope was in her pack all along. Later she wants her climbing kit too (weight 3, which would bring her to 9), so she spends a Fate Point.\n\n### Keeping your sheet up to date\n\nUse your [character sheet](sheet.html) for everything above:\n\n- the **Coins** counter;\n- **Buy** buttons in its Marketplace tab, which take the price from your Coins;\n- **Brought into action** checkboxes, with your carried weight shown against your carry limit;\n- the **carry limit** itself, which you can change when a stunt or situation calls for it.\n\nPress **Save file** and send the file to the GM, who brings the changes into the campaign records.",
+    "summary": "Your character's equipment lives in their **Personal Stash**. You buy it at the Marketplace with **Coins**, your **Resources** skill tops your Coins up after every expedition, and your **Active Pack** decides how much extra Gear you can bring: its **Carry Limit**.",
+    "details": "### Coins\n\nYour Coins are shown on your character's page and on your [character sheet](sheet.html).\n\n- **Starting Coins:** a new Expeditioner starts with Coins equal to their Resources rating (none if it's +0 or lower).\n- **Buying:** pay an item's [Marketplace](marketplace.html) price (its sale price, if it's discounted) and add it to your Personal Stash.\n- Buying doesn't cost Downtime.\n- **Availability:** an item's availability (Common, Restricted or Rare) doesn't change its price. Only items marked *Unavailable* can't be bought right now.\n- **Rewards:** jobs and the GM can also give you Coins.\n\n### Resources refreshes your Coins\n\nAfter each expedition, every Expeditioner **refreshes** their Coins against their **Resources** skill:\n\n- If you have **fewer** Coins than your Resources rating, raise them to that rating.\n- If you have **as many or more**, keep what you have.\n- If your character **took part** in the expedition, refresh first, **then** add any reward Coins.\n\nA Resources rating of +0 or lower doesn't refresh anything.\n\n> **Example.** Ines spent all her Coins and has Resources at Fair (+2). The next expedition ends, so she refreshes to **2**. Tomas also had 0 Coins and has Resources at Average (+1). He was on that expedition, which paid each crew member 3 Coins. He refreshes to 1, then adds the reward, for **4** Coins.\n\n### Your Personal Stash\n\nYour Personal Stash holds everything your character owns: what you bought, what Projects made for you (see [Personal Stash & Crafting](game.html#post-personal-stash-and-crafting)), what you were given, and your **Expedition Packs**. It's listed on your character's page.\n\n### Expedition Packs\n\nA **Pack** is your character's main carrying setup: a bag, frame or kit with a fixed list of ordinary supplies packed inside it, such as Rope, a Lantern and Rations.\n\n- Your Personal Stash can hold several Packs, but only one is your **Active Pack** at a time.\n- Your Active Pack sets your **Carry Limit**: how much additional Gear you can bring into action. Every starting Pack has a Carry Limit of **6**.\n- What the Pack lists comes with it and **doesn't count** toward your Carry Limit. Neither does the Pack itself.\n- A Pack holds exactly what it lists. If the list has no shovel, you have no shovel.\n- Its contents are real things. Oil burns, Rations get eaten, Bandages get used, and a Rope tied across a chasm stays there. Mark what you use up, lose or leave behind on your character sheet. It stays gone until the GM restocks the Pack.\n\n**Your Sponsor's Pack.** When you create your character, your Sponsor (your Recruitment Faction) gives you its Pack for free, and it becomes your Active Pack. Each Sponsor's rule shows what its Pack holds.\n\n**Buying Packs.** Packs from your own Sponsor cost nothing. A Pack from another Sponsor costs **1 Coin**. They are listed under *Expedition Packs* in the [Marketplace](marketplace.html). You only ever need one of each: only one Pack is active at a time, so a second copy of the same Pack wouldn't help.\n\n**Supplies and kits.** Small supplies such as a Ration, a Bandage or a flask of Lantern Oil are counted one by one inside your Pack, but they aren't sold one at a time. To bring more, take a **kit** from the Marketplace and bring it as additional Gear: a **Rations Kit** (weight 1) holds 5 Rations, a **Bandage Kit** (weight 1) holds 5 Bandages and a **Lantern Oil Kit** (weight 1) holds 3 flasks of Lantern Oil. Kits and ordinary basic Gear such as Rope, a Lantern or a Bedroll cost **0 Coins**. Each kit keeps its own count on your character sheet, beside your Pack's.\n\n> **Example.** Your Pack holds 5 Rations. You add a Rations Kit (weight 1) to your additional Gear, so you have 10 Rations on the expedition, and only the kit counts toward your Carry Limit.\n\n### Bringing Gear on an expedition\n\nDuring Preparation (see [Expeditions](game.html#post-expeditions)):\n\n1. Choose your **Active Pack**.\n2. Check what is left inside it.\n3. Mark the additional Gear from your Personal Stash that you're taking as **Brought into action**.\n\n- The total weight of that additional Gear (each item's weight × how many you bring) can be at most your Active Pack's **Carry Limit**.\n- Extra copies of something your Pack already holds count normally: if your Pack has one Rope and you bring a second one, the second Rope weighs 1.\n- Without an Active Pack, no additional Gear fits.\n- Some stunts let you carry more than your Pack allows, and some situations weigh you down. Note that as your **Carry modifier** on your character sheet (for example +1 or −1); it's added to your Active Pack's Carry Limit.\n- Each item's weight and Tags are listed in the Marketplace. What Tags mean, and how Armor works: [Gear Tags & Armor](game.html#post-gear-tags-and-armor).\n\n**Weight isn't how heavy something is.** It combines size, bulk, fragility, upkeep and how awkward the item is to keep at hand: how hard it is to bring with you. A sheet of paper can weigh more than a hammer if it has to stay perfectly dry.\n\n> **Example.** Mira's Active Pack is the University Field Pack (Carry Limit 6), which already holds a Rope, a Lantern and Lantern Oil. She also brings a second Rope (weight 1) and a climbing kit (weight 3): 4 of her 6. The Rope inside her Pack doesn't count again. A second climbing kit would put her over the limit.\n\n### Forgot something?\n\nGear you didn't bring isn't completely out of reach. During the expedition, you can declare that you had an item from your Personal Stash with you after all:\n\n| If adding it would… | It costs |\n| --- | --- |\n| keep you **within** your Active Pack's Carry Limit | **1 stress**, on a stress track of your choice |\n| take you **over** your Active Pack's Carry Limit | **1 Fate Point** |\n\nMark the item as brought into action. It stays with you for the rest of the expedition. You can only produce items you own: anything not in your Personal Stash is still back in Endros, or still in the Marketplace.\n\n> **Example.** Halfway up a cliff, Mira realises she left a crowbar (weight 1) in her stash. She is carrying 4 of her 6, so she takes 1 stress and the crowbar was with her all along. Later she wants her second climbing kit too (weight 3, which would bring her to 8), so she spends a Fate Point.\n\n### Keeping your sheet up to date\n\nUse your [character sheet](sheet.html) for everything above:\n\n- the **Coins** counter;\n- your **Sponsor** and your **Expedition Pack**: which Pack is active, and what is left inside it;\n- **Buy** buttons in its Marketplace tab, which take the price from your Coins (Packs at your price: free from your own Sponsor);\n- **Brought into action** checkboxes, with your carried weight shown against your Active Pack's Carry Limit.\n\nPress **Save file** and send the file to the GM, who brings the changes into the campaign records.",
     "tags": [
+      "Active Pack",
+      "Brought into Action",
+      "Buying",
+      "Carry Limit",
       "Coins",
+      "Equipment",
+      "Expedition Pack",
+      "Gear",
       "Marketplace",
       "Personal Stash",
-      "Equipment",
-      "Gear",
-      "Buying",
-      "Resources",
+      "Preparation",
       "Refresh",
-      "Carry Limit",
-      "Weight",
-      "Brought into Action",
-      "Preparation"
+      "Resources",
+      "Weight"
     ],
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
     "order": 5,
-    "image": null
+    "image": null,
+    "sponsor": false
+  },
+  {
+    "id": "gear-tags-and-armor",
+    "type": "rule",
+    "title": "Gear Tags & Armor",
+    "category": "Campaign Systems",
+    "summary": "Gear has **Tags** such as `Cutting`, `Breaching` or `Loud` that say what it can do in the fiction; they give no numerical bonus. Some protective Gear has **Armor** boxes you mark instead of Physical Stress.",
+    "details": "### Gear Tags\n\nGear may have Tags such as `Cutting`, `Breaching`, `Loud`, `Magnetic` or `Breathing`. Tags describe what the equipment can do and how it behaves in the fiction.\n\nTags don't grant automatic numerical bonuses. A creature, hazard, environment or other rule may make a Tag important:\n\n- A machete's `Clearing` Tag lets it cut through dense vegetation.\n- A `Breaching` weapon suits a reinforced door.\n- A `Loud` firearm may reveal your position.\n- A `Magnetic` tool may interact unexpectedly with something found beyond a Gate.\n- `Hearing Protection` may keep out a siren's song, and ordinary warnings too.\n\nChoosing the right equipment is part of expedition preparation: learn something about a Gate, bring the Gear it calls for, and you have options the last crew didn't.\n\n### Weapons\n\nWeapons have no damage numbers. A weapon lets you act in the fiction, and its Tags say how. What it achieves depends on what you face: a creature's notes may say ordinary `Cutting` blades can't get through its shell, while a heavy `Blunt` blow can crack it.\n\nOrdinary firearm ammunition isn't counted. Things whose limited supply matters, such as explosives, Flares, flamethrower fuel and breathing air, come in kits, and each kit keeps its own count on your [character sheet](sheet.html).\n\n### Armor\n\nSome protective Gear has **Armor boxes**.\n\n> **Armor.** When you would take Physical Stress from something the Armor could reasonably protect you from, you may mark one Armor box instead. A marked Armor box can't be used again until the Armor is repaired or replaced.\n\n- Armor only helps where physical protection makes sense. It doesn't protect against drowning, poison gas, sound, extreme heat, disease, or psychic or anomalous effects unless its Tags justify it.\n- Like any other Gear, Armor only protects you if you brought it into action.\n- Ordinary Armor has one or two boxes. Mark them on your character sheet.\n\n> **Example.** A creature's claws would deal Nell 2 Physical Stress. She wears a Heavy Leather Coat (`Armor`, `Cutting`), so she marks its Armor box instead. The box stays marked until the coat is repaired.",
+    "tags": [
+      "Gear",
+      "Tags",
+      "Armor",
+      "Weapons",
+      "Equipment"
+    ],
+    "publishedAt": "",
+    "pinned": false,
+    "showUntil": "",
+    "order": 6,
+    "image": null,
+    "sponsor": false
   },
   {
     "id": "whats-next",
@@ -166,8 +195,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 6,
-    "image": null
+    "order": 7,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "faction-nowhere-expeditions",
@@ -175,7 +205,7 @@
     "title": "Nowhere Expeditions (the Company)",
     "category": "Recruitment Factions",
     "summary": "**Nowhere Expeditions** is the name of this campaign, and also an in-world **company**: a recruitment and relocation agency that brings people from abroad to Endros and helps them settle in. Its recruits get the **Relocation Package**: +1 Coin after each expedition they take part in.",
-    "details": "### The game and the company\n\nThese are two different things that share a name.\n\n- **Nowhere Expeditions, the game,** is the campaign you're playing. Every player takes part in it, whatever their faction.\n- **Nowhere Expeditions, the company,** is a business operating in Endros. Only characters who chose it as their Recruitment Faction came through it.\n\nThe [recruitment notice](game.html#post-game-listing) on the Announcements tab is one of the company's advertisements.\n\n### Lore\n\nNowhere Expeditions specializes in finding people abroad who are willing to move to the edge of the known world, and in getting them there. For its recruits it can arrange:\n\n- transportation to Endros;\n- relocation assistance and temporary or subsidized housing;\n- help finding employment;\n- expedition registration and other administrative support;\n- introductions to employers and expedition organizers;\n- general help settling in.\n\nNone of this is charity. The company profits from the people it brings in, for example through commissions, placement fees or a share of expedition rewards. The exact terms depend on each recruit's contract.\n\nFor a sponsored character, the company is somewhere between a benefactor and a business partner. It has an office to visit, agents who know your name, and paperwork with your signature on it.\n\n### Recruitment Extra\n\n> **Relocation Package**\n> After each expedition you take part in, gain **+1 Coin**.\n\nThis isn't the company handing you a coin each time. It stands for what your arrangement saves you: subsidized housing, lower living costs, better contract terms. Add it after your Resources refresh, together with any other rewards (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\n### Expectations\n\nThe company has expectations of its recruits, such as:\n\n- staying active and taking on expeditions;\n- honoring the terms of their contract;\n- appearing in promotional material;\n- letting the company take its agreed commissions.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.",
+    "details": "### The game and the company\n\nThese are two different things that share a name.\n\n- **Nowhere Expeditions, the game,** is the campaign you're playing. Every player takes part in it, whatever their faction.\n- **Nowhere Expeditions, the company,** is a business operating in Endros. Only characters who chose it as their Recruitment Faction came through it.\n\nThe [recruitment notice](game.html#post-game-listing) on the Announcements tab is one of the company's advertisements.\n\n### Lore\n\nNowhere Expeditions specializes in finding people abroad who are willing to move to the edge of the known world, and in getting them there. For its recruits it can arrange:\n\n- transportation to Endros;\n- relocation assistance and temporary or subsidized housing;\n- help finding employment;\n- expedition registration and other administrative support;\n- introductions to employers and expedition organizers;\n- general help settling in.\n\nNone of this is charity. The company profits from the people it brings in, for example through commissions, placement fees or a share of expedition rewards. The exact terms depend on each recruit's contract.\n\nFor a sponsored character, the company is somewhere between a benefactor and a business partner. It has an office to visit, agents who know your name, and paperwork with your signature on it.\n\n### Recruitment Extra\n\n> **Relocation Package**\n> After each expedition you take part in, gain **+1 Coin**.\n\nThis isn't the company handing you a coin each time. It stands for what your arrangement saves you: subsidized housing, lower living costs, better contract terms. Add it after your Resources refresh, together with any other rewards (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nThe company has expectations of its recruits, such as:\n\n- staying active and taking on expeditions;\n- honoring the terms of their contract;\n- appearing in promotional material;\n- letting the company take its agreed commissions.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.",
     "tags": [
       "Recruitment Faction",
       "Nowhere Expeditions",
@@ -190,8 +220,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 7,
-    "image": null
+    "order": 8,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-university-of-verna",
@@ -199,7 +230,7 @@
     "title": "University of Verna",
     "category": "Recruitment Factions",
     "summary": "The **University of Verna** is an academic institution with laboratories, archives and staff in Endros, and it sponsors scholars and field specialists to study the Gates. Its recruits get **Institutional Access**: +1 Progress on one Research Project Action between expeditions.",
-    "details": "### Lore\n\nThe University of Verna runs laboratories in Endros. They are listed among the Outpost's Research facilities on the [Outpost Sheet](outpost.html). With them come archives, specialist equipment, academic contacts and a great deal of institutional expertise.\n\nThe Gates and the materials found beyond them are the only known source of magic in the world, and the University intends to understand them. To do that it brings people to the Outpost:\n\n- researchers, archaeologists and historians;\n- engineers and natural philosophers;\n- physicians;\n- other relevant scholars.\n\nYou don't need to be a traditional academic to be sponsored. Field specialists, technicians, assistants and unusual experts all qualify, as long as the University thinks your work is worth supporting.\n\n### Recruitment Extra\n\n> **Institutional Access**\n> Once per between-expedition period, when you make a **Research Project Action**, gain **+1 additional Progress** if the University's laboratories, archives, specialists or equipment could reasonably assist you.\n\nThe bonus needs a reason in the fiction. When you describe your approach, say how the University helps: a microscope in its laboratories, a record in its archive, a colleague who has seen something similar. A \"between-expedition period\" is the time between one expedition and the next. See [Research](game.html#post-research).\n\n### Expectations\n\nThe University may expect its people to:\n\n- submit their research;\n- share samples;\n- publish their findings;\n- contribute to academic projects;\n- assist other University personnel.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.",
+    "details": "### Lore\n\nThe University of Verna runs laboratories in Endros. They are listed among the Outpost's Research facilities on the [Outpost Sheet](outpost.html). With them come archives, specialist equipment, academic contacts and a great deal of institutional expertise.\n\nThe Gates and the materials found beyond them are the only known source of magic in the world, and the University intends to understand them. To do that it brings people to the Outpost:\n\n- researchers, archaeologists and historians;\n- engineers and natural philosophers;\n- physicians;\n- other relevant scholars.\n\nYou don't need to be a traditional academic to be sponsored. Field specialists, technicians, assistants and unusual experts all qualify, as long as the University thinks your work is worth supporting.\n\n### Recruitment Extra\n\n> **Institutional Access**\n> Once per between-expedition period, when you make a **Research Project Action**, gain **+1 additional Progress** if the University's laboratories, archives, specialists or equipment could reasonably assist you.\n\nThe bonus needs a reason in the fiction. When you describe your approach, say how the University helps: a microscope in its laboratories, a record in its archive, a colleague who has seen something similar. A \"between-expedition period\" is the time between one expedition and the next. See [Research](game.html#post-research).\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nThe University may expect its people to:\n\n- submit their research;\n- share samples;\n- publish their findings;\n- contribute to academic projects;\n- assist other University personnel.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.",
     "tags": [
       "Recruitment Faction",
       "University of Verna",
@@ -213,8 +244,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 8,
-    "image": null
+    "order": 9,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-independent",
@@ -222,7 +254,7 @@
     "title": "Independent",
     "category": "Recruitment Factions",
     "summary": "**Independent** Expeditioners reached Endros on their own terms, without a major institution behind them. They owe nobody, and their own work comes first. **Self-Directed** gives them +1 Progress on one Personal Project Action between expeditions.",
-    "details": "### Lore\n\nIndependents reached Endros without meaningful sponsorship from a major institution. They might have:\n\n- paid their own way;\n- arrived through personal contacts;\n- worked their passage aboard a ship;\n- used family money or their own savings;\n- followed an unusual opportunity;\n- come through a smaller organization that offers no real ongoing support.\n\nBeing Independent isn't the \"no faction\" option. It's a choice for characters whose identity is their freedom: no contract, no institution, no one else's agenda. Their time and their work are their own.\n\n### Recruitment Extra\n\n> **Self-Directed**\n> Once per between-expedition period, when you make a **Personal Project Action**, gain **+1 additional Progress**.\n\nA **Personal Project** is one whose main benefit when completed belongs to your character, such as:\n\n- creating an item for your Personal Stash;\n- modifying your own equipment;\n- restoring a personal artifact;\n- developing a personal invention;\n- a similar individual undertaking.\n\nSelf-Directed doesn't apply to Public Projects, Marketplace Projects, Facilities or other Outpost development. A \"between-expedition period\" is the time between one expedition and the next. See [Projects](game.html#post-projects) and [Personal Stash & Crafting](game.html#post-personal-stash-and-crafting).\n\n### Expectations\n\nIndependents have no formal obligations to any institution.\n\nThey also don't have the contacts and support that come with a sponsor. Nobody arranges their introductions or opens doors for them. Any help they get, they find themselves.",
+    "details": "### Lore\n\nIndependents reached Endros without meaningful sponsorship from a major institution. They might have:\n\n- paid their own way;\n- arrived through personal contacts;\n- worked their passage aboard a ship;\n- used family money or their own savings;\n- followed an unusual opportunity;\n- come through a smaller organization that offers no real ongoing support.\n\nBeing Independent isn't the \"no faction\" option. It's a choice for characters whose identity is their freedom: no contract, no institution, no one else's agenda. Their time and their work are their own.\n\n### Recruitment Extra\n\n> **Self-Directed**\n> Once per between-expedition period, when you make a **Personal Project Action**, gain **+1 additional Progress**.\n\nA **Personal Project** is one whose main benefit when completed belongs to your character, such as:\n\n- creating an item for your Personal Stash;\n- modifying your own equipment;\n- restoring a personal artifact;\n- developing a personal invention;\n- a similar individual undertaking.\n\nSelf-Directed doesn't apply to Public Projects, Marketplace Projects, Facilities or other Outpost development. A \"between-expedition period\" is the time between one expedition and the next. See [Projects](game.html#post-projects) and [Personal Stash & Crafting](game.html#post-personal-stash-and-crafting).\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nIndependents have no formal obligations to any institution.\n\nThey also don't have the contacts and support that come with a sponsor. Nobody arranges their introductions or opens doors for them. Any help they get, they find themselves.",
     "tags": [
       "Recruitment Faction",
       "Independent",
@@ -235,8 +267,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 9,
-    "image": null
+    "order": 10,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-vardic-holds",
@@ -244,7 +277,7 @@
     "title": "Vardic Holds",
     "category": "Recruitment Factions",
     "summary": "The **Vardic Holds** are a loose federation of industrial northern jarldoms that send shipwrights, engineers and warriors to Endros. Their recruits get **Built to Endure**: once per session, a tied Crafts roll to fix or improvise equipment becomes a success with a free invoke.",
-    "details": "### Lore\n\nThe Vardic Holds are a loose federation of industrial northern jarldoms whose culture values craftsmanship, reputation, self-reliance and deeds worth remembering. They tend to see the Gates as another frontier to enter, understand and master.\n\nThe Holds back people who can build, fix and endure:\n\n- shipwrights and engineers;\n- smiths, riggers and other skilled workers;\n- warriors;\n- anyone whose work would carry a Vardic maker's mark with pride.\n\nTheir sponsorship comes as training, tools and practical support rather than paperwork.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Vardic to be sponsored by the Holds: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Built to Endure**\n> Once per session, when you **Create an Advantage** using **Crafts** by repairing, reinforcing, modifying or improvising equipment, you may treat a **tie** as a **success with one free invoke** instead.\n\nThe benefit represents Vardic training, tools or practical sponsorship. It only changes a tie: a failure is still a failure.\n\n> **Example.** The crew's winch jams halfway down a shaft. Sigrun rolls Crafts to rig it with spare chain and ties. With Built to Endure the repair holds properly: the crew gets the Aspect *Chain-Rigged Winch* with a free invoke.\n\n### Expectations\n\nThe Holds may expect the people they back to:\n\n- keep the oaths they swear;\n- do work worthy of a maker's mark;\n- uphold the reputation of whoever vouched for them;\n- help other Vardic workers in Endros when asked.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)) and write it and its Extra in the Extras section of your character sheet.",
+    "details": "### Lore\n\nThe Vardic Holds are a loose federation of industrial northern jarldoms whose culture values craftsmanship, reputation, self-reliance and deeds worth remembering. They tend to see the Gates as another frontier to enter, understand and master.\n\nThe Holds back people who can build, fix and endure:\n\n- shipwrights and engineers;\n- smiths, riggers and other skilled workers;\n- warriors;\n- anyone whose work would carry a Vardic maker's mark with pride.\n\nTheir sponsorship comes as training, tools and practical support rather than paperwork.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Vardic to be sponsored by the Holds: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Built to Endure**\n> Once per session, when you **Create an Advantage** using **Crafts** by repairing, reinforcing, modifying or improvising equipment, you may treat a **tie** as a **success with one free invoke** instead.\n\nThe benefit represents Vardic training, tools or practical sponsorship. It only changes a tie: a failure is still a failure.\n\n> **Example.** The crew's winch jams halfway down a shaft. Sigrun rolls Crafts to rig it with spare chain and ties. With Built to Endure the repair holds properly: the crew gets the Aspect *Chain-Rigged Winch* with a free invoke.\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nThe Holds may expect the people they back to:\n\n- keep the oaths they swear;\n- do work worthy of a maker's mark;\n- uphold the reputation of whoever vouched for them;\n- help other Vardic workers in Endros when asked.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)): pick it as your Sponsor on your character sheet: you receive its Pack, and its Extra is written into your Extras for you.",
     "tags": [
       "Recruitment Faction",
       "Vardic Holds",
@@ -255,8 +288,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 10,
-    "image": null
+    "order": 11,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-aurelian-empire",
@@ -264,7 +298,7 @@
     "title": "Aurelian Empire",
     "category": "Recruitment Factions",
     "summary": "The **Aurelian Empire** is a powerful maritime empire of navy, bureaucracy and standardization. Its recruits get **Properly Provisioned**: once per session, bring one item from your Personal Stash into action for free.",
-    "details": "### Lore\n\nThe Aurelian Empire is a powerful maritime empire defined by its navy, its bureaucracy, standardization, etiquette and the belief that power creates responsibility. Aurelia treats magic as a strategic asset that needs responsible administration, and it wants capable people where that magic is found.\n\nImperial sponsorship is thorough. It comes with logistics, manifests, standardized supply and contingency plans, and it reaches:\n\n- officers and administrators;\n- engineers and technicians;\n- specialists of every kind, properly equipped.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Aurelian to be sponsored by Aurelia: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Properly Provisioned**\n> Once per session, bring one item from your Personal Stash into action **without paying** the normal Stress or Fate Point cost.\n\nNormally, declaring mid-expedition that you had an item with you after all costs 1 stress, or a Fate Point if it takes you over your carry limit (see *Forgot something?* in [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)). Properly Provisioned waives that cost once per session. The item still has to be in your Personal Stash, and once produced it counts as brought into action like any other.\n\n> **Example.** Halfway up a cliff, Aldric realises his climbing kit is back in Endros. It isn't, of course: the manifest says it was packed. He marks it as brought into action and pays nothing.\n\n### Expectations\n\nImperial sponsors may expect their people to:\n\n- keep proper records, manifests and reports;\n- maintain issued equipment to standard;\n- conduct themselves with proper etiquette, especially before officials;\n- report magical discoveries so they can be responsibly administered.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)) and write it and its Extra in the Extras section of your character sheet.",
+    "details": "### Lore\n\nThe Aurelian Empire is a powerful maritime empire defined by its navy, its bureaucracy, standardization, etiquette and the belief that power creates responsibility. Aurelia treats magic as a strategic asset that needs responsible administration, and it wants capable people where that magic is found.\n\nImperial sponsorship is thorough. It comes with logistics, manifests, standardized supply and contingency plans, and it reaches:\n\n- officers and administrators;\n- engineers and technicians;\n- specialists of every kind, properly equipped.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Aurelian to be sponsored by Aurelia: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Properly Provisioned**\n> Once per session, bring one item from your Personal Stash into action **without paying** the normal Stress or Fate Point cost.\n\nNormally, declaring mid-expedition that you had an item with you after all costs 1 stress, or a Fate Point if it takes you over your Active Pack's Carry Limit (see *Forgot something?* in [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)). Properly Provisioned waives that cost once per session. The item still has to be in your Personal Stash, and once produced it counts as brought into action like any other.\n\n> **Example.** Halfway up a cliff, Aldric realises his climbing kit is back in Endros. It isn't, of course: the manifest says it was packed. He marks it as brought into action and pays nothing.\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nImperial sponsors may expect their people to:\n\n- keep proper records, manifests and reports;\n- maintain issued equipment to standard;\n- conduct themselves with proper etiquette, especially before officials;\n- report magical discoveries so they can be responsibly administered.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)): pick it as your Sponsor on your character sheet: you receive its Pack, and its Extra is written into your Extras for you.",
     "tags": [
       "Recruitment Faction",
       "Aurelian Empire",
@@ -275,8 +309,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 11,
-    "image": null
+    "order": 12,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-vesper-republic",
@@ -284,7 +319,7 @@
     "title": "Vesper Republic",
     "category": "Recruitment Factions",
     "summary": "The **Vesper Republic** is a young revolutionary republic of citizenship, public argument and inquiry. Its recruits get **Someone Knows Someone**: once per session, a useful contact through the sponsor or one of its societies.",
-    "details": "### Lore\n\nThe Vesper Republic is a young revolutionary republic built around citizenship, public argument, inquiry and the belief that institutions must justify themselves. Vesper strongly resists monopolies over magical knowledge, and it would rather send its own people to the Gates than leave them to others.\n\nVesperian sponsorship usually comes through the Republic's affiliated societies, which open doors for:\n\n- scientists, inventors and engineers;\n- physicians and natural philosophers;\n- citizens with a cause worth arguing for.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Vesperian to be sponsored by Vesper: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Someone Knows Someone**\n> Once per session, establish that your Vesperian sponsor or one of its affiliated societies provided a **reasonable, useful contact** relevant to the problem.\n\nThe contact may provide information, an introduction or limited assistance. They may **not** solve the main problem, bypass a major obstacle, or know impossible secrets simply because you used this Extra. The GM decides who the contact is and what they can reasonably offer.\n\n> **Example.** The crew needs to read the markings on a salvaged instrument. Odile uses Someone Knows Someone: a member of a society her sponsor works with has seen similar markings, and can tell the crew what kind of device it is. Working out how it functions is still up to them.\n\n> **Working design.** This Extra may still change before the campaign starts.\n\n### Expectations\n\nVesperian sponsors may expect their people to:\n\n- share what they learn rather than hoard it;\n- make their case openly when they disagree;\n- return favours to the societies and contacts who help them;\n- question institutions that can't justify themselves.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)) and write it and its Extra in the Extras section of your character sheet.",
+    "details": "### Lore\n\nThe Vesper Republic is a young revolutionary republic built around citizenship, public argument, inquiry and the belief that institutions must justify themselves. Vesper strongly resists monopolies over magical knowledge, and it would rather send its own people to the Gates than leave them to others.\n\nVesperian sponsorship usually comes through the Republic's affiliated societies, which open doors for:\n\n- scientists, inventors and engineers;\n- physicians and natural philosophers;\n- citizens with a cause worth arguing for.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Vesperian to be sponsored by Vesper: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Someone Knows Someone**\n> Once per session, establish that your Vesperian sponsor or one of its affiliated societies provided a **reasonable, useful contact** relevant to the problem.\n\nThe contact may provide information, an introduction or limited assistance. They may **not** solve the main problem, bypass a major obstacle, or know impossible secrets simply because you used this Extra. The GM decides who the contact is and what they can reasonably offer.\n\n> **Example.** The crew needs to read the markings on a salvaged instrument. Odile uses Someone Knows Someone: a member of a society her sponsor works with has seen similar markings, and can tell the crew what kind of device it is. Working out how it functions is still up to them.\n\n> **Working design.** This Extra may still change before the campaign starts.\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nVesperian sponsors may expect their people to:\n\n- share what they learn rather than hoard it;\n- make their case openly when they disagree;\n- return favours to the societies and contacts who help them;\n- question institutions that can't justify themselves.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)): pick it as your Sponsor on your character sheet: you receive its Pack, and its Extra is written into your Extras for you.",
     "tags": [
       "Recruitment Faction",
       "Vesper Republic",
@@ -295,8 +330,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 12,
-    "image": null
+    "order": 13,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-kharad-compact",
@@ -304,7 +340,7 @@
     "title": "Kharad Compact",
     "category": "Recruitment Factions",
     "summary": "The **Kharad Compact** is a league of mercantile city-states, banks and merchant houses. Its recruits get **Established Credit**: an extra Mild Consequence slot, Minor Obligation, that covers a cost of up to 2 Coins now, paid back later with a finished Project.",
-    "details": "### Lore\n\nThe Kharad Compact is a league of mercantile city-states, banks, merchant houses and treaty networks whose civilization prizes agreement, reputation, patient negotiation and honest measure. Kharad sees the Gate era as a new world of value, risk, credit and exchange.\n\nKharadi sponsorship is a relationship with a merchant house, guild, bank, captain or intermediary that thinks your work will create value. They back:\n\n- traders, agents and assessors;\n- captains and crews;\n- specialists whose finds could be worth something.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Kharadi to be sponsored by the Compact: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Established Credit**\n> You have an extra **Mild Consequence slot**, called **Minor Obligation**. When you would pay **up to 2 Coins**, you can fill the slot instead: a merchant house, guild, bank, captain or intermediary covers the cost for you.\n\nWrite the debt, favour or contract in the slot, as an Aspect. The slot only ever holds obligations, never injuries, and while it's filled you can't use it again. You pay it back by **completing a Project and offering its result to the Kharad Compact**: the item, the finding or the finished work goes to your creditor instead of to you. Until then, the GM may let the obligation surface as a complication.\n\n> **Example.** Yusra is 2 Coins short of a diving rig. A Kharadi chandler lets her take it on account, and she writes *Owes the Chandler a Favour* in her Minor Obligation slot. It stays there until she finishes a Personal Project, a set of Vaultvine climbing harnesses, and hands them to the chandler's house instead of keeping them.\n\n> **Working design.** This Extra may still change before the campaign starts.\n\n### Expectations\n\nKharadi sponsors may expect their people to:\n\n- honour every agreement they make;\n- deal in honest measure;\n- settle their obligations, on time or by negotiation;\n- protect their sponsor's reputation, and their own.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)) and write it and its Extra in the Extras section of your character sheet.",
+    "details": "### Lore\n\nThe Kharad Compact is a league of mercantile city-states, banks, merchant houses and treaty networks whose civilization prizes agreement, reputation, patient negotiation and honest measure. Kharad sees the Gate era as a new world of value, risk, credit and exchange.\n\nKharadi sponsorship is a relationship with a merchant house, guild, bank, captain or intermediary that thinks your work will create value. They back:\n\n- traders, agents and assessors;\n- captains and crews;\n- specialists whose finds could be worth something.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be Kharadi to be sponsored by the Compact: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Established Credit**\n> You have an extra **Mild Consequence slot**, called **Minor Obligation**. When you would pay **up to 2 Coins**, you can fill the slot instead: a merchant house, guild, bank, captain or intermediary covers the cost for you.\n\nWrite the debt, favour or contract in the slot, as an Aspect. The slot only ever holds obligations, never injuries, and while it's filled you can't use it again. You pay it back by **completing a Project and offering its result to the Kharad Compact**: the item, the finding or the finished work goes to your creditor instead of to you. Until then, the GM may let the obligation surface as a complication.\n\n> **Example.** Yusra is 2 Coins short of a diving rig. A Kharadi chandler lets her take it on account, and she writes *Owes the Chandler a Favour* in her Minor Obligation slot. It stays there until she finishes a Personal Project, a set of Vaultvine climbing harnesses, and hands them to the chandler's house instead of keeping them.\n\n> **Working design.** This Extra may still change before the campaign starts.\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nKharadi sponsors may expect their people to:\n\n- honour every agreement they make;\n- deal in honest measure;\n- settle their obligations, on time or by negotiation;\n- protect their sponsor's reputation, and their own.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)): pick it as your Sponsor on your character sheet: you receive its Pack, and its Extra is written into your Extras for you.",
     "tags": [
       "Recruitment Faction",
       "Kharad Compact",
@@ -315,8 +351,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 13,
-    "image": null
+    "order": 14,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "faction-tianzhao-mandate",
@@ -324,7 +361,7 @@
     "title": "Tianzhao Mandate",
     "category": "Recruitment Factions",
     "summary": "The **Tianzhao Mandate** is an ancient bureaucratic civilization shaped by harmony, long-term consequence and celestial order. Its recruits get **Restorative Care**: +1 Progress on one Recovery Project Action between expeditions.",
-    "details": "### Lore\n\nThe Tianzhao Mandate is an ancient bureaucratic civilization whose politics and culture are shaped by harmony, long-term consequence, celestial order and a practical, administrative approach to the spirits it believes in. Tianzhao first read the Gates through its own ideas of the Spirit and Celestial realms, and it sends people to learn what they really are.\n\nIts sponsorship comes with access to Tianzhao physicians, medicines, therapeutic traditions and spiritual care, and it supports:\n\n- officials and scholars;\n- physicians and engineers;\n- specialists whose work touches the spirit world.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be from Tianzhao to be sponsored by the Mandate: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Restorative Care**\n> Once per between-expedition period, when you make progress on a **Recovery Project** for one of **your own** Consequences, gain **+1 additional Progress**.\n\nSay how Tianzhao care helps: a physician's treatment, a medicine, a therapeutic practice, a rite. It applies only to Recovery Projects for your own Consequences (see [Consequences & Recovery](game.html#post-consequences-and-recovery)). A \"between-expedition period\" is the time between one expedition and the next.\n\n> **Example.** Wen works on the Recovery Project *Set the Bone* for a broken leg, with the help of a Tianzhao physician's treatment. The Project Action succeeds for 2 Progress, and Restorative Care adds 1 more.\n\n### Expectations\n\nThe Mandate may expect the people it sponsors to:\n\n- weigh the long-term consequences of what they do;\n- show proper respect to officials, ancestors and spirits;\n- keep harmony within their crew;\n- report what the Gates reveal about the Spirit and Celestial realms.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)) and write it and its Extra in the Extras section of your character sheet.",
+    "details": "### Lore\n\nThe Tianzhao Mandate is an ancient bureaucratic civilization whose politics and culture are shaped by harmony, long-term consequence, celestial order and a practical, administrative approach to the spirits it believes in. Tianzhao first read the Gates through its own ideas of the Spirit and Celestial realms, and it sends people to learn what they really are.\n\nIts sponsorship comes with access to Tianzhao physicians, medicines, therapeutic traditions and spiritual care, and it supports:\n\n- officials and scholars;\n- physicians and engineers;\n- specialists whose work touches the spirit world.\n\nA Recruitment Faction is who sponsored your character, not where they come from. You don't need to be from Tianzhao to be sponsored by the Mandate: your character may belong to the culture, come from somewhere else, disagree with its politics, or simply have been recruited by one of its institutions.\n\n### Recruitment Extra\n\n> **Restorative Care**\n> Once per between-expedition period, when you make progress on a **Recovery Project** for one of **your own** Consequences, gain **+1 additional Progress**.\n\nSay how Tianzhao care helps: a physician's treatment, a medicine, a therapeutic practice, a rite. It applies only to Recovery Projects for your own Consequences (see [Consequences & Recovery](game.html#post-consequences-and-recovery)). A \"between-expedition period\" is the time between one expedition and the next.\n\n> **Example.** Wen works on the Recovery Project *Set the Bone* for a broken leg, with the help of a Tianzhao physician's treatment. The Project Action succeeds for 2 Progress, and Restorative Care adds 1 more.\n\n### Expedition Pack\n\n{{expedition-pack}}\n\n### Expectations\n\nThe Mandate may expect the people it sponsors to:\n\n- weigh the long-term consequences of what they do;\n- show proper respect to officials, ancestors and spirits;\n- keep harmony within their crew;\n- report what the Gates reveal about the Spirit and Celestial realms.\n\nThese are hooks for roleplay, and possible Compels. They are not automatic penalties.\n\nChoose your Recruitment Faction when you create your character (see [Creating an Expeditioner](game.html#post-creating-an-expeditioner)): pick it as your Sponsor on your character sheet: you receive its Pack, and its Extra is written into your Extras for you.",
     "tags": [
       "Recruitment Faction",
       "Tianzhao Mandate",
@@ -335,8 +372,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 14,
-    "image": null
+    "order": 15,
+    "image": null,
+    "sponsor": true
   },
   {
     "id": "projects",
@@ -360,8 +398,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 15,
-    "image": null
+    "order": 16,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "project-requirements-and-complications",
@@ -383,8 +422,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 16,
-    "image": null
+    "order": 17,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "research",
@@ -407,8 +447,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 17,
-    "image": null
+    "order": 18,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "consequences-and-recovery",
@@ -432,8 +473,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 18,
-    "image": null
+    "order": 19,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "domains",
@@ -462,8 +504,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 19,
-    "image": null
+    "order": 20,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "resources",
@@ -498,8 +541,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 20,
-    "image": null
+    "order": 21,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "resource-functions",
@@ -526,8 +570,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 21,
-    "image": null
+    "order": 22,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "material-engineering",
@@ -550,8 +595,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 22,
-    "image": null
+    "order": 23,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "personal-stash-and-crafting",
@@ -559,7 +605,7 @@
     "title": "Personal Stash & Crafting",
     "category": "For Crafters & Artificers",
     "summary": "A Personal Project can create, modify or restore an item for your character. When it is finished, the item goes into your **Personal Stash**, but making one working item doesn't make it available to everyone in Endros.",
-    "details": "### Making an item\n\nUse a Personal Project (see [Projects](game.html#post-projects)) to:\n\n- **create** a new item;\n- **modify** an item you already have;\n- **restore** a damaged item or an artifact.\n\nThe Project's Requirements often include Resources with particular Functions (see [Resource Functions](game.html#post-resource-functions)). When the Project is complete, the item is added to your **Personal Stash**, and it counts towards your carry limit like any other Gear (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\n### One item is not a product line\n\nCreating a working item gives **you** that item. It doesn't mean Endros can make more.\n\n> **Example.** Ines finishes a Personal Project and creates **Gate-Silk Armor**. She owns the prototype and can wear it on her next expedition. Nobody else can buy Gate-Silk Armor yet.\n>\n> If the crews want it to become generally available, someone needs to start a **Marketplace Project**, and Ines's prototype might be one of its Requirements.\n\n### Summary\n\n| Project | Result |\n| --- | --- |\n| **Personal Project** | One item, in your Personal Stash. |\n| **Marketplace Project** | The item can be bought by everyone. See [Marketplace Development](game.html#post-marketplace-development). |",
+    "details": "### Making an item\n\nUse a Personal Project (see [Projects](game.html#post-projects)) to:\n\n- **create** a new item;\n- **modify** an item you already have;\n- **restore** a damaged item or an artifact.\n\nThe Project's Requirements often include Resources with particular Functions (see [Resource Functions](game.html#post-resource-functions)). When the Project is complete, the item is added to your **Personal Stash**, and it counts toward your Active Pack's Carry Limit like any other Gear when you bring it into action (see [Coins, Marketplace & Personal Stash](game.html#post-coins-marketplace-and-personal-stash)).\n\n### One item is not a product line\n\nCreating a working item gives **you** that item. It doesn't mean Endros can make more.\n\n> **Example.** Ines finishes a Personal Project and creates **Gate-Silk Armor**. She owns the prototype and can wear it on her next expedition. Nobody else can buy Gate-Silk Armor yet.\n>\n> If the crews want it to become generally available, someone needs to start a **Marketplace Project**, and Ines's prototype might be one of its Requirements.\n\n### Summary\n\n| Project | Result |\n| --- | --- |\n| **Personal Project** | One item, in your Personal Stash. |\n| **Marketplace Project** | The item can be bought by everyone. See [Marketplace Development](game.html#post-marketplace-development). |",
     "tags": [
       "Personal Stash",
       "Items",
@@ -573,8 +619,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 23,
-    "image": null
+    "order": 24,
+    "image": null,
+    "sponsor": false
   },
   {
     "id": "spellcasting",
@@ -603,8 +650,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 24,
-    "image": null
+    "order": 25,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "spell-innovation",
@@ -626,8 +674,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 25,
-    "image": null
+    "order": 26,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "outpost-capabilities",
@@ -652,8 +701,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 26,
-    "image": null
+    "order": 27,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "facilities-and-outpost-development",
@@ -676,8 +726,9 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 27,
-    "image": null
+    "order": 28,
+    "image": null,
+    "sponsor": null
   },
   {
     "id": "marketplace-development",
@@ -700,7 +751,8 @@
     "publishedAt": "",
     "pinned": false,
     "showUntil": "",
-    "order": 28,
-    "image": null
+    "order": 29,
+    "image": null,
+    "sponsor": null
   }
 ]

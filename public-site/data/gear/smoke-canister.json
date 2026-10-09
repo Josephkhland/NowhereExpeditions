@@ -1,0 +1,22 @@
+{
+  "id": "smoke-canister",
+  "name": "Smoke Canister",
+  "category": "tactical",
+  "description": "One canister of thick white smoke.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Smoke",
+    "Concealment",
+    "Area"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

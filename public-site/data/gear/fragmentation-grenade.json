@@ -1,0 +1,23 @@
+{
+  "id": "fragmentation-grenade",
+  "name": "Fragmentation Grenade",
+  "category": "tactical",
+  "description": "One fragmentation grenade.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Explosive",
+    "Area",
+    "Shrapnel",
+    "Loud"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

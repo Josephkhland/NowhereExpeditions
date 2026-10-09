@@ -1,0 +1,52 @@
+{
+  "id": "university-field-pack",
+  "name": "University Field Pack",
+  "description": "Packed for fieldwork that ends in a report: notebooks and specimen jars take the place of rope and a knife.",
+  "sponsorId": "faction-university-of-verna",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 2,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "field-notebook",
+      "quantity": 2
+    },
+    {
+      "gearId": "specimen-jar",
+      "quantity": 3
+    }
+  ]
+}

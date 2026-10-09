@@ -1,0 +1,52 @@
+{
+  "id": "nowhere-expeditions-pack",
+  "name": "Nowhere Expeditions Pack",
+  "description": "The kit the company issues to its recruits: the essentials, a rope and a full roll of bandages for emergencies.",
+  "sponsorId": "faction-nowhere-expeditions",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 1,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "rope",
+      "quantity": 1
+    },
+    {
+      "gearId": "bandage",
+      "quantity": 5
+    }
+  ]
+}

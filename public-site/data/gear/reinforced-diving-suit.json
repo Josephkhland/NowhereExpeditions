@@ -1,0 +1,24 @@
+{
+  "id": "reinforced-diving-suit",
+  "name": "Reinforced Diving Suit",
+  "category": "protective",
+  "description": "A riveted canvas-and-copper suit. Works with a Diving Mask & Regulator.",
+  "price": 1,
+  "weight": 3,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Armor",
+    "Diving",
+    "Waterproof",
+    "Pressure",
+    "Heavy"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 2
+}

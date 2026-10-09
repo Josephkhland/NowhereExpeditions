@@ -1,0 +1,20 @@
+{
+  "id": "bandage",
+  "name": "Bandage",
+  "category": "medical",
+  "description": "One clean bandage for binding a wound.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Consumable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

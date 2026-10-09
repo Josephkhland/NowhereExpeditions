@@ -1,0 +1,27 @@
+{
+  "id": "wire-trap-kit",
+  "name": "Wire Trap Kit",
+  "category": "tactical",
+  "description": "Wire snares and stakes. Whether they hold depends on what walks into them.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Triggered",
+    "Restraining",
+    "Concealable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "wire-snare",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

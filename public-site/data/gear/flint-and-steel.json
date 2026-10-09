@@ -1,0 +1,20 @@
+{
+  "id": "flint-and-steel",
+  "name": "Flint & Steel",
+  "category": "exploration",
+  "description": "Strikes sparks to light a fire.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Incendiary"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

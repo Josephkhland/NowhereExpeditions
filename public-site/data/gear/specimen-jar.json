@@ -1,0 +1,21 @@
+{
+  "id": "specimen-jar",
+  "name": "Specimen Jar",
+  "category": "scientific",
+  "description": "A small corked glass jar for samples.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Sampling",
+    "Fragile"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

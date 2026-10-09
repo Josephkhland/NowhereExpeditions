@@ -1,0 +1,64 @@
+{
+  "id": "aurelian-empire-pack",
+  "name": "Aurelian Empire Pack",
+  "description": "Standard issue, packed to a manifest: a rope, a notebook for the records, and a kettle, mug and tea, because a properly provisioned expedition makes tea.",
+  "sponsorId": "faction-aurelian-empire",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 5,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 1
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "rope",
+      "quantity": 1
+    },
+    {
+      "gearId": "field-notebook",
+      "quantity": 1
+    },
+    {
+      "gearId": "kettle",
+      "quantity": 1
+    },
+    {
+      "gearId": "mug",
+      "quantity": 1
+    },
+    {
+      "gearId": "tea-leaves",
+      "quantity": 3
+    }
+  ]
+}

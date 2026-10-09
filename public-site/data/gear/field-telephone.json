@@ -1,0 +1,22 @@
+{
+  "id": "field-telephone",
+  "name": "Field Telephone Set",
+  "category": "communication",
+  "description": "Two field telephones and a drum of cable: for when radio fails.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Communication",
+    "Wired",
+    "Reliable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

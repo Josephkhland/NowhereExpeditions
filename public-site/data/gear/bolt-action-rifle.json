@@ -1,0 +1,23 @@
+{
+  "id": "bolt-action-rifle",
+  "name": "Bolt-Action Rifle",
+  "category": "weapon",
+  "description": "A bolt-action service rifle.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Long Range",
+    "Ballistic",
+    "Precise",
+    "Loud"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

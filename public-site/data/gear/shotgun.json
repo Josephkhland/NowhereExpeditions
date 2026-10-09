@@ -1,0 +1,24 @@
+{
+  "id": "shotgun",
+  "name": "Shotgun",
+  "category": "weapon",
+  "description": "A double-barrelled shotgun.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Ranged",
+    "Ballistic",
+    "Scatter",
+    "Breaching",
+    "Loud"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

@@ -1,0 +1,28 @@
+{
+  "id": "dynamite-bundle",
+  "name": "Dynamite Bundle",
+  "category": "tactical",
+  "description": "Three sticks of mining dynamite with fuses. Crude, flexible, and not fond of rough handling.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Explosive",
+    "Breaching",
+    "Loud",
+    "Unstable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "dynamite-stick",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

@@ -1,0 +1,56 @@
+{
+  "id": "kharad-compact-pack",
+  "name": "Kharad Compact Pack",
+  "description": "A trader's field kit: a second canteen, fire-making kit and a notebook to keep honest accounts.",
+  "sponsorId": "faction-kharad-compact",
+  "starting": true,
+  "carryLimit": 6,
+  "price": 1,
+  "sponsorPrice": 0,
+  "availability": "common",
+  "image": null,
+  "featured": false,
+  "order": 7,
+  "contents": [
+    {
+      "gearId": "lantern",
+      "quantity": 1
+    },
+    {
+      "gearId": "lantern-oil",
+      "quantity": 3
+    },
+    {
+      "gearId": "ration",
+      "quantity": 5
+    },
+    {
+      "gearId": "bedroll",
+      "quantity": 1
+    },
+    {
+      "gearId": "canteen",
+      "quantity": 2
+    },
+    {
+      "gearId": "expedition-compass",
+      "quantity": 1
+    },
+    {
+      "gearId": "ear-plugs",
+      "quantity": 1
+    },
+    {
+      "gearId": "rope",
+      "quantity": 1
+    },
+    {
+      "gearId": "field-notebook",
+      "quantity": 1
+    },
+    {
+      "gearId": "flint-and-steel",
+      "quantity": 1
+    }
+  ]
+}

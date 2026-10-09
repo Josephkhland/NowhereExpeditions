@@ -1,0 +1,22 @@
+{
+  "id": "heavy-leather-coat",
+  "name": "Heavy Leather Coat",
+  "category": "protective",
+  "description": "A long coat of thick oiled leather.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Armor",
+    "Cutting",
+    "Weatherproof"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 1
+}

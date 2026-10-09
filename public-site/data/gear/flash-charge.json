@@ -1,0 +1,23 @@
+{
+  "id": "flash-charge",
+  "name": "Flash Charge",
+  "category": "tactical",
+  "description": "One magnesium flash charge.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Light",
+    "Loud",
+    "Disorienting",
+    "Area"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

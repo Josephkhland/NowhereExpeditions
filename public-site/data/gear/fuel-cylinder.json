@@ -1,0 +1,27 @@
+{
+  "id": "fuel-cylinder",
+  "name": "Fuel Cylinder",
+  "category": "supplies",
+  "description": "A spare pressurized fuel cylinder for a flamethrower. A damaged one may vent, ignite, feed a fire or rupture; it doesn't simply explode.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Fuel",
+    "Flammable",
+    "Pressurized"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "flamethrower-fuel",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

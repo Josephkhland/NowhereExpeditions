@@ -1,0 +1,22 @@
+{
+  "id": "tripflare",
+  "name": "Tripflare",
+  "category": "tactical",
+  "description": "One flare on a tripwire.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Triggered",
+    "Signal",
+    "Light"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

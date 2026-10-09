@@ -1,0 +1,22 @@
+{
+  "id": "noise-maker",
+  "name": "Noise Maker",
+  "category": "tactical",
+  "description": "One tripwire rattle or clockwork bell.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Triggered",
+    "Loud",
+    "Distraction"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

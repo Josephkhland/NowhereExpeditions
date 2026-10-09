@@ -1,0 +1,27 @@
+{
+  "id": "pressurized-air-tank",
+  "name": "Pressurized Air Tank",
+  "category": "exploration",
+  "description": "Breathing air for diving, smoke or enclosed spaces. A ruptured tank is dangerous, but it isn't a bomb.",
+  "price": 0,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Breathing",
+    "Pressurized",
+    "Bulky"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [
+    {
+      "gearId": "air-supply",
+      "quantity": 3
+    }
+  ],
+  "armorBoxes": 0
+}

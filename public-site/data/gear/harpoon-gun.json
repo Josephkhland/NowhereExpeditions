@@ -1,0 +1,23 @@
+{
+  "id": "harpoon-gun",
+  "name": "Harpoon Gun",
+  "category": "weapon",
+  "description": "A gas-charged harpoon gun on a line, for hauling in what it hits.",
+  "price": 1,
+  "weight": 2,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Ranged",
+    "Piercing",
+    "Tether",
+    "Retrieval"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

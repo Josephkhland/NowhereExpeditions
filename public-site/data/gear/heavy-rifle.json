@@ -1,0 +1,24 @@
+{
+  "id": "heavy-rifle",
+  "name": "Heavy Rifle",
+  "category": "weapon",
+  "description": "A large-calibre big-game rifle, for what ordinary rounds won't stop.",
+  "price": 1,
+  "weight": 3,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Long Range",
+    "Ballistic",
+    "Heavy",
+    "Breaching",
+    "Loud"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}

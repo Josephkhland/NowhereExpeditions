@@ -10,5 +10,7 @@
   "stash": [],
   "coins": 0,
   "downtime": 0,
-  "carryLimit": 6
+  "sponsorId": null,
+  "packs": [],
+  "carryModifier": 0
 }

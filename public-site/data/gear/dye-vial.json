@@ -1,0 +1,21 @@
+{
+  "id": "dye-vial",
+  "name": "Dye Vial",
+  "category": "tactical",
+  "description": "One vial of bright, long-lasting marking dye.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Marking",
+    "Persistent"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

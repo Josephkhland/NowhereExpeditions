@@ -1,0 +1,21 @@
+{
+  "id": "expedition-compass",
+  "name": "Expedition Compass",
+  "category": "exploration",
+  "description": "A brass field compass with a second needle. Within an operational radius of an active Gate, the secondary needle points toward the Gate: a way back, a warning when a Gate shifts, and a hint when something is wrong with the ground under you. Some Gates make it behave strangely.",
+  "price": 0,
+  "weight": 0,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Navigation",
+    "Gate-Sense"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [],
+  "armorBoxes": 0
+}

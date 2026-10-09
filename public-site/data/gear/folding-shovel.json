@@ -1,0 +1,21 @@
+{
+  "id": "folding-shovel",
+  "name": "Folding Shovel",
+  "category": "exploration",
+  "description": "A folding entrenching shovel.",
+  "price": 0,
+  "weight": 1,
+  "availability": "common",
+  "image": null,
+  "tags": [
+    "Digging",
+    "Clearing"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": true,
+  "contents": [],
+  "armorBoxes": 0
+}
