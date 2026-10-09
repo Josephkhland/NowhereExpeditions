@@ -88,7 +88,7 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | `marketplace.html`, the **Marketplace** | Featured Gear carousel and the full price list (grid or list view), with prices in Coins, weights and availability. |
 | `characters.html`, **Characters** | Player characters and NPCs ("Known Figures", e.g. the Gate Evaluation Committee's Senior Evaluator), profiles, Fate sheets (with clickable skill rolls), Personal Stash, Projects, "Create new character", and **In the Archive**: every Archive entry that links to the character with `[Name](characters.html#id)`. NPCs show no empty stash or job history. |
 | `game.html`, **Rules & News** | Announcements and the rules reader. Rules are grouped into **learning paths**, starting with Onboarding, and each rule links to the next. |
-| `sheet.html`, the **character sheet** | An editable Fate sheet that runs in the browser. Players fill it in or update it, press **Save file** (JSON) and send the file to the GM, who imports it. It includes a Marketplace tab for buying Gear and carry-limit tracking. |
+| `sheet.html`, the **character sheet** | An editable Fate sheet that runs in the browser. Players fill it in or update it, press **Save file** (JSON) and send the file to the GM, who imports it. It includes the Sponsor choice, the Active Expedition Pack (with what is left inside it), a Marketplace tab for buying Packs and Gear, and Carry Limit tracking. |
 | `rules.html`, `island.html`, `gates.html`, `expeditions.html` | Redirect stubs from old addresses. |
 
 **Site-wide features:**
@@ -121,7 +121,8 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 | Collection | Represents | Notes |
 | --- | --- | --- |
 | **Factions** | Countries, powers and sponsors | Name, aliases, descriptor, identity, government, values, Gate attitude, beliefs and history summaries, visual notes, relations to other factions, the Recruitment Faction rule it links to plus a compact Extra, and images (flag, homeland, gallery, clothing). Archive entries name their factions (`factionIds`, many-to-many), and the faction page lists them automatically. Schema v9. |
-| **Characters** | PCs and NPCs | Optional Fate sheet, Personal Stash (Gear × quantity, "brought into action"), Coins, Downtime, Projects. |
+| **Characters** | PCs and NPCs | Optional Fate sheet, Sponsor, owned Expedition Packs (one active, each with its remaining contents), Personal Stash (Gear × quantity, "brought into action"), Coins, Downtime, Projects. |
+| **Expedition Packs** | Carrying setups | Sponsor, Carry Limit, price / Sponsor price, contents (Gear × quantity). One starting Pack per Sponsor. |
 | **Jobs** | Job Board listings | Type, schedule, crew and participants, optional link to a Session Record. |
 | **Archive** | Lore entries | Structural types: gate-record, session-record, newspaper, lore. What a lore entry is about is its **topics** (suggested: History, Folklore, Religion, Politics, Technology, Culture, Notable People, Institutions, Events, Diplomacy; others can be added). Schema v10 turned the old History and Folklore types into lore entries with that topic. Gate Records add a designation, status (incl. restricted, quarantined), Core state, access, significance, Domains (environments only), environment, traits, hazards, locations, creatures, and a poster image with caption. Session records and newspapers can name **Gates** (`details.gateIds`); Jobs have a `gateId`. Any entry can name the factions it is about. Free-text search tags are separate from topics. |
 | **Gear** | Marketplace items | Category, price, sale price, weight, availability, featured flag. |
@@ -164,7 +165,7 @@ The campaign uses **Fate Core**: Aspects, Skills on the ladder (Mediocre +0 to G
 
 ### The two loops
 
-- **Expedition Loop:** Job Board, then **Preparation**, then **Exploration**, then **Return**. During Preparation the crew reads the Archive, picks Gear within its carry limit and considers the Gate's Domain. During Exploration they enter the Gate, learn its rules and pursue the objective. Return records discoveries, Resources, Cores, consequences, rewards and Downtime.
+- **Expedition Loop:** Job Board, then **Preparation**, then **Exploration**, then **Return**. During Preparation the crew reads the Archive, chooses each Active Pack, checks its supplies, picks extra Gear within its Carry Limit and considers the Gate's Domain. During Exploration they enter the Gate, learn its rules and pursue the objective. Return records discoveries, Resources, Cores, consequences, rewards and Downtime.
 - **Settlement Loop:** Downtime is spent on Projects, Research and recovery. Their results, and especially their Complications, create new jobs.
 
 Somewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so the crew may need to decide whether that is the goal.
@@ -197,8 +198,14 @@ Somewhere in each Gate is a **Core**. Recovering the Core collapses the Gate, so
 
 - **Starting Coins** equal your **Resources** rating (none at +0 or below). Buying costs no Downtime.
 - **After every expedition, refresh:** if your Coins are below your Resources rating, raise them to it. If you took part, refresh first, then add reward Coins.
-- **Personal Stash:** everything you own. Before an expedition you mark Gear as **brought into action**, up to a **carry limit of 6** (weight measures how hard something is to bring along, not mass).
-- **Forgot something?** You can produce an owned item mid-expedition. It costs 1 stress if it fits your carry limit, or 1 Fate Point if it takes you over.
+- **Personal Stash:** everything you own, including your **Expedition Packs**.
+- **Expedition Packs:** a Pack is your carrying setup with a fixed list of ordinary supplies inside (Rope, Lantern, Rations...). One is your **Active Pack**; it sets your **Carry Limit** (6 for every starting Pack), and its contents don't count toward it. Contents get used up, lost or left behind and stay gone until the GM restocks the Pack. Your Sponsor gives you its Pack free at creation; your own Sponsor's Packs cost 0 Coins, other Sponsors' 1 Coin.
+- **Gear Tags:** Gear has Tags (`Cutting`, `Breaching`, `Loud`, `Magnetic`, `Breathing`...) describing what it can do in the fiction. No numerical bonuses: creatures, hazards and Gates refer to Tags. Weapons have no damage numbers; ordinary ammunition isn't counted.
+- **Armor:** protective Gear may have 1–2 Armor boxes. When you'd take Physical Stress the Armor could reasonably stop, mark a box instead; it stays marked until repaired or replaced.
+- **Catalogue:** late-Victorian/Edwardian industrial: weapons (Machete, Revolver, Bolt-Action Rifle, Heavy Rifle, Harpoon Gun, Flamethrower...), Tactical & Demolition kits (Dynamite Bundle, Grenade Kit, Smoke Kit, Flare Kit...), Exploration, Scientific Instruments, Communication, Protective Equipment (Heavy Leather Coat, Steel Breastplate, Reinforced Diving Suit), Personal (Cigarette Carton). Most costs 0 Coins; weight is the real cost. Every Sponsor Pack has an Expedition Compass (its second needle points to the Gate within range) and Ear Plugs.
+- **Supplies and kits:** small supplies (a Ration, a Bandage, a flask of Lantern Oil; also Knife, Canteen, Flint & Steel, Field Notebook, Specimen Jar) are *components*: counted inside Packs, never sold alone. Extra supplies come as weighted kits: Rations Kit (weight 1, Ration ×5), Bandage Kit (weight 1, Bandage ×5), Lantern Oil Kit (weight 1, Lantern Oil ×3). Kits, Rope, Lantern and Bedroll cost 0 Coins. Each kit keeps its own count beside the Pack's.
+- **Brought into action:** before an expedition you mark additional Gear from your stash; its weight (how hard something is to bring along, not mass) can total up to your Active Pack's Carry Limit. Extra copies of something the Pack holds count normally.
+- **Forgot something?** You can produce an owned item mid-expedition. It costs 1 stress if it fits your Active Pack's Carry Limit, or 1 Fate Point if it takes you over.
 - **Personal Project vs Marketplace Project:** a Personal Project makes one item for you. A Marketplace Project makes the item buyable by everyone.
 
 ### Recruitment Factions

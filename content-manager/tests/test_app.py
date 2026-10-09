@@ -1,6 +1,8 @@
 import base64
 import json
+import shutil
 import sqlite3
+import subprocess
 import sys
 import threading
 import tempfile
@@ -277,6 +279,296 @@ class ContentStoreTests(unittest.TestCase):
         self.store.delete_record("characters", oren)
         self.store.delete_record("gear", lantern)
 
+    # --- Expedition Packs ---
+
+    def add_sponsor(self, title: str, **fields) -> str:
+        return self.store.save_record("game", None, {"type": "rule", "title": title, "category": "Recruitment Factions",
+                                                     "sponsor": True, "published": True, **fields})["id"]
+
+    def add_pack(self, name: str, **fields) -> str:
+        return self.store.save_record("packs", None, {"name": name, "published": True, **fields})["id"]
+
+    def test_packs_are_edited_in_the_manager_and_hold_real_gear(self) -> None:
+        verna = self.add_sponsor("University of Verna")
+        oil = self.add_gear("Lantern Oil", price=0, weight=0)
+        pack = self.add_pack("University Field Pack", sponsorId=verna, starting=True,
+                             contents=[{"gearId": "rope", "quantity": 1}, {"gearId": oil, "quantity": 2}, {"gearId": oil, "quantity": 1}])
+        record = self.record("packs", pack)
+        self.assertEqual((record["carryLimit"], record["price"], record["sponsorPrice"]), (6, 1, 0), "defaults: Carry Limit 6, 1 Coin, free for the Sponsor")
+        self.assertEqual(record["contents"], [{"gearId": "rope", "quantity": 1}, {"gearId": oil, "quantity": 3}], "the same Gear is listed once")
+        self.store.save_record("packs", pack, {**record, "carryLimit": 7, "description": "Issued at the laboratories."})
+        self.assertEqual(self.record("packs", pack)["carryLimit"], 7)
+
+        with self.assertRaisesRegex(ManagerError, "Unknown Gear in Pack contents"):
+            self.add_pack("Phantom Pack", contents=[{"gearId": "shovel", "quantity": 1}])
+        with self.assertRaisesRegex(ManagerError, "cannot contain another Pack"):
+            self.add_pack("Nested Pack", contents=[{"gearId": pack, "quantity": 1}])
+        with self.assertRaisesRegex(ManagerError, "already this Sponsor's starting Pack"):
+            self.add_pack("Second University Pack", sponsorId=verna, starting=True)
+        with self.assertRaisesRegex(ManagerError, "marked as a Sponsor"):
+            self.add_pack("Rule Pack", sponsorId="persistent-world")
+        with self.assertRaisesRegex(ManagerError, "Pack contents quantity"):
+            self.add_pack("Empty Pack", contents=[{"gearId": "rope", "quantity": 0}])
+        with self.assertRaisesRegex(ManagerError, "Pack .University Field Pack.* \\(contents\\)"):
+            self.store.delete_record("gear", oil)
+        with self.assertRaisesRegex(ManagerError, "Pack .University Field Pack."):
+            self.store.save_record("game", verna, {**self.record("game", verna), "sponsor": False})
+        loose = self.add_pack("Loose Pack", starting=True)
+        self.assertFalse(self.record("packs", loose)["starting"], "only a Sponsor's Pack can be a starting Pack")
+
+    def test_character_receives_their_sponsors_pack_and_keeps_its_state(self) -> None:
+        verna = self.add_sponsor("University of Verna")
+        company = self.add_sponsor("Nowhere Expeditions (the Company)")
+        oil = self.add_gear("Lantern Oil", price=0, weight=0)
+        field_pack = self.add_pack("University Field Pack", sponsorId=verna, starting=True, carryLimit=6,
+                                   contents=[{"gearId": "rope", "quantity": 1}, {"gearId": oil, "quantity": 2}])
+        company_pack = self.add_pack("Nowhere Expeditions Pack", sponsorId=company, starting=True, carryLimit=5,
+                                     contents=[{"gearId": "rope", "quantity": 2}])
+        mara = self.add_character("Mara", sponsorId=verna)
+        packs = self.record("characters", mara)["packs"]
+        self.assertEqual(packs, [{"id": "pack-1", "packId": field_pack, "active": True, "contents": [
+            {"gearId": "rope", "quantity": 1, "capacity": 1}, {"gearId": oil, "quantity": 2, "capacity": 2}]}],
+            "Sponsor selection gives one active instance of the Sponsor's Pack")
+
+        # Burn a flask of oil and leave the rope across a chasm; the Pack remembers.
+        packs[0]["contents"] = [{"gearId": "rope", "quantity": 0, "capacity": 1}, {"gearId": oil, "quantity": 1, "capacity": 2}]
+        self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": packs})
+        self.assertEqual([item["quantity"] for item in self.record("characters", mara)["packs"][0]["contents"]], [0, 1])
+        # Changing the definition never refills an existing Pack.
+        self.store.save_record("packs", field_pack, {**self.record("packs", field_pack), "contents": [{"gearId": oil, "quantity": 4}]})
+        self.assertEqual([item["quantity"] for item in self.record("characters", mara)["packs"][0]["contents"]], [0, 1])
+
+        # A second Pack bought later; only one can be active.
+        owned = self.record("characters", mara)["packs"] + [{"id": "pack-2", "packId": company_pack, "active": True,
+                                                              "contents": [{"gearId": "rope", "quantity": 2, "capacity": 2}]}]
+        with self.assertRaisesRegex(ManagerError, "Only one Pack can be the Active Pack"):
+            self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": owned})
+        owned[0]["active"] = False
+        self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": owned})
+        self.assertEqual([item["active"] for item in self.record("characters", mara)["packs"]], [False, True])
+        with self.assertRaisesRegex(ManagerError, "holds at most 2"):
+            owned[1]["contents"][0]["quantity"] = 3
+            self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": owned})
+        with self.assertRaisesRegex(ManagerError, "Unknown Pack"):
+            self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": [{"packId": "nothing"}]})
+        with self.assertRaisesRegex(ManagerError, "Character .Mara. \\(owned Packs\\)"):
+            self.store.delete_record("packs", company_pack)
+
+        self.assertEqual(self.record("characters", self.add_character("Drifter"))["packs"], [], "no Sponsor, no Pack")
+
+    def test_old_characters_without_packs_still_load(self) -> None:
+        # Public files written before Packs: a carry limit, no Sponsor, no Packs.
+        write_json(self.data_dir / "characters" / "index.json", ["old-timer.json"])
+        write_json(self.data_dir / "characters" / "old-timer.json", {
+            "id": "old-timer", "name": "Old Timer", "type": "player", "status": "active", "portrait": None, "summary": "",
+            "playerName": "", "sheet": None, "stash": [{"gearId": "rope", "quantity": 2, "broughtIntoAction": True}],
+            "coins": 3, "downtime": 1, "carryLimit": 6})
+        self.store.import_site()
+        record = self.record("characters", "old-timer")
+        self.assertEqual((record["packs"], record["sponsorId"], record["stash"][0]["quantity"]), ([], None, 2))
+        self.assertNotIn("carryLimit", record)
+        self.store.save_record("characters", "old-timer", record)
+
+        # A database from before Packs keeps loading; a non-default carry limit is kept aside for the GM.
+        connection = sqlite3.connect(self.database)
+        with connection:
+            data = json.loads(connection.execute("SELECT data FROM characters WHERE id = 'old-timer'").fetchone()[0])
+            connection.execute("UPDATE characters SET data = ? WHERE id = 'old-timer'", (json.dumps({**data, "carryLimit": 8}),))
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertTrue(any("carry limit" in line for line in reopened.migration_report))
+        self.assertNotIn("carryLimit", next(item for item in reopened.state()["characters"] if item["id"] == "old-timer"))
+        connection = sqlite3.connect(self.database)
+        kept = connection.execute("SELECT data FROM legacy_records WHERE source = 'carry-limit' AND id = 'old-timer'").fetchone()
+        connection.close()
+        self.assertEqual(json.loads(kept[0]), {"carryLimit": 8})
+
+        # Once the GM sets the Sponsor, the migration gives the Sponsor's Pack.
+        verna = self.add_sponsor("University of Verna")
+        pack = self.add_pack("University Field Pack", sponsorId=verna, starting=True, contents=[{"gearId": "rope", "quantity": 1}])
+        reopened.save_record("characters", "old-timer", {**self.record("characters", "old-timer"), "sponsorId": verna})
+        self.assertEqual([(item["packId"], item["active"]) for item in self.record("characters", "old-timer")["packs"]], [(pack, True)])
+
+    def test_packs_and_owned_packs_are_published_and_round_trip(self) -> None:
+        verna = self.add_sponsor("University of Verna")
+        hidden_rule = self.add_sponsor("Secret Society", published=False)
+        notebook = self.add_gear("Field Notebook", price=0, weight=0)
+        prototype = self.add_gear("Prototype Lamp", published=False)
+        field_pack = self.add_pack("University Field Pack", sponsorId=verna, starting=True,
+                                   contents=[{"gearId": notebook, "quantity": 2}, {"gearId": prototype, "quantity": 1}])
+        secret_pack = self.add_pack("Secret Pack", sponsorId=hidden_rule, starting=True, contents=[{"gearId": "rope", "quantity": 1}])
+        draft_pack = self.add_pack("Draft Pack", published=False)
+        sample_pack = self.add_pack("Sample Pack", sample=True)
+        mara = self.add_character("Mara", sponsorId=verna)
+        owned = self.record("characters", mara)["packs"] + [
+            {"id": "pack-2", "packId": draft_pack, "contents": []}, {"id": "pack-3", "packId": secret_pack, "active": False,
+                                                                     "contents": [{"gearId": "rope", "quantity": 0, "capacity": 1}]}]
+        owned[0]["contents"][0]["quantity"] = 1
+        self.store.save_record("characters", mara, {**self.record("characters", mara), "packs": owned})
+
+        self.store.export_site()
+        data = self.export_dir / "data"
+        self.assertEqual(read_json(data / "packs" / "index.json"), sorted([f"{field_pack}.json", f"{secret_pack}.json"]),
+                         "unpublished and (hidden) sample Packs stay off the site")
+        public_pack = read_json(data / "packs" / f"{field_pack}.json")
+        self.assertEqual(public_pack["contents"], [{"gearId": notebook, "quantity": 2}], "contents drop unpublished Gear")
+        self.assertEqual((public_pack["sponsorId"], public_pack["starting"], public_pack["price"], public_pack["sponsorPrice"]), (verna, True, 1, 0))
+        self.assertEqual((read_json(data / "packs" / f"{secret_pack}.json")["sponsorId"]), None, "an unpublished Sponsor is dropped")
+        character = read_json(data / "characters" / f"{mara}.json")
+        self.assertEqual(character["sponsorId"], verna)
+        self.assertEqual([item["id"] for item in character["packs"]], ["pack-1", "pack-3"])
+        self.assertEqual(character["packs"][0]["contents"], [{"gearId": notebook, "quantity": 1, "capacity": 2}])
+        self.assertEqual(read_json(data / "sponsors.json"), [{"id": verna, "name": "University of Verna", "factionId": None, "packId": field_pack,
+                                                              "extraName": "", "extraRule": ""}])
+
+        # The Extra a new character gets written into their Extras: the Sponsor rule's own, else its Faction's.
+        faction = self.store.save_record("factions", None, {"name": "Verna", "ruleId": verna, "extraName": "Institutional Access",
+                                                            "extraRule": "+1 Progress on Research.", "published": True})["id"]
+        independent = self.add_sponsor("Independent", extraName="Self-Directed", extraRule="+1 Progress on a Personal Project.")
+        self.store.export_site()
+        sponsors = {item["id"]: item for item in read_json(data / "sponsors.json")}
+        self.assertEqual((sponsors[verna]["factionId"], sponsors[verna]["extraName"], sponsors[verna]["extraRule"]),
+                         (faction, "Institutional Access", "+1 Progress on Research."))
+        self.assertEqual((sponsors[independent]["extraName"], sponsors[independent]["extraRule"]), ("Self-Directed", "+1 Progress on a Personal Project."))
+        self.assertEqual(self.store.save_record("game", None, {"type": "rule", "title": "Plain rule", "category": "Campaign",
+                                                               "extraName": "Ignored"})["id"], "plain-rule")
+        self.assertEqual(self.record("game", "plain-rule")["extraName"], "", "only Sponsors carry an Extra")
+        self.assertTrue(next(post for post in read_json(data / "game.json") if post["id"] == verna)["sponsor"])
+
+        self.store.set_include_samples(True)
+        self.store.export_site()
+        self.assertIn(f"{sample_pack}.json", read_json(data / "packs" / "index.json"), "samples are published when shown")
+        self.store.set_include_samples(False)
+
+        # Sync writes public-site/data; importing it back keeps every Pack's state.
+        self.store.sync_site_data()
+        self.store.import_site()
+        imported = self.record("characters", mara)
+        self.assertEqual((imported["sponsorId"], [item["id"] for item in imported["packs"]]), (verna, ["pack-1", "pack-3"]))
+        self.assertEqual(imported["packs"][0], character["packs"][0])
+        self.assertEqual(self.record("packs", field_pack)["contents"], [{"gearId": notebook, "quantity": 2}])
+
+    def test_bundles_hold_components_that_are_never_sold_alone(self) -> None:
+        ration = self.add_gear("Ration", price=0, weight=0, marketplaceVisible=False)
+        kit = self.add_gear("Rations Kit", price=0, weight=1, contents=[{"gearId": ration, "quantity": 5}])
+        crate = self.add_gear("Supply Crate", price=0, weight=3, contents=[{"gearId": kit, "quantity": 2}, {"gearId": "rope", "quantity": 1}])
+        self.assertTrue(self.record("gear", kit)["marketplaceVisible"], "Gear is Marketplace visible unless told otherwise")
+        self.assertEqual(self.record("gear", kit)["contents"], [{"gearId": ration, "quantity": 5}])
+
+        # No Gear may end up containing itself, directly or through other bundles, and no Pack goes inside Gear.
+        with self.assertRaisesRegex(ManagerError, "cannot contain itself"):
+            self.store.save_record("gear", kit, {**self.record("gear", kit), "contents": [{"gearId": kit, "quantity": 1}]})
+        with self.assertRaisesRegex(ManagerError, "Rations Kit → Supply Crate → Rations Kit"):
+            self.store.save_record("gear", kit, {**self.record("gear", kit), "contents": [{"gearId": crate, "quantity": 1}]})
+        pack = self.add_pack("Standard Pack", contents=[{"gearId": ration, "quantity": 5}, {"gearId": "rope", "quantity": 1}])
+        with self.assertRaisesRegex(ManagerError, "cannot contain a Pack"):
+            self.add_gear("Pack Box", contents=[{"gearId": pack, "quantity": 1}])
+        with self.assertRaisesRegex(ManagerError, "Rations Kit.*bundle contents"):
+            self.store.delete_record("gear", ration)
+
+        # A component can be packed but not stashed on its own: no piles of weightless Rations.
+        with self.assertRaisesRegex(ManagerError, "only comes inside Packs and bundles"):
+            self.add_character("Hoarder", stash=[{"gearId": ration, "quantity": 50, "broughtIntoAction": True}])
+        mara = self.add_character("Mara", stash=[{"gearId": kit, "quantity": 2, "broughtIntoAction": True},
+                                                 {"gearId": crate, "quantity": 1}])
+        # Eat one Ration from the kits; use more than a crate holds and it stops at what is inside.
+        stash = self.record("characters", mara)["stash"]
+        stash[0]["used"] = [{"gearId": ration, "quantity": 1}, {"gearId": "rope", "quantity": 1}]
+        stash[1]["used"] = [{"gearId": ration, "quantity": 40}, {"gearId": "rope", "quantity": 1}]
+        self.store.save_record("characters", mara, {**self.record("characters", mara), "stash": stash})
+        saved = self.record("characters", mara)["stash"]
+        self.assertEqual(saved[0]["used"], [{"gearId": ration, "quantity": 1}], "only supplies the kit holds are tracked: 9 of 10 left")
+        self.assertEqual(saved[1]["used"], [{"gearId": ration, "quantity": 10}, {"gearId": "rope", "quantity": 1}], "a crate holds 10 Rations and a Rope")
+
+        self.store.export_site()
+        data = self.export_dir / "data"
+        self.assertFalse(read_json(data / "gear" / f"{ration}.json")["marketplaceVisible"], "components are published, marked as not sold alone")
+        self.assertEqual(read_json(data / "gear" / f"{kit}.json")["contents"], [{"gearId": ration, "quantity": 5}])
+        self.assertEqual(read_json(data / "characters" / f"{mara}.json")["stash"][0]["used"], [{"gearId": ration, "quantity": 1}])
+        self.store.sync_site_data()
+        self.store.import_site()
+        self.assertEqual(self.record("characters", mara)["stash"][0]["used"], [{"gearId": ration, "quantity": 1}], "used supplies survive a round trip")
+
+    def test_gear_tags_categories_and_armor(self) -> None:
+        machete = self.add_gear("Machete", category="weapon", tags=["Close", "Cutting", "Clearing", "cutting", "Durable"])
+        self.assertEqual(self.record("gear", machete)["tags"], ["Close", "Cutting", "Clearing", "Durable"], "each Tag once, first spelling kept")
+        old = self.add_gear("Old Coat", category="armor")
+        self.assertEqual(self.record("gear", old)["category"], "protective", "old categories move to the new Marketplace sections")
+        with self.assertRaises(ManagerError):
+            self.add_gear("Odd", category="snacks")
+
+        plate = self.add_gear("Steel Breastplate", category="protective", price=1, weight=2, armorBoxes=2, tags=["Armor", "Ballistic", "Heavy"])
+        with self.assertRaisesRegex(ManagerError, "Armor boxes"):
+            self.add_gear("Fortress", armorBoxes=9)
+        guard = self.add_character("Guard", stash=[{"gearId": plate, "quantity": 1, "broughtIntoAction": True, "armorMarked": 1}])
+        self.assertEqual(self.record("characters", guard)["stash"][0]["armorMarked"], 1, "a marked box stays marked")
+        stash = self.record("characters", guard)["stash"]
+        stash[0]["armorMarked"] = 5
+        self.store.save_record("characters", guard, {**self.record("characters", guard), "stash": stash})
+        self.assertEqual(self.record("characters", guard)["stash"][0]["armorMarked"], 2, "never more than its boxes")
+        rope = self.add_character("Climber", stash=[{"gearId": "rope", "armorMarked": 3}])
+        self.assertNotIn("armorMarked", self.record("characters", rope)["stash"][0], "only Armor has boxes")
+
+        self.store.export_site()
+        data = self.export_dir / "data"
+        public = read_json(data / "gear" / f"{plate}.json")
+        self.assertEqual((public["armorBoxes"], public["tags"], public["category"]), (2, ["Armor", "Ballistic", "Heavy"], "protective"))
+        self.assertEqual(read_json(data / "characters" / f"{guard}.json")["stash"][0]["armorMarked"], 2)
+        self.assertEqual(read_json(data / "gear" / "rope.json")["armorBoxes"], 0)
+        self.store.sync_site_data()
+        self.store.import_site()
+        self.assertEqual(self.record("characters", guard)["stash"][0]["armorMarked"], 2, "damage survives a round trip; nothing repairs it silently")
+
+        # A database from before the expansion has its Gear moved to the new categories on startup.
+        connection = sqlite3.connect(self.database)
+        with connection:
+            data_row = json.loads(connection.execute("SELECT data FROM gear WHERE id = 'rope'").fetchone()[0])
+            connection.execute("UPDATE gear SET data = ? WHERE id = 'rope'", (json.dumps({**data_row, "category": "tool"}),))
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        self.assertEqual(next(item for item in reopened.state()["gear"] if item["id"] == "rope")["category"], "exploration")
+        self.assertIn("gearTagGroups", reopened.state()["vocabulary"])
+
+    def test_tags_that_read_like_functions_are_gm_only(self) -> None:
+        # Players see Gear Tags; a Tag that is also a Resource Function's name would read like one.
+        with self.assertRaisesRegex(ManagerError, "anchor: the same as a Resource Function"):
+            self.add_gear("Grapnel", tags=["Climbing", "anchor"])
+        grapnel = self.add_gear("Grapnel", tags=["Climbing"], gmTags=["Anchor", "Heat", "anchor"])
+        self.assertEqual(self.record("gear", grapnel)["gmTags"], ["Anchor", "Heat"])
+
+        # Older data, written before the rule, moves on startup.
+        connection = sqlite3.connect(self.database)
+        with connection:
+            data = json.loads(connection.execute("SELECT data FROM gear WHERE id = 'rope'").fetchone()[0])
+            connection.execute("UPDATE gear SET data = ? WHERE id = 'rope'", (json.dumps({**data, "tags": ["Tether", "Anchor"]}),))
+        connection.close()
+        reopened = ContentStore(self.database, self.data_dir)
+        rope = next(item for item in reopened.state()["gear"] if item["id"] == "rope")
+        self.assertEqual((rope["tags"], rope["gmTags"]), (["Tether"], ["Anchor"]))
+        self.assertTrue(any("moved to GM tags" in line for line in reopened.migration_report))
+
+        reopened.export_site()
+        public = read_json(self.export_dir / "data" / "gear" / f"{grapnel}.json")
+        self.assertEqual(public["tags"], ["Climbing"])
+        self.assertNotIn("gmTags", public, "GM tags never reach the site")
+
+        # A Function added later that matches a Tag takes that Tag off the players' view too.
+        groups = reopened.function_vocabulary()
+        groups[0]["functions"].append({"name": "Climbing", "definition": "Go up."})
+        result = reopened.save_function_vocabulary(groups)
+        self.assertTrue(result["gearTagsMoved"])
+        grapnel_record = next(item for item in reopened.state()["gear"] if item["id"] == grapnel)
+        self.assertEqual((grapnel_record["tags"], grapnel_record["gmTags"]), ([], ["Anchor", "Heat", "Climbing"]))
+
+    def test_pack_rules_shared_by_the_sheet_and_the_site(self) -> None:
+        """Pricing, the Active Pack, carried weight and Forgot something? live in public-site/packs.js."""
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is not installed")
+        script = Path(__file__).resolve().parent / "packs_rules.test.js"
+        result = subprocess.run([node, "--test", str(script)], capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     # --- publishing ---
 
     def test_unpublished_records_are_left_out_and_references_to_them_dropped(self) -> None:
@@ -322,7 +614,7 @@ class ContentStoreTests(unittest.TestCase):
                                      "eventDate", "image", "imageCaption", "tags", "topics", "participantIds", "factionIds", "details"})
         self.assertEqual(set(read_json(self.export_dir / "data" / "gear" / "rope.json")),
                          {"id", "name", "category", "description", "price", "weight", "availability", "image", "tags",
-                          "featured", "promoLabel", "discount", "projectId"})
+                          "featured", "promoLabel", "discount", "projectId", "marketplaceVisible", "contents", "armorBoxes"})
 
     # --- site settings: launch roadmap, Discord, sponsor ---
 
@@ -494,7 +786,8 @@ class ContentStoreTests(unittest.TestCase):
         latest = game[0]
         self.assertEqual((latest["pinned"], latest["showUntil"]), (True, "2026-10-10"))
         self.assertEqual(latest["details"], "See [[g-03]] and [record unavailable].")
-        self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image"})
+        self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image",
+                                       "sponsor"})
 
     # --- Resources, Forms and Gate Domains (schema v8) ---
 
@@ -835,14 +1128,24 @@ class ContentStoreTests(unittest.TestCase):
             with self.assertRaises(ManagerError):
                 self.store.save_record("characters", crew, {**self.record("characters", crew), "coins": bad})
         record = self.record("characters", crew)
-        self.assertEqual((record["downtime"], record["carryLimit"]), (0, 6), "defaults: no Downtime, carry limit 6")
-        self.store.save_record("characters", crew, {**record, "downtime": 8, "carryLimit": "9"})
-        for field, bad in (("downtime", 9), ("downtime", -1), ("carryLimit", 100)):
+        self.assertEqual((record["downtime"], record["packs"]), (0, []), "defaults: no Downtime, no Pack")
+        self.store.save_record("characters", crew, {**record, "downtime": 8})
+        for field, bad in (("downtime", 9), ("downtime", -1)):
             with self.assertRaises(ManagerError):
                 self.store.save_record("characters", crew, {**self.record("characters", crew), field: bad})
         self.store.export_site()
         public = read_json(self.export_dir / "data" / "characters" / f"{crew}.json")
-        self.assertEqual((public["coins"], public["downtime"], public["carryLimit"]), (12, 8, 9))
+        self.assertEqual((public["coins"], public["downtime"]), (12, 8))
+        self.assertNotIn("carryLimit", public, "the Active Pack sets the Carry Limit now")
+        self.assertEqual(public["carryModifier"], 0, "no stunt: the Pack's Carry Limit as it is")
+        self.store.save_record("characters", crew, {**self.record("characters", crew), "carryModifier": "-2"})
+        self.assertEqual(self.record("characters", crew)["carryModifier"], -2)
+        for bad in (21, -21, "lots"):
+            with self.assertRaises(ManagerError):
+                self.store.save_record("characters", crew, {**self.record("characters", crew), "carryModifier": bad})
+        self.store.save_record("characters", crew, {**self.record("characters", crew), "carryModifier": 1})
+        self.store.export_site()
+        self.assertEqual(read_json(self.export_dir / "data" / "characters" / f"{crew}.json")["carryModifier"], 1)
 
     def test_reading_path_is_saved_as_reading_orders(self) -> None:
         ids = [self.store.save_record("game", None, {"type": "rule", "title": title, "category": "Campaign", "order": order})["id"]

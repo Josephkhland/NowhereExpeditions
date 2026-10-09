@@ -9,7 +9,8 @@
   - sheet.html?id=<character> loads the published character, stash, and Marketplace.
   - sheet.html?new starts a blank character (Fate Core defaults, every skill at +0) with name fields.
   Edits are kept in this browser until "Reset to published" / "Start over". "Save file" downloads the character
-  as a small JSON file (format "nowhere-expeditions/fate-sheet", version 3) that the GM imports in the content
+  as a small JSON file (format "nowhere-expeditions/fate-sheet", version 4: adds the Sponsor and owned Expedition
+  Packs; older files without them still open) that the GM imports in the content
   manager; "Open file" loads such a file back into this sheet. Edit mode changes everything; View mode shows the
   sheet for play (skills as a pyramid) while keeping Fate points, stress, and consequences usable.
 -->
@@ -72,10 +73,12 @@
   .purse { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem 2rem; margin: 0 0 0.9rem; }
   .purse-label { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
   .purse .counter input { width: 5.5rem; }
-  .purse .limit-input { width: 3.6rem; padding: 0.25rem 0.4rem; text-align: center; }
+  .purse .modifier-input { width: 4.5rem; min-height: 2rem; padding: 0.25rem 0.4rem; text-align: center; }
+  .purse label.purse-label { display: block; cursor: help; }
   .purse .hint { display: block; margin-top: 0.2rem; color: var(--muted); font-size: 0.78rem; }
   .carried.over { color: #e07a6f; font-weight: 700; }
-  .row-market { grid-template-columns: minmax(0, 1fr) 4.5rem 5rem 9rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+  .row-market { grid-template-columns: minmax(0, 1fr) 4.5rem 5rem 7.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+  .market-button { width: 100%; white-space: nowrap; }
   .item-name { display: block; }
   .item-meta { display: block; color: var(--muted); font-size: 0.8rem; }
   .check { display: flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.85rem; }
@@ -125,6 +128,36 @@
   .view-gear { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
   .view-gear ul { margin: 0; padding: 0; list-style: none; }
   .view-gear li { display: flex; justify-content: space-between; gap: 0.8rem; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+  .forgot { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+  .forgot.fate { color: var(--accent-2); }
+
+  /* Expedition Pack: the Active Pack sets the Carry Limit; its contents are tracked, never weighed. */
+  .pack-panel { margin: 0 0 1rem; padding: 0.8rem 0.9rem; border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); background: #0a1113; }
+  .pack-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 0.6rem 1.2rem; }
+  .pack-name { display: block; font-size: 1.1rem; font-weight: 700; }
+  .pack-head select { width: auto; min-width: 14rem; }
+  .pack-contents { margin-top: 0.7rem; }
+  .pack-contents summary { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+  .pack-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1.2rem; margin: 0.5rem 0 0; padding: 0; list-style: none; }
+  .pack-items li { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.25rem 0; border-bottom: 1px solid var(--line); }
+  .pack-items li.spent .item-name { color: var(--muted); text-decoration: line-through; }
+  .pack-qty { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .pack-qty .small { min-width: 1.9rem; height: 1.9rem; padding: 0; }
+  .pack-qty output { min-width: 2.8rem; text-align: center; font-variant-numeric: tabular-nums; }
+  .pack-others { margin: 0.7rem 0 0; padding: 0; list-style: none; }
+  .pack-others li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.8rem; padding: 0.3rem 0; border-top: 1px solid var(--line); }
+  .pack-others .item-name { flex: 1 1 12rem; }
+  .pack-empty { margin: 0.4rem 0 0; color: var(--muted); }
+  .supplies-panel { border-left-color: var(--accent-2); }
+  .gear-tags { display: block; color: var(--accent); font-size: 0.72rem; letter-spacing: 0.04em; }
+  .view-gear .gear-tags { margin-top: 0.1rem; }
+  .armor-track { display: inline-flex; align-items: center; gap: 0.2rem; margin-left: 0.3rem; color: var(--muted); font-size: 0.75rem; vertical-align: middle; }
+  .armor-box { width: 1.5rem; height: 1.5rem; padding: 0; border: 1px solid var(--line-strong); background: #0a1113; color: var(--accent-2); line-height: 1; cursor: pointer; }
+  .armor-box[aria-pressed="true"] { border-color: var(--accent-2); background: rgba(224, 168, 93, 0.16); }
+  .supply-source { margin-top: 0.7rem; }
+  .supply-source .pack-name { font-size: 0.95rem; }
+  .market-heading { margin: 0.4rem 0 0.2rem; color: var(--accent-2); }
+  .market-heading + .help { margin: 0 0 0.4rem; }
 
   @media (max-width: 720px) {
     .grid, .row-skill, .row-stunt, .row-consequence, .row-stash, .row-market, .market-tools, .view-gear { grid-template-columns: 1fr; }
@@ -171,6 +204,7 @@
   <form method="dialog"><button class="primary">Got it</button></form>
 </dialog>
 <script src="dice.js"></script>
+<script src="packs.js"></script>
 <script>
 (async () => {
   "use strict";
@@ -216,7 +250,7 @@
       if (!character.sheet) throw new Error("This character has no public sheet.");
       base = { characterId: character.id, characterName: character.name, playerName: character.playerName || "",
         summary: character.summary || "", sheet: character.sheet, stash: character.stash || [], coins: Number(character.coins) || 0,
-        carryLimit: Number.isInteger(character.carryLimit) ? character.carryLimit : 6 };
+        sponsorId: character.sponsorId || "", packs: character.packs || [], carryModifier: Number.isInteger(character.carryModifier) ? character.carryModifier : 0 };
     } else if (creating) {
       base = { newCharacter: true, characterId: null, characterName: "", playerName: "", summary: "",
         sheet: {
@@ -228,7 +262,7 @@
           consequences: [{ label: "Mild", shift: 2, aspect: "" }, { label: "Moderate", shift: 4, aspect: "" }, { label: "Severe", shift: 6, aspect: "" }],
           extras: ""
         },
-        stash: [], coins: 0, carryLimit: 6 };
+        stash: [], coins: 0, sponsorId: "", packs: [], carryModifier: 0 };
     }
   } catch (error) {
     app.innerHTML = `<p class="empty">The sheet could not be loaded (${escapeHtml(error.message)}). Open it again from the character's page.</p>`;
@@ -265,7 +299,10 @@
       at: data.savedAt || new Date().toISOString(), savedAt: data.savedAt || null, sheet: data.sheet,
       stash: Array.isArray(data.stash) ? data.stash : undefined,
       coins: Number.isInteger(data.coins) ? data.coins : undefined,
-      carryLimit: Number.isInteger(data.carryLimit) ? data.carryLimit : undefined,
+      // Version 4 files carry the Sponsor and owned Packs; older ones keep whatever this browser had.
+      sponsorId: typeof data.sponsorId === "string" ? data.sponsorId : undefined,
+      packs: Array.isArray(data.packs) ? data.packs : undefined,
+      carryModifier: Number.isInteger(data.carryModifier) ? data.carryModifier : undefined,
       identity: { name: data.characterName || "", playerName: data.playerName || "", summary: typeof data.summary === "string" ? data.summary : undefined },
       basedOn: null, openedFrom: file.name
     });
@@ -302,9 +339,18 @@
   });
   const normalizeStash = (items) => (Array.isArray(items) ? items : [])
     .filter((item) => item && typeof item.gearId === "string")
-    .map((item) => ({ gearId: item.gearId, quantity: Math.max(1, Math.round(Number(item.quantity)) || 1), broughtIntoAction: Boolean(item.broughtIntoAction) }));
-  // Identifies the published version a draft started from, so a newer GM version can be noticed.
-  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || [], source.summary || "", source.coins ?? 0, source.carryLimit ?? 6]);
+    .map((item) => ({ gearId: item.gearId, quantity: Math.max(1, Math.round(Number(item.quantity)) || 1), broughtIntoAction: Boolean(item.broughtIntoAction),
+      // A bundle (Rations Kit...) remembers which of its supplies were used.
+      ...(Array.isArray(item.used) && item.used.length ? { used: item.used.filter((entry) => entry && typeof entry.gearId === "string")
+        .map((entry) => ({ gearId: entry.gearId, quantity: Math.max(0, Math.round(Number(entry.quantity)) || 0) })) } : {}),
+      // Armor remembers its marked boxes until it is repaired or replaced.
+      ...(Math.round(Number(item.armorMarked)) > 0 ? { armorMarked: Math.round(Number(item.armorMarked)) } : {}) }));
+  const Packs = window.NowherePacks;
+  // Identifies the published version a draft started from, so a newer GM version can be noticed. The 6 stands where
+  // the retired carry limit was, so drafts of characters without a Sponsor or Pack keep matching.
+  const fingerprint = (source) => JSON.stringify([normalize(source.sheet), source.stash || [], source.summary || "", source.coins ?? 0, 6,
+    ...(source.sponsorId || (source.packs || []).length ? [source.sponsorId || "", Packs.normalizeOwned(source.packs)] : []),
+    ...(source.carryModifier ? [source.carryModifier] : [])]);
   const publishedFingerprint = fingerprint(base);
 
   const draftKey = draftKeyFor(base.characterId);
@@ -312,8 +358,12 @@
   let stash = normalizeStash(base.stash);
   const cleanCoins = (value) => Math.max(0, Math.min(999999, Math.round(Number(value)) || 0));
   let coins = cleanCoins(base.coins);
-  const cleanLimit = (value) => Math.max(0, Math.min(99, Math.round(Number(value)) || 0));
-  let carryLimit = cleanLimit(base.carryLimit ?? 6);
+  // The Recruitment Faction (a Sponsor) and the Expedition Packs owned; the Active Pack sets the Carry Limit.
+  let sponsorId = base.sponsorId || "";
+  let packs = Packs.normalizeOwned(base.packs);
+  // Added to the Active Pack's Carry Limit, for stunts that raise it and situations that lower it.
+  const cleanModifier = (value) => Math.max(-20, Math.min(20, Math.round(Number(value)) || 0));
+  let carryModifier = cleanModifier(base.carryModifier);
   const identity = { name: base.characterName || "", playerName: base.playerName || "", summary: base.summary || "" };
   const characterName = () => identity.name.trim() || (base.newCharacter ? "New character" : "Character");
   let dirty = false;
@@ -326,7 +376,9 @@
     state = normalize(draft.sheet);
     if (Array.isArray(draft.stash)) stash = normalizeStash(draft.stash);
     if (Number.isInteger(draft.coins)) coins = cleanCoins(draft.coins);
-    if (Number.isInteger(draft.carryLimit)) carryLimit = cleanLimit(draft.carryLimit);
+    if (typeof draft.sponsorId === "string") sponsorId = draft.sponsorId;
+    if (Array.isArray(draft.packs)) packs = Packs.normalizeOwned(draft.packs);
+    if (Number.isInteger(draft.carryModifier)) carryModifier = cleanModifier(draft.carryModifier);
     if (draft.identity) {
       if (base.newCharacter) {
         identity.name = draft.identity.name ?? identity.name;
@@ -349,7 +401,22 @@
   const gearFiles = await fetchJson("data/gear/index.json").catch(() => []);
   const catalogue = (await Promise.all(gearFiles.map((file) => fetchJson(`data/gear/${file}`).catch(() => null)))).filter(Boolean);
   const gearById = new Map(catalogue.map((gear) => [gear.id, gear]));
-  const CATEGORIES = [...new Set(catalogue.map((gear) => gear.category))].sort();
+  // Components (one Ration) are listed only inside Packs and bundles; the Marketplace offers what is sold alone.
+  const forSale = catalogue.filter((gear) => Packs.isSoldAlone(gear));
+  const CATEGORY_LABELS = { weapon: "Weapons", tactical: "Tactical & Demolition", exploration: "Exploration", scientific: "Scientific Instruments",
+    communication: "Communication", protective: "Protective Equipment", medical: "Medical", supplies: "Supplies",
+    personal: "Personal & Miscellaneous", special: "Specialized / Advanced" };
+  const CATEGORIES = [...Object.keys(CATEGORY_LABELS), ...new Set(forSale.map((gear) => gear.category))]
+    .filter((category, index, all) => all.indexOf(category) === index && forSale.some((gear) => gear.category === category));
+  const categoryLabel = (category) => CATEGORY_LABELS[category] || humanize(category);
+  // Gear Tags (Cutting, Loud, Breathing...): what an item can do in the fiction. Shown small; they grant no numbers.
+  const tagLine = (gear) => (gear?.tags || []).length ? `<span class="gear-tags">${gear.tags.map(escapeHtml).join(" · ")}</span>` : "";
+  const armorBoxes = (item, index) => {
+    const { boxes, marked } = Packs.armorStatus(item, gearById);
+    if (!boxes) return "";
+    return `<span class="armor-track" role="group" aria-label="Armor boxes">Armor ${Array.from({ length: boxes }, (_, box) =>
+      `<button type="button" class="armor-box" data-action="armor-box" data-index="${index}" data-box="${box}" aria-pressed="${box < marked}" aria-label="Armor box ${box + 1}${box < marked ? ", marked" : ""}">${box < marked ? "■" : "□"}</button>`).join("")}</span>`;
+  };
   const inventoryView = { tab: "stash", query: "", category: "" };
   const humanize = (value) => { const text = String(value || "").replace(/-/g, " "); return text.charAt(0).toUpperCase() + text.slice(1); };
   const coin = (amount) => `<span class="coins"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(16, 23, 25, 0.45)" stroke-width="1.5"/></svg>${escapeHtml(amount)}<span class="visually-hidden"> coins</span></span>`;
@@ -357,11 +424,41 @@
   const priceText = (gear) => gear.discount?.active && Number.isFinite(gear.discount.salePrice)
     ? `<span class="sale">${coin(gear.discount.salePrice)}</span> <s>${coin(gear.price)}</s>` : coin(Number(gear.price) || 0);
   const priceOf = (gear) => gear.discount?.active && Number.isFinite(gear.discount.salePrice) ? gear.discount.salePrice : Number(gear.price) || 0;
-  // Gear brought into action counts against the carry limit: 6 by default, changed here when a stunt or situation says so.
-  const carriedWeight = () => stash.filter((item) => item.broughtIntoAction)
-    .reduce((total, item) => total + (Number(gearById.get(item.gearId)?.weight) || 0) * item.quantity, 0);
-  const carriedMarkup = () => `<span class="carried${carriedWeight() > carryLimit ? " over" : ""}" id="carried">${weight(carriedWeight())}${carriedWeight() > carryLimit ? " · over the limit" : ""}</span>`;
-  const updateCarried = () => { const line = app.querySelector("#carried"); if (line) line.outerHTML = carriedMarkup(); };
+  // Expedition Packs and Sponsors are published lists too.
+  const packFiles = await fetchJson("data/packs/index.json").catch(() => []);
+  const packCatalogue = (await Promise.all(packFiles.map((file) => fetchJson(`data/packs/${file}`).catch(() => null)))).filter(Boolean)
+    .sort((left, right) => (left.order ?? 999) - (right.order ?? 999) || String(left.name).localeCompare(String(right.name)));
+  const packsById = new Map(packCatalogue.map((pack) => [pack.id, pack]));
+  const sponsors = await fetchJson("data/sponsors.json").catch(() => []);
+  const sponsorById = new Map(sponsors.map((sponsor) => [sponsor.id, sponsor]));
+  const gearName = (gearId) => gearById.get(gearId)?.name || humanize(gearId);
+  const packLabel = (instance) => {
+    const pack = packsById.get(instance.packId);
+    const twins = packs.filter((other) => other.packId === instance.packId);
+    return `${pack ? pack.name : "Unknown Pack"}${twins.length > 1 ? ` #${twins.indexOf(instance) + 1}` : ""}`;
+  };
+  const packContentsText = (pack) => (pack.contents || []).map((item) => `${gearName(item.gearId)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`).join(", ");
+
+  // Gear brought into action counts against the Active Pack's Carry Limit; what is inside the Pack never does.
+  const carry = () => Packs.carryStatus({ packs, stash, carryModifier }, packsById, gearById);
+  const signedText = (value) => `${value >= 0 ? "+" : "−"}${Math.abs(value)}`;
+  const carriedMarkup = () => {
+    const status = carry();
+    const breakdown = status.limit !== null && status.modifier ? ` <span class="hint" style="display:inline">(Pack ${status.packLimit} ${signedText(status.modifier)})</span>` : "";
+    return `<span class="carried${status.over ? " over" : ""}" id="carried">${weight(status.carried)} / ${status.limit === null
+      ? "— <span class=\"hint\" style=\"display:inline\">no Active Pack</span>" : `<strong>${status.limit}</strong>`}${breakdown}${status.over ? " · over the limit" : ""}</span>`;
+  };
+  const CARRY_MODIFIER_HINT = "For stunts that let you carry more than your Pack allows (+1, +2), or something that weighs you down (−1, −2). Added to your Active Pack's Carry Limit; leave at 0 otherwise.";
+  const modifierField = () => `<div><label class="purse-label" for="carry-modifier" title="${CARRY_MODIFIER_HINT}">Carry modifier <span aria-hidden="true">ⓘ</span></label>
+      <div><input type="number" id="carry-modifier" class="modifier-input" min="-20" max="20" step="1" data-carry-modifier value="${carryModifier}" title="${CARRY_MODIFIER_HINT}" aria-describedby="carry-modifier-hint" />
+        <span class="hint" id="carry-modifier-hint">Stunts or situations only</span></div></div>`;
+  const updateCarried = () => {
+    const line = app.querySelector("#carried");
+    if (line) line.outerHTML = carriedMarkup();
+    // Bundles brought into action (or not any more) change the supplies on hand.
+    const slot = app.querySelector("#supplies-slot");
+    if (slot) slot.innerHTML = suppliesPanel();
+  };
   const purse = (editable) => `<div class="purse">
       <div><span class="purse-label">Coins</span>
         <div class="counter">
@@ -369,12 +466,103 @@
           ${editable ? `<input type="number" min="0" data-coins value="${coins}" aria-label="Coins" />` : `<span class="view-value" aria-live="polite">${coin(coins)}</span>`}
           <button type="button" class="small" data-action="coins" data-step="1" aria-label="Gain a coin">+</button>
         </div></div>
-      <div><span class="purse-label">Carried into action</span>
-        <div>${carriedMarkup()} / ${editable
-          ? `<input type="number" class="limit-input" min="0" max="99" data-carry-limit value="${carryLimit}" aria-label="Carry limit" />
-            <span class="hint">Carry limit: 6 unless a stunt or situation changes it.</span>`
-          : `<strong>${carryLimit}</strong>`}</div></div>
+      <div><span class="purse-label">Additional Gear · carried / Carry Limit</span>
+        <div>${carriedMarkup()}</div></div>
+      ${editable ? modifierField() : ""}
     </div>`;
+
+  // The Active Pack: which owned Pack it is, its Carry Limit and what is left inside it. Usable in both modes.
+  const untouched = (instance) => instance.contents.every((item) => item.quantity === item.capacity);
+  const packPanel = () => {
+    const active = Packs.activePack(packs);
+    const pack = active && packsById.get(active.packId);
+    const sponsor = sponsorById.get(sponsorId);
+    const starting = sponsor?.packId && packsById.get(sponsor.packId);
+    const choose = packs.length ? `<label class="stack">Active Pack
+        <select data-active-pack aria-label="Active Pack">
+          ${packs.map((instance) => `<option value="${escapeHtml(instance.id)}" ${instance.active ? "selected" : ""}>${escapeHtml(packLabel(instance))}</option>`).join("")}
+          <option value="" ${active ? "" : "selected"}>No Active Pack</option>
+        </select></label>` : "";
+    let body;
+    if (!packs.length) {
+      body = starting
+        ? `<p class="pack-empty">You own no Pack. As ${escapeHtml(sponsor.name)}'s recruit you can take the <strong>${escapeHtml(starting.name)}</strong> for free.
+            <button type="button" class="small" data-action="take-starting-pack">Take it</button></p>`
+        : `<p class="pack-empty">You own no Pack, so you can't bring any extra Gear. ${base.newCharacter || !sponsorId ? "Choose your Sponsor above to receive its Pack, or buy one" : "Buy one"} in the Marketplace tab.</p>`;
+    } else if (!active) {
+      body = '<p class="pack-empty">No Active Pack: choose which Pack you carry. Without one, no extra Gear fits.</p>';
+    } else {
+      const items = active.contents.map((item) => `
+        <li class="${item.quantity ? "" : "spent"}">
+          <span class="item-name">${escapeHtml(gearName(item.gearId))}</span>
+          <span class="pack-qty">
+            <button type="button" class="small" data-action="pack-step" data-instance="${escapeHtml(active.id)}" data-gear-id="${escapeHtml(item.gearId)}" data-step="-1" aria-label="Use or lose one ${escapeHtml(gearName(item.gearId))}" ${item.quantity ? "" : "disabled"}>−</button>
+            <output aria-label="${escapeHtml(gearName(item.gearId))} remaining">${item.quantity} / ${item.capacity}</output>
+            <button type="button" class="small" data-action="pack-step" data-instance="${escapeHtml(active.id)}" data-gear-id="${escapeHtml(item.gearId)}" data-step="1" aria-label="Recover one ${escapeHtml(gearName(item.gearId))}" ${item.quantity < item.capacity ? "" : "disabled"}>+</button>
+          </span>
+        </li>`).join("");
+      body = `<details class="pack-contents" open>
+          <summary>Inside the Pack · ${active.contents.reduce((total, item) => total + item.quantity, 0)} of ${active.contents.reduce((total, item) => total + item.capacity, 0)} left</summary>
+          ${items ? `<ul class="pack-items">${items}</ul>` : '<p class="pack-empty">This Pack holds nothing else.</p>'}
+          <p class="help" style="margin:0.5rem 0 0">Mark what you use up, lose or leave behind. Pack contents never count toward your Carry Limit; extra copies from your stash do.</p>
+        </details>`;
+    }
+    const others = packs.filter((instance) => !instance.active);
+    return `<div class="pack-panel" aria-labelledby="h-pack">
+      <div class="pack-head">
+        <div><h2 id="h-pack" style="margin:0">Expedition Pack</h2>
+          ${pack ? `<span class="pack-name">${escapeHtml(packLabel(active))}</span><span class="item-meta">Carry Limit ${escapeHtml(pack.carryLimit)}</span>`
+            : active ? '<span class="pack-name">Unknown Pack</span><span class="item-meta">Not in the published list; ask the GM.</span>' : ""}</div>
+        ${choose}
+      </div>
+      ${body}
+      ${others.length ? `<ul class="pack-others" aria-label="Other Packs you own">${others.map((instance) => {
+        const other = packsById.get(instance.packId);
+        return `<li><span class="item-name">${escapeHtml(packLabel(instance))}<span class="item-meta">${other ? `Carry Limit ${escapeHtml(other.carryLimit)} · ` : ""}${instance.contents.map((item) => `${escapeHtml(gearName(item.gearId))} ${item.quantity}/${item.capacity}`).join(", ") || "empty"}</span></span>
+          <button type="button" class="small" data-action="activate-pack" data-instance="${escapeHtml(instance.id)}">Make active</button>
+          ${mode === "edit" ? `<button type="button" class="small remove" data-action="remove-pack" data-instance="${escapeHtml(instance.id)}" aria-label="Remove ${escapeHtml(packLabel(instance))}" title="Remove">×</button>` : ""}</li>`;
+      }).join("")}</ul>` : ""}
+      ${mode === "edit" && active ? `<p style="margin:0.5rem 0 0"><button type="button" class="small remove" data-action="remove-pack" data-instance="${escapeHtml(active.id)}">Remove this Pack</button></p>` : ""}
+    </div>`;
+  };
+
+  // Supplies brought in bundles (a Rations Kit holds 5 Rations): each kit keeps its own count beside the Pack's.
+  const suppliesText = (item) => Packs.stashSupplies(item, gearById).map((supply) => `${gearName(supply.gearId)} ${supply.quantity}/${supply.capacity}`).join(", ");
+  const suppliesPanel = () => {
+    const bundles = stash.map((item, index) => ({ item, index, supplies: Packs.stashSupplies(item, gearById) }))
+      .filter(({ item, supplies }) => item.broughtIntoAction && supplies.length);
+    if (!bundles.length) return "";
+    const totals = Packs.suppliesOnHand({ packs, stash }, gearById).filter((entry) => entry.sources.length > 1);
+    return `<div class="pack-panel supplies-panel" aria-labelledby="h-supplies">
+      <h2 id="h-supplies" style="margin:0">Supplies from additional Gear</h2>
+      ${bundles.map(({ item, index, supplies }) => `
+        <div class="supply-source"><span class="pack-name">${escapeHtml(gearName(item.gearId))}${item.quantity > 1 ? ` <span class="item-meta" style="display:inline">× ${item.quantity}</span>` : ""}</span>
+          <ul class="pack-items">${supplies.map((supply) => `
+            <li class="${supply.quantity ? "" : "spent"}"><span class="item-name">${escapeHtml(gearName(supply.gearId))}</span>
+              <span class="pack-qty">
+                <button type="button" class="small" data-action="supply-step" data-index="${index}" data-gear-id="${escapeHtml(supply.gearId)}" data-step="-1" aria-label="Use one ${escapeHtml(gearName(supply.gearId))} from ${escapeHtml(gearName(item.gearId))}" ${supply.quantity ? "" : "disabled"}>−</button>
+                <output>${supply.quantity} / ${supply.capacity}</output>
+                <button type="button" class="small" data-action="supply-step" data-index="${index}" data-gear-id="${escapeHtml(supply.gearId)}" data-step="1" aria-label="Recover one ${escapeHtml(gearName(supply.gearId))} from ${escapeHtml(gearName(item.gearId))}" ${supply.quantity < supply.capacity ? "" : "disabled"}>+</button>
+              </span></li>`).join("")}</ul></div>`).join("")}
+      ${totals.length ? `<p class="help" style="margin:0.6rem 0 0">On hand in total: ${totals.map((entry) => `${escapeHtml(gearName(entry.gearId))} ${entry.quantity} / ${entry.capacity}`).join(" · ")}</p>` : ""}
+    </div>`;
+  };
+
+  // A new character can still change their mind: the previous Sponsor's untouched Pack goes back with it.
+  const chooseSponsor = (value) => {
+    const previous = sponsorById.get(sponsorId);
+    sponsorId = value;
+    // Its Extra goes into Extras and notes, like its Pack goes into the stash.
+    state.extras = Packs.applySponsorExtra(state.extras, previous, sponsorById.get(sponsorId));
+    if (base.newCharacter && packs.length === 1 && previous?.packId === packs[0].packId && untouched(packs[0])) packs = [];
+    packs = Packs.grantStartingPack(packs, sponsorById.get(sponsorId), packsById);
+  };
+  const sponsorField = () => `<label class="stack">Sponsor · Recruitment Faction
+      <select data-sponsor aria-label="Sponsor">
+        <option value="">${sponsors.length ? "— Choose your Sponsor —" : "No Sponsors published yet"}</option>
+        ${sponsors.map((sponsor) => `<option value="${escapeHtml(sponsor.id)}" ${sponsor.id === sponsorId ? "selected" : ""}>${escapeHtml(sponsor.name)}</option>`).join("")}
+        ${sponsorId && !sponsorById.has(sponsorId) ? `<option value="${escapeHtml(sponsorId)}" selected>${escapeHtml(humanize(sponsorId))}</option>` : ""}
+      </select></label>`;
   const resourcesRating = () => Math.max(0, Number(state.skills.find((skill) => skill.name.trim().toLowerCase() === "resources")?.rating) || 0);
   const followResources = (change) => {
     const following = base.newCharacter && coins === resourcesRating();
@@ -397,7 +585,7 @@
     document.title = `${characterName()} — Character Sheet`;
   };
   document.getElementById("help").innerHTML = base.newCharacter
-    ? "Build your character here: name them, write a public summary, set aspects, rate skills (all start at Mediocre +0), and buy starting Gear (you start with Coins equal to your Resources rating). Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
+    ? "Build your character here: name them, write a public summary, choose your Sponsor (it gives you its Expedition Pack), set aspects, rate skills (all start at Mediocre +0), and buy starting Gear (you start with Coins equal to your Resources rating). Your work is kept in this browser. When the character is ready, press <strong>Save file</strong> and send the file to the GM."
     : "Edit anything during play; your changes are kept in this browser, even if you close the tab. Switch to <strong>View sheet</strong> for a play layout. Press <strong>Save file</strong> after the session and send the file to the GM.";
   resetButton.textContent = base.newCharacter ? "Start over" : "Reset to published";
   [resetButton, saveButton, modeButton].forEach((button) => { button.hidden = false; });
@@ -413,7 +601,7 @@
       : lastSavedAt ? `Saved to file ${timeText(lastSavedAt)}` : "No changes yet";
   };
   const persist = () => storageSet(draftKey, {
-    at: new Date().toISOString(), sheet: state, stash, coins, carryLimit, identity, savedAt: lastSavedAt,
+    at: new Date().toISOString(), sheet: state, stash, coins, sponsorId, packs, carryModifier, identity, savedAt: lastSavedAt,
     basedOn: draft?.basedOn || publishedFingerprint
   });
   const changed = () => {
@@ -436,6 +624,9 @@
         <label class="stack">Player name<input data-identity="playerName" value="${escapeHtml(identity.playerName)}" placeholder="Your name, so the GM knows who sent it" autocomplete="off" /></label>
       </div>` : ""}
       <label class="stack">Public summary<textarea data-identity="summary" placeholder="A few lines other players see on the character page">${escapeHtml(identity.summary)}</textarea></label>
+      <div class="grid" style="margin-top:0.8rem">${sponsorField()}
+        <p class="help" style="margin:0">Your Sponsor gives you its Extra (written into Extras and notes for you) and its Expedition Pack for free.
+          See the <a class="back" href="game.html#path-recruitment-factions" target="_blank" rel="noopener">Recruitment Factions</a>.</p></div>
     </section>`;
 
   const renderEdit = () => `
@@ -531,8 +722,16 @@
       .filter(([, text]) => text.trim());
     const tiers = [...new Set(state.skills.filter((skill) => skill.name.trim()).map((skill) => skill.rating))].sort((left, right) => right - left);
     const owned = stash.map((item, index) => ({ ...item, index, gear: gearById.get(item.gearId) }));
-    const gearList = (items, empty) => items.length ? `<ul>${items.map(({ gear, gearId, quantity }) => `
-      <li><span>${escapeHtml(gear ? gear.name : gearId)}${quantity > 1 ? ` <span class="item-meta" style="display:inline">× ${quantity}</span>` : ""}</span>${gear ? weight(gear.weight, quantity > 1 ? " each" : "") : ""}</li>`).join("")}</ul>` : `<p class="empty">${empty}</p>`;
+    // Stored Gear shows what "Forgot something?" would cost right now: 1 stress if one more still fits, else 1 Fate Point.
+    const status = carry();
+    const forgot = (gear) => {
+      if (!gear) return "";
+      const fate = Packs.forgotCost(status, gear.weight) === "fate-point";
+      return `<span class="forgot${fate ? " fate" : ""}" title="Forgot something? Produce one mid-expedition">Forgot it? ${fate ? "1 Fate Point" : "1 stress"}</span>`;
+    };
+    const gearList = (items, empty, stored = false) => items.length ? `<ul>${items.map((entry) => { const { gear, gearId, quantity } = entry; return `
+      <li><span>${escapeHtml(gear ? gear.name : gearId)}${quantity > 1 ? ` <span class="item-meta" style="display:inline">× ${quantity}</span>` : ""} ${armorBoxes(entry, entry.index)}${tagLine(gear)}</span>
+        <span>${stored ? `${forgot(gear)} ` : ""}${gear ? weight(gear.weight, quantity > 1 ? " each" : "") : ""}</span></li>`; }).join("")}</ul>` : `<p class="empty">${empty}</p>`;
     return `
       ${identity.summary.trim() ? `<section aria-label="Summary"><p class="view-summary">${escapeHtml(identity.summary)}</p></section>` : ""}
       <section aria-labelledby="h-v-aspects">
@@ -592,10 +791,12 @@
 
       <section aria-labelledby="h-v-gear">
         <h2 id="h-v-gear">Gear</h2>
+        ${packPanel()}
+        ${suppliesPanel()}
         ${purse(false)}
         <div class="view-gear">
-          <div><h2>Brought into action</h2>${gearList(owned.filter((item) => item.broughtIntoAction), "Nothing marked for this job.")}</div>
-          <div><h2>Stored in stash</h2>${gearList(owned.filter((item) => !item.broughtIntoAction), "Nothing in storage.")}</div>
+          <div><h2>Additional Gear brought into action</h2>${gearList(owned.filter((item) => item.broughtIntoAction), "Nothing marked for this job.")}</div>
+          <div><h2>Stored in stash</h2>${gearList(owned.filter((item) => !item.broughtIntoAction), "Nothing in storage.", true)}</div>
         </div>
       </section>`;
   };
@@ -608,7 +809,7 @@
       const gear = gearById.get(item.gearId);
       const name = gear ? gear.name : item.gearId;
       return `<div class="row row-stash">
-        <span><span class="item-name">${escapeHtml(name)}</span><span class="item-meta">${gear ? `${escapeHtml(humanize(gear.category))} · ${weight(gear.weight, " each")}` : "Not in the Marketplace list"}</span></span>
+        <span><span class="item-name">${escapeHtml(name)} ${armorBoxes(item, index)}</span><span class="item-meta">${gear ? `${escapeHtml(categoryLabel(gear.category))} · ${weight(gear.weight, " each")}${suppliesText(item) ? ` · holds ${escapeHtml(suppliesText(item))}` : ""}` : "Not in the Marketplace list"}</span>${tagLine(gear)}</span>
         <input type="number" min="1" max="999" data-stash-index="${index}" value="${item.quantity}" aria-label="Quantity of ${escapeHtml(name)}" />
         <label class="check"><input type="checkbox" data-stash-action="${index}" ${item.broughtIntoAction ? "checked" : ""} />Brought into action</label>
         <button type="button" class="small remove" data-action="remove-gear" data-index="${index}" aria-label="Remove ${escapeHtml(name)} from your stash" title="Remove">×</button>
@@ -616,44 +817,72 @@
     }).join("");
     return `<section aria-labelledby="h-inventory">
       <h2 id="h-inventory">Inventory</h2>
+      ${packPanel()}
+      <div id="supplies-slot">${suppliesPanel()}</div>
       ${purse(true)}
       <div class="tabs" role="tablist" aria-label="Inventory">${tab("stash", `My Stash (${stash.length})`)}${tab("market", "Marketplace")}</div>
       <div id="panel-stash" role="tabpanel" aria-labelledby="tab-stash" ${inventoryView.tab === "stash" ? "" : "hidden"}>
         <div class="rows">${rows || '<p class="empty">Your stash is empty. Add Gear from the Marketplace tab.</p>'}</div>
-        <p class="help">Before a job, mark what you bring into action; together it can weigh up to your carry limit. Forgot something? During the expedition you can still bring an item: 1 stress (any track) if it fits, or 1 Fate Point if it takes you over your limit. Removing an entry only takes it out of your stash, it does not refund anything.</p>
+        <p class="help">Before a job: pick your Active Pack, check what is left inside it, then mark the additional Gear you bring into action. Together that Gear can weigh up to your Active Pack's Carry Limit; the Pack's own contents don't count. Forgot something? During the expedition you can still bring an item you own: 1 stress (any track) if it fits, or 1 Fate Point if it takes you over the limit. Removing an entry only takes it out of your stash, it does not refund anything.</p>
       </div>
       <div id="panel-market" role="tabpanel" aria-labelledby="tab-market" ${inventoryView.tab === "market" ? "" : "hidden"}>
         <div class="market-tools">
           <input type="search" data-market="query" value="${escapeHtml(inventoryView.query)}" placeholder="Search Gear" aria-label="Search Gear" />
-          <select data-market="category" aria-label="Gear category"><option value="">All categories</option>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${inventoryView.category === category ? "selected" : ""}>${escapeHtml(humanize(category))}</option>`).join("")}</select>
+          <select data-market="category" aria-label="Gear category"><option value="">All categories</option>${CATEGORIES.map((category) => `<option value="${escapeHtml(category)}" ${inventoryView.category === category ? "selected" : ""}>${escapeHtml(categoryLabel(category))}</option>`).join("")}</select>
         </div>
         <div class="market-list" id="market-list">${renderMarket()}</div>
-        <p class="help">Buying puts the item in your stash and takes its price from your Coins. Use the Coins counter for rewards and anything the GM hands out.</p>
+        <p class="help">Buying puts the item in your stash and takes its price from your Coins (0-Coin Gear is free to take). Use the Coins counter for rewards and anything the GM hands out.</p>
       </div>
     </section>`;
+  };
+
+  // Expedition Packs come first: your own Sponsor's Packs at their Sponsor price, others at their normal price.
+  const renderPackMarket = (query) => {
+    const listed = packCatalogue.filter((pack) => !query || [pack.name, pack.description, sponsorById.get(pack.sponsorId)?.name, packContentsText(pack)]
+      .join(" ").toLowerCase().includes(query));
+    if (!listed.length || inventoryView.category) return "";
+    return `<h3 class="market-heading purse-label">Expedition Packs</h3>
+      <p class="help">Your Active Pack sets your Carry Limit and holds its listed supplies. Your Sponsor's Pack is free; Packs from other Sponsors cost 1 Coin.</p>
+      ${listed.map((pack) => {
+        const price = Packs.packPrice(pack, sponsorId);
+        const unavailable = pack.availability === "unavailable";
+        const affordable = price <= coins;
+        // Only one Pack is active at a time, so a second copy of the same Pack is no use: it can be had once.
+        const owned = packs.some((item) => item.packId === pack.id);
+        const sponsor = sponsorById.get(pack.sponsorId);
+        return `<div class="row row-market">
+          <span><span class="item-name">${escapeHtml(pack.name)}</span><span class="item-meta">${sponsor ? `${escapeHtml(sponsor.name)} · ` : ""}Carry Limit ${escapeHtml(pack.carryLimit)} · ${escapeHtml(packContentsText(pack) || "no supplies listed")}</span></span>
+          <span class="num">${coin(price)}</span>
+          <span class="num"><span class="item-meta">${Packs.isOwnSponsorPack(pack, sponsorId) ? "Your Sponsor" : ""}</span></span>
+          <button type="button" class="small market-button" data-action="buy-pack" data-pack-id="${escapeHtml(pack.id)}" ${owned || unavailable || !affordable ? "disabled" : ""}
+            title="${owned ? "Already in your stash. Switch to it with Active Pack." : unavailable ? "Not available right now" : affordable ? `Costs ${price} coins` : `Costs ${price} coins; you have ${coins}`}">${owned ? "Owned" : unavailable ? "Unavailable" : !affordable ? "Too costly" : price ? "Buy" : "Take"}</button>
+        </div>`;
+      }).join("")}
+      <h3 class="market-heading purse-label">Gear</h3>`;
   };
 
   const renderMarket = () => {
     const query = inventoryView.query.trim().toLowerCase();
     const owned = new Map(stash.map((item) => [item.gearId, item]));
-    if (!catalogue.length) return '<p class="empty">The Marketplace has no published Gear yet.</p>';
-    return catalogue
+    if (!forSale.length && !packCatalogue.length) return '<p class="empty">The Marketplace has no published Gear yet.</p>';
+    const bundleText = (gear) => Object.entries(Packs.bundleSupplies(gear.id, gearById)).map(([gearId, quantity]) => `${gearName(gearId)} ×${quantity}`).join(", ");
+    return renderPackMarket(query) + (forSale
       .filter((gear) => !inventoryView.category || gear.category === inventoryView.category)
-      .filter((gear) => !query || [gear.name, gear.category, gear.description].join(" ").toLowerCase().includes(query))
-      .sort((left, right) => String(left.category).localeCompare(String(right.category)) || String(left.name).localeCompare(String(right.name)))
+      .filter((gear) => !query || [gear.name, categoryLabel(gear.category), gear.description, bundleText(gear), ...(gear.tags || [])].join(" ").toLowerCase().includes(query))
+      .sort((left, right) => CATEGORIES.indexOf(left.category) - CATEGORIES.indexOf(right.category) || String(left.name).localeCompare(String(right.name)))
       .map((gear) => {
         const item = owned.get(gear.id);
         const unavailable = gear.availability === "unavailable";
         const price = priceOf(gear);
         const affordable = price <= coins;
         return `<div class="row row-market">
-          <span><span class="item-name">${escapeHtml(gear.name)}</span><span class="item-meta">${escapeHtml(humanize(gear.category))}${gear.availability && gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}</span></span>
+          <span><span class="item-name">${escapeHtml(gear.name)}</span><span class="item-meta">${escapeHtml(categoryLabel(gear.category))}${gear.armorBoxes ? ` · Armor ${"□".repeat(gear.armorBoxes)}` : ""}${bundleText(gear) ? ` · holds ${escapeHtml(bundleText(gear))}` : ""}${gear.availability && gear.availability !== "common" ? ` · ${escapeHtml(humanize(gear.availability))}` : ""}${item ? ` · ${item.quantity} in your stash` : ""}</span>${tagLine(gear)}</span>
           <span class="num">${priceText(gear)}</span>
           <span class="num">${weight(gear.weight)}</span>
-          <button type="button" class="small" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable || !affordable ? "disabled" : ""}
-            title="${unavailable ? "Not available right now" : affordable ? `Costs ${price} coins` : `Costs ${price} coins; you have ${coins}`}">${unavailable ? "Unavailable" : !affordable ? "Not enough coins" : item ? `Buy another (${item.quantity} owned)` : "Buy"}</button>
+          <button type="button" class="small market-button" data-action="add-gear" data-gear-id="${escapeHtml(gear.id)}" ${unavailable || !affordable ? "disabled" : ""}
+            title="${unavailable ? "Not available right now" : affordable ? `Costs ${price} coins` : `Costs ${price} coins; you have ${coins}`}">${unavailable ? "Unavailable" : !affordable ? "Too costly" : `${price ? "Buy" : "Take"}${item ? " +1" : ""}`}</button>
         </div>`;
-      }).join("") || '<p class="empty">No Gear matches.</p>';
+      }).join("") || '<p class="empty">No Gear matches.</p>');
   };
 
   const render = () => {
@@ -693,8 +922,16 @@
       inventoryView[target.dataset.market] = target.value;
       document.getElementById("market-list").innerHTML = renderMarket();
       return;
-    } else if (target.dataset.carryLimit !== undefined) {
-      carryLimit = cleanLimit(target.value);
+    } else if (target.dataset.sponsor !== undefined) {
+      chooseSponsor(target.value);
+      render();
+      app.querySelector("[data-sponsor]")?.focus();
+    } else if (target.dataset.activePack !== undefined) {
+      packs = Packs.setActive(packs, target.value || null);
+      render();
+      app.querySelector("[data-active-pack]")?.focus();
+    } else if (target.dataset.carryModifier !== undefined) {
+      carryModifier = cleanModifier(target.value);
       updateCarried();
     } else if (target.dataset.coins !== undefined) {
       coins = cleanCoins(target.value);
@@ -746,7 +983,7 @@
       return;
     } else if (action === "add-gear") {
       const gear = gearById.get(button.dataset.gearId);
-      if (!gear || priceOf(gear) > coins) return;
+      if (!gear || !Packs.isSoldAlone(gear) || priceOf(gear) > coins) return;
       coins -= priceOf(gear);
       const existing = stash.find((item) => item.gearId === button.dataset.gearId);
       if (existing) existing.quantity = Math.min(999, existing.quantity + 1);
@@ -762,9 +999,35 @@
       const gear = gearById.get(stash[index].gearId);
       if (!confirm(`Remove ${gear ? gear.name : stash[index].gearId} from your stash?`)) return;
       stash.splice(index, 1);
+    } else if (action === "pack-step") {
+      packs = packs.map((instance) => instance.id === button.dataset.instance
+        ? Packs.adjustItem(instance, button.dataset.gearId, Number(button.dataset.step)) : instance);
+    } else if (action === "armor-box") {
+      stash[index] = Packs.toggleArmorBox(stash[index], Number(button.dataset.box), gearById);
+    } else if (action === "supply-step") {
+      stash[index] = Packs.adjustSupply(stash[index], button.dataset.gearId, Number(button.dataset.step), gearById);
+    } else if (action === "activate-pack") {
+      packs = Packs.setActive(packs, button.dataset.instance);
+    } else if (action === "take-starting-pack") {
+      packs = Packs.grantStartingPack(packs, sponsorById.get(sponsorId), packsById);
+    } else if (action === "remove-pack") {
+      const instance = packs.find((item) => item.id === button.dataset.instance);
+      if (!instance || !confirm(`Remove ${packLabel(instance)} and everything still inside it from your stash? Nothing is refunded.`)) return;
+      packs = packs.filter((item) => item !== instance);
+    } else if (action === "buy-pack") {
+      const pack = packsById.get(button.dataset.packId);
+      const price = pack ? Packs.packPrice(pack, sponsorId) : Infinity;
+      if (!pack || price > coins || packs.some((item) => item.packId === pack.id)) return;
+      coins -= price;
+      // A first Pack becomes the Active Pack; later ones wait in the stash until you switch.
+      packs = [...packs, Packs.newInstance(pack, Packs.nextInstanceId(packs), !Packs.activePack(packs))];
     } else return;
     const focusSelector = action === "box" ? `[data-action="box"][data-index="${index}"][data-box="${button.dataset.box}"]`
-      : action === "fate" || action === "coins" ? `[data-action="${action}"][data-step="${button.dataset.step}"]` : null;
+      : action === "fate" || action === "coins" ? `[data-action="${action}"][data-step="${button.dataset.step}"]`
+      : action === "pack-step" ? `[data-action="pack-step"][data-gear-id="${CSS.escape(button.dataset.gearId)}"][data-step="${button.dataset.step}"]`
+      : action === "armor-box" ? `[data-action="armor-box"][data-index="${index}"][data-box="${button.dataset.box}"]`
+      : action === "supply-step" ? `[data-action="supply-step"][data-index="${index}"][data-gear-id="${CSS.escape(button.dataset.gearId)}"][data-step="${button.dataset.step}"]`
+      : action === "buy-pack" ? `[data-action="buy-pack"][data-pack-id="${CSS.escape(button.dataset.packId)}"]` : null;
     render();
     changed();
     if (focusSelector) app.querySelector(focusSelector)?.focus();
@@ -800,7 +1063,7 @@
     }
     const savedAt = new Date().toISOString();
     const file = {
-      format: FORMAT, version: 3, savedAt,
+      format: FORMAT, version: 4, savedAt,
       ...(base.newCharacter ? { newCharacter: true } : {}),
       characterId: base.characterId || null,
       characterName: base.newCharacter ? identity.name.trim() : base.characterName,
@@ -809,7 +1072,9 @@
       sheet: clone(state),
       stash: clone(stash),
       coins,
-      carryLimit
+      sponsorId: sponsorId || null,
+      packs: clone(packs),
+      carryModifier
     };
     const slug = identity.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "character";
     const fileName = base.newCharacter ? `new-character-${slug}-sheet.json` : `${base.characterId}-sheet.json`;
