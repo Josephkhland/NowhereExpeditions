@@ -89,6 +89,7 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | `characters.html`, **Characters** | Player characters and NPCs ("Known Figures", e.g. the Gate Evaluation Committee's Senior Evaluator), profiles, Fate sheets (with clickable skill rolls), Personal Stash, Projects, "Create new character", and **In the Archive**: every Archive entry that links to the character with `[Name](characters.html#id)`. NPCs show no empty stash or job history. |
 | `game.html`, **Rules & News** | Announcements and the rules reader. Rules are grouped into **learning paths**, starting with Onboarding, and each rule links to the next. |
 | `sheet.html`, the **character sheet** | An editable Fate sheet that runs in the browser. Players fill it in or update it, press **Save file** (JSON) and send the file to the GM, who imports it. It includes the Sponsor choice, the Active Expedition Pack (with what is left inside it), a Marketplace tab for buying Packs and Gear, and Carry Limit tracking. |
+| `names.html`, the **Name Generator** | Ten character names at a time in the style of a homeland (Vardic Holds, Aurelian Empire, Vesper Republic, Kharad Compact, Tianzhao Mandate, Verna), mixed or feminine/masculine, with a note on how that culture names people. Deep link `names.html#<faction-id>`. Linked from the Creating an Expeditioner rule, the Characters page (beside Create new character), each faction page and the footer. The lists are the hand-maintained `assets/names.json`, which the Discord bot's `/names` command also reads. |
 | `rules.html`, `island.html`, `gates.html`, `expeditions.html` | Redirect stubs from old addresses. |
 
 **Site-wide features:**
@@ -252,7 +253,7 @@ Some Functions are **Hidden** until Research reveals them. An **Establish Supply
 
 Functions are verbs: exceptional, exploitable properties rather than descriptions. Ordinary materials have none.
 - Projects ask for Functions rather than named materials.
-- Effects are combinations: burning is `Release` + `Heat`, cooling is `Absorb` + `Heat`, propulsion is `Move` + `Release`.
+- Effects are combinations of Functions. The interaction table in the Discoveries Functions explorer is the source of truth (GM ruling, 13 Oct 2026); rules point to it rather than keeping their own combination tables.
 - Spellcasting manifests the same Functions as **Words**.
 - The GM keeps the list. It currently has **30 Functions in five groups** (reworked 5–6 Oct 2026):
 
@@ -308,36 +309,23 @@ When no known Resource has the needed Functions, a character can **engineer a ne
 - **Success:** the inventors name the result, and it counts as a Resource.
 - **Experimental Substitution:** a Resource with not-quite-matching Functions can be argued for, at extra cost or risk.
 
-### Spellcasting (partly designed)
+### Spellcasting (partly designed; reworked 13 Oct 2026)
 
-**Artificery studies Functions embodied in matter; Spellcasting manifests the same Functions directly as magical Words.** Magic is an emerging experimental science made possible by Gate discoveries, not an ancient spell list.
+**Artificery studies Functions embodied in matter; Spellcasting manifests the same Functions directly as magical Words.** Magic is a new experimental science (the "Era of Magic"): book-dependent, specialised and inconvenient on purpose; simplifications are discovered in play. Rules: Spellcasting, Runes, Base Forms, Forms, Spell Innovation.
 
-The chain: Gates contain environments, environments produce Resources, Resources embody Functions, Research reveals them, artificery combines them in matter, and Spellcasting manifests them as **Words**. **Forms** then combine Words into repeatable effects, and Projects make discoveries permanent.
+- **Words:** Functions manifested as magic. A manifested Word has **Word Stress** (capacity Forms draw on) and lasts until the end of the scene or until its Stress runs out.
+- **Runes:** Gate artifacts that each supply one Word; a caster with the Rune can cast a Form without knowing its Base Form. A used Rune goes **inert** (stays physically present). Nobody can make Runes; Rune research is open to players.
+- **Base Form: [Word]:** a Stunt per Word (never "Basic Form"). Casting = a mental calculation using celestial/real-world parameters + a vocalisation; needs the spellbook. Own roll; the result sets the Word's Stress. Discovered *after* the first Forms.
+- **Forms:** each a Stunt. First (1 Word), Second (2), Third (3). Physical technique (caster must be unrestrained); own roll, usually Overcome. Magic gives **permission** for otherwise impossible actions; on already-possible actions it gives **leverage** +1/+2/+3 by tier, never automatically.
+- **Recorded Forms:** Effect Glowing (`Glow`), Simple Sauna (`Heat`), Kinetic Shove (`Move`), all First Forms.
+- **Base Form roll (decided 13 Oct 2026):** Lore (a Stunt can swap the Skill for one Word) vs Fair (+2), GM adjusts. Fail no Word, Tie 1 box, Success 2, Success with Style 3. Once per Word, 1 Fate Point adds the Skill rating in boxes, even on a Fail. One Word per roll; no cap on Words held.
+- **Form cost:** set per Form (`cost` on the Form record, default 1), marked on each of its Words. Extra boxes buy scope only, never a roll bonus.
+- **Runes:** power exactly one Form cast (whole cost), then go inert.
+- **Resources:** `wordStress` 1–4 boxes per known Function (set per Resource in the CMS, NO DATA until set); casting through one is +1 difficulty; each Word clears 1 box per scene and fully between expeditions.
+- **Learning (Progress):** learn Base Form 6 / First 4 / Second 6 / Third 10; invent First 6 / Second 10 / Third 15. Magical Stunts from Projects cost no Refresh.
+- **Self/Object/Scene hosts:** under review, may be dropped.
 
-- **Words:** a caster knows how to manifest some Words. Each manifested Word has temporary **Stress capacity**.
-- **Forms:**
-  - **Basic** manifests one Word. The Basic Form can be skipped when the Word or its Function is already within reach (a Resource, an object, the scene).
-  - **First Form:** uses one Word for a defined effect.
-  - **Second Form:** combines two Words.
-  - **Third Form:** combines three Words.
-
-  Every Form is learned separately.
-- **Hosts:** a Word can be manifested in three places:
-  - **Self:** your own capacity and high control, but the risk falls on you.
-  - **Object:** limited capacity and high control, but the object can be lost.
-  - **Scene:** large capacity and low control, and anyone (including enemies) can use it.
-- **Resources:** a Resource can give access to a matching Word, but a physical Function is not an unlimited Word.
-- **Example Forms** (illustrations, not a spell list): Kindle (`Heat`), Kinetic Impulse (`Move`), Flash Freeze (`Absorb` + `Heat`), Thermal Burst (`Release` + `Heat`), Kinetic Arrest (`Absorb` + `Move`), Dimensional Lock (`Anchor` + `Phase`), Gate Signature Reading (`Sense` + `Resonate`).
-- **Spell Innovation:** a Project that turns a theoretical combination of Words into a reliable new Form.
-- **Still being designed:**
-  - Word Stress values;
-  - manifestation difficulties and the Skills used;
-  - Form costs;
-  - how many Words can be manifested at once;
-  - drawing capacity from Resources;
-  - how Words and Forms are learned.
-
-  Until then the GM rules case by case.
+The CMS Form tier key is `base` (`basic` is still accepted and converted). Rules can use `layout: "cheatsheet"` (the **Rules at a Glance** page: `###` sections render as numbered cards, `##` as groups, "(House rule)" in a heading becomes a badge, with a Print button). The **Skill List** rule documents the 18 Fate Core skills.
 
 ### Learning paths (how the rules are read)
 
@@ -348,8 +336,9 @@ The chain: Gates contain environments, environments produce Resources, Resources
 | **Between Expeditions** | Projects, Project Requirements & Complications, Research, Consequences & Recovery | First time spending Downtime. |
 | **Gates & Discoveries** | Domains, Resources, Resource Functions | The crew brings back something new. |
 | **Crafting & Artificery** | Material Engineering, Personal Stash & Crafting | Building gear or inventing materials. |
-| **Spellcasting** | Spellcasting, Spell Innovation | The character studies magic. |
+| **Spellcasting** | Spellcasting, Runes, Base Forms, Forms, Spell Innovation | The character studies magic. |
 | **Building Endros** | Outpost Capabilities, Facilities & Outpost Development, Marketplace Development | Helping the settlement grow. |
+| **Quick Reference** | Rules at a Glance, Skill List | Looking something up at the table. |
 
 The pinned announcement **JOIN NOWHERE EXPEDITIONS!** (the game listing) is the entry point. Onboarding page 1 sends new players to it first.
 
@@ -461,7 +450,7 @@ The database holds **sample** records used to test layouts. They are hidden from
 - **Jobs:** 12 sample jobs (e.g. Saltglass Survey E-17, Find Teodor Quell).
 - **Characters:** 8 sample characters (e.g. Ilse Markov, Doctor Enna Hale, Quartermaster Varga, The Archivist).
 - **Other records:** 18 sample Gear items, 3 sample Projects (Harbor Reinforcement, Gate Mapping Sweep, Ruin Stabilization) and 3 sample Facilities.
-- **In rules text:** the examples Emberglass, Whisper Silk, Gate-Silk Armor, Mira, Tomas and Ines are illustrations, not established world facts.
+- **In rules text:** example characters (Mira, Tomas, Ines, Nell) and the items they make (Redbark Plate) are illustrations, not established world facts. Example materials in rules always use Resources that exist in Discoveries, with their public Functions only (checked 13 Oct 2026).
 
 No real Gates, Resources, spell Forms, Jobs, Gear or Projects have been published yet.
 
