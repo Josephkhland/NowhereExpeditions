@@ -23,6 +23,43 @@
       "label": "Run both",
       "dependsOn": ["Content manager", "Public site"],
       "problemMatcher": []
+    },
+    {
+      "label": "Bot",
+      "detail": "Discord bot (Vaultulation). Answer approvals here with y / n, in the dashboard or in the Windows dialog.",
+      "type": "process",
+      "command": "${workspaceFolder}/discord_server/bot/.venv/Scripts/python.exe",
+      "args": ["run_bot.py"],
+      "options": { "cwd": "${workspaceFolder}/discord_server/bot" },
+      "isBackground": true,
+      "presentation": { "group": "servers", "panel": "dedicated", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Bot + dashboard",
+      "detail": "Discord bot, then opens its GM dashboard in the browser.",
+      "type": "process",
+      "command": "${workspaceFolder}/discord_server/bot/.venv/Scripts/python.exe",
+      "args": ["run_bot.py", "--open-dashboard"],
+      "options": { "cwd": "${workspaceFolder}/discord_server/bot" },
+      "isBackground": true,
+      "presentation": { "group": "servers", "panel": "dedicated", "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Open site and manager",
+      "detail": "Waits for the content manager and the site, then opens both in the browser.",
+      "type": "process",
+      "command": "powershell",
+      "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/start-everything.ps1", "-OpenOnly"],
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Everything",
+      "detail": "Content manager, public site, bot + dashboard, then opens the site and the manager.",
+      "dependsOn": ["Content manager", "Public site", "Bot + dashboard", "Open site and manager"],
+      "problemMatcher": []
     }
   ]
 }

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vaultulation Dashboard</title>
+<style>
+  :root {
+    --bg: #0f0c09; --panel: #1a1611; --panel-2: #221c16; --line: #3a3026;
+    --text: #efe6d6; --muted: #a8998a; --gold: #e0a85d; --teal: #7ad7d1; --red: #e07a6a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Georgia, "Palatino Linotype", serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 22px; color: var(--gold); letter-spacing: .02em; }
+  .pill { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  .pill.on { color: var(--teal); border-color: var(--teal); }
+  .pill.off { color: var(--red); border-color: var(--red); }
+  #refreshed { margin-left: auto; color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; padding: 16px; } }
+  section.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
+  section.panel h2 { margin: 0 0 12px; font-size: 17px; color: var(--gold); display: flex; align-items: center; gap: 10px; }
+  .count { font-size: 12px; color: var(--bg); background: var(--gold); border-radius: 999px; padding: 1px 8px; }
+  .empty { color: var(--muted); font-style: italic; }
+  .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .card.waiting { border-color: var(--gold); }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .meta a { color: var(--teal); }
+  ul.lines { margin: 8px 0 12px; padding-left: 18px; }
+  ul.lines li { margin: 2px 0; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  button { font: inherit; font-size: 14px; border-radius: 8px; padding: 6px 14px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--text); }
+  button.approve { background: var(--teal); color: var(--bg); border-color: var(--teal); }
+  button.reveal { background: var(--gold); color: var(--bg); border-color: var(--gold); }
+  button.reject, button.cancel { border-color: var(--red); color: var(--red); }
+  button:disabled { opacity: .5; cursor: wait; }
+  .badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid; }
+  .badge.open { color: var(--teal); } .badge.revealed { color: var(--gold); } .badge.cancelled { color: var(--red); }
+  .positions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  @media (max-width: 560px) { .positions { grid-template-columns: 1fr; } }
+  .pos { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .pos.top { border-color: var(--teal); }
+  .pos .num { color: var(--gold); font-weight: bold; }
+  .pos .name { display: block; margin: 2px 0 6px; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--teal); }
+  .voters { color: var(--muted); font-size: 13px; margin-top: 6px; word-break: break-word; }
+  pre#log { margin: 0; max-height: 70vh; overflow: auto; white-space: pre-wrap; font: 12.5px/1.45 Consolas, monospace; color: var(--muted); }
+  #notice { margin: 20px 24px; padding: 14px 18px; border: 1px solid var(--red); border-radius: 10px; color: var(--red); display: none; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 16px; display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔮 Vaultulation · GM dashboard</h1>
+  <span id="status" class="pill">connecting…</span>
+  <span id="refreshed"></span>
+  <span class="actions" style="margin-top:0">
+    <button id="restart" class="reveal" type="button">↻ Restart bot</button>
+    <button id="stop" class="cancel" type="button">■ Stop bot</button>
+  </span>
+</header>
+<div id="notice"></div>
+<main>
+  <div>
+    <section class="panel">
+      <h2>Waiting for approval <span id="pending-count" class="count">0</span></h2>
+      <div id="pending"><p class="empty">Nothing waiting.</p></div>
+    </section>
+    <section class="panel">
+      <h2>Tarot readings</h2>
+      <div id="polls"><p class="empty">No readings yet.</p></div>
+    </section>
+  </div>
+  <div>
+    <section class="panel">
+      <h2>Recent actions</h2>
+      <pre id="log"></pre>
+    </section>
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+  // The key comes from the link printed in the bot's terminal (#key=...). It's kept for this
+  // tab only and removed from the address bar, so it isn't left in history or screenshots.
+  const fromHash = new URLSearchParams(location.hash.slice(1)).get("key");
+  if (fromHash) { sessionStorage.setItem("dashboardKey", fromHash); history.replaceState(null, "", location.pathname); }
+  const KEY = sessionStorage.getItem("dashboardKey") || "";
+
+  const $ = (id) => document.getElementById(id);
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v; else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v); else node.setAttribute(k, v);
+    }
+    for (const child of children) if (child) node.append(child);
+    return node;
+  }
+  function toast(text) { const t = $("toast"); t.textContent = text; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3000); }
+  function when(iso) { return iso ? new Date(iso).toLocaleString() : ""; }
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, { ...options, headers: { "X-Dashboard-Key": KEY, "Content-Type": "application/json" } });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || response.statusText);
+    return body;
+  }
+
+  async function act(button, path, body, done) {
+    button.disabled = true;
+    try { await api(path, { method: "POST", body: JSON.stringify(body || {}) }); toast(done); }
+    catch (e) { toast("Failed: " + e.message); }
+    refresh();
+  }
+
+  function renderPending(list) {
+    $("pending-count").textContent = list.length;
+    const box = $("pending"); box.replaceChildren();
+    if (!list.length) { box.append(el("p", { class: "empty", text: "Nothing waiting." })); return; }
+    for (const item of list) {
+      const lines = el("ul", { class: "lines" }, ...item.lines.map((l) => el("li", { text: l })));
+      const approve = el("button", { class: "approve", text: "Approve", onclick: (e) => act(e.target, `/api/pending/${item.id}`, { decision: "approve" }, `#${item.id} approved`) });
+      const reject = el("button", { class: "reject", text: "Reject", onclick: (e) => act(e.target, `/api/pending/${item.id}`, { decision: "reject" }, `#${item.id} rejected`) });
+      box.append(el("div", { class: "card waiting" },
+        el("h3", { text: `#${item.id} · ${item.title}` }),
+        el("div", { class: "meta" }, el("span", { text: "requested " + when(item.created) })),
+        lines, el("div", { class: "actions" }, approve, reject)));
+    }
+  }
+
+  function renderPolls(list) {
+    const box = $("polls"); box.replaceChildren();
+    if (!list.length) { box.append(el("p", { class: "empty", text: "No readings yet." })); return; }
+    for (const poll of list) {
+      const state = poll.cancelled ? "cancelled" : poll.closed ? "revealed" : "open";
+      const best = Math.max(...poll.cards.map((c) => c.votes));
+      const meta = el("div", { class: "meta" },
+        el("span", { class: "badge " + state, text: state }),
+        el("span", { text: poll.channel }),
+        el("span", { text: "host: " + poll.host }),
+        el("span", { text: poll.face_up ? "face up" : "face down" }),
+        el("span", { text: when(poll.created) }),
+        el("span", { text: `${poll.total} vote${poll.total === 1 ? "" : "s"}` }),
+        poll.url ? el("a", { href: poll.url, target: "_blank", rel: "noopener", text: "open in Discord ↗" }) : null);
+      const positions = el("div", { class: "positions" }, ...poll.cards.map((c) => {
+        const width = poll.total ? Math.round(100 * c.votes / poll.total) : 0;
+        const bar = el("div", { class: "bar" }, el("span", { style: `width:${width}%` }));
+        return el("div", { class: "pos" + (best > 0 && c.votes === best ? " top" : "") },
+          el("span", { class: "num", text: `${c.position} · ${c.votes}` }),
+          el("span", { class: "name", text: c.name }), bar,
+          el("div", { class: "voters", text: c.voters.length ? c.voters.join(", ") : "—" }));
+      }));
+      const actions = poll.closed ? null : el("div", { class: "actions" },
+        el("button", { class: "reveal", text: "End and reveal", onclick: (e) => {
+          if (confirm(`Reveal "${poll.question}" to everyone?`)) act(e.target, `/api/polls/${poll.id}/reveal`, null, "Revealed");
+        } }),
+        el("button", { class: "cancel", text: "Cancel reading", onclick: (e) => {
+          if (confirm(`Cancel "${poll.question}" without revealing it?`)) act(e.target, `/api/polls/${poll.id}/cancel`, null, "Cancelled");
+        } }));
+      box.append(el("div", { class: "card" }, el("h3", { text: poll.question }), meta, positions, actions));
+    }
+  }
+
+  async function refresh() {
+    if (!KEY) {
+      $("notice").textContent = "No key: open the dashboard with the link printed in the bot's terminal.";
+      $("notice").style.display = "block"; return;
+    }
+    try {
+      const state = await api("/api/state");
+      $("notice").style.display = "none";
+      const status = $("status");
+      status.textContent = state.bot.ready ? `online as ${state.bot.user} · ${state.bot.guilds.join(", ")}` : "starting…";
+      status.className = "pill " + (state.bot.ready ? "on" : "");
+      renderPending(state.pending);
+      renderPolls(state.polls);
+      const log = $("log"); const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+      log.textContent = state.log.join("\n") || "No actions yet.";
+      if (atBottom) log.scrollTop = log.scrollHeight;
+      $("refreshed").textContent = "updated " + new Date().toLocaleTimeString();
+      document.title = state.pending.length ? `(${state.pending.length}) Vaultulation Dashboard` : "Vaultulation Dashboard";
+    } catch (e) {
+      const status = $("status"); status.textContent = "offline"; status.className = "pill off";
+      $("notice").textContent = e.message.includes("key") ? "The key is wrong or from an older bot session: use the newest link from the bot's terminal." : "Can't reach the bot. Is it running?";
+      $("notice").style.display = "block";
+    }
+  }
+  async function botControl(verb) {
+    const question = verb === "restart"
+      ? "Restart the bot? Anything waiting for approval is rejected."
+      : "Stop the bot? Buttons and commands in Discord stop working until it's started again.";
+    if (!confirm(question)) return;
+    try {
+      const result = await api(`/api/bot/${verb}`, { method: "POST", body: "{}" });
+      if (verb === "stop") toast("Bot stopping.");
+      else if (result.supervised) toast("Restarting… this page reconnects by itself.");
+      else toast("Restarting in a new window: open the new dashboard link printed there.");
+    } catch (e) { toast("Failed: " + e.message); }
+  }
+  $("restart").addEventListener("click", () => botControl("restart"));
+  $("stop").addEventListener("click", () => botControl("stop"));
+
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
