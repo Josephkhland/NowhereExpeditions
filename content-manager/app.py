@@ -94,6 +94,9 @@ GEAR_TAG_GROUPS = {
 MAX_ARMOR_BOXES = 4
 GEAR_AVAILABILITY = ("common", "restricted", "rare", "unavailable")
 GAME_POST_TYPES = ("announcement", "rule")
+# How a rule's Details are laid out on the site: "standard" reads as an article; "cheatsheet" turns each ### section
+# into a compact reference card in a grid (## headings become group titles across the grid).
+RULE_LAYOUTS = ("standard", "cheatsheet")
 
 # Continuity issues: discrepancies between pieces of authored content, resolved one by one in the manager. They live
 # only in the database: never synced to the site, and kept when site data is imported.
@@ -217,7 +220,8 @@ RESOURCE_SOURCES = ("fauna", "flora", "ground", "constructed", "by-product", "ot
 # sample: research quantities only; limited: a stock that use consumes; available: a dependable supply.
 RESOURCE_AVAILABILITY = ("sample", "limited", "available", "unavailable")
 # Basic manifests one Word; First uses one Word for a defined effect; Second and Third combine two and three.
-FORM_TIERS = {"basic": 1, "first": 1, "second": 2, "third": 3}
+# A Base Form manifests one specific Word ("basic" is the retired spelling, still accepted).
+FORM_TIERS = {"base": 1, "first": 1, "second": 2, "third": 3}
 FORM_STATUSES = ("theoretical", "in-development", "known")
 PROJECT_RESULTS = ("item", "facility", "research", "spell", "resource-supply", "recovery", "other")
 
@@ -1102,6 +1106,8 @@ def clean_resource(data: dict[str, Any]) -> dict[str, Any]:
         "hiddenFunctions": hidden,
         "specialProperty": clean_text(data, "specialProperty"),
         "availability": clean_choice(data, "availability", RESOURCE_AVAILABILITY, "sample"),
+        # Spellcasting: Word Stress boxes the Resource offers for each of its known Functions (1-4). Blank: not yet studied.
+        "wordStress": clean_int(data.get("wordStress"), "Word Stress", 1, 4, allow_none=True),
         "supply": clean_text(data, "supply"),
         "harvestingIssue": clean_text(data, "harvestingIssue"),
         "gateId": clean_ref(data, "gateId"),
@@ -1179,6 +1185,8 @@ def path_set(record: dict[str, Any], field: str, new_value: str) -> dict[str, An
 
 def clean_form(data: dict[str, Any]) -> dict[str, Any]:
     """A spellcasting Form: a learned technique using a fixed number of Words for its tier."""
+    if str(data.get("tier") or "").strip().lower() == "basic":
+        data = {**data, "tier": "base"}
     tier = clean_choice(data, "tier", tuple(FORM_TIERS), "first")
     words = clean_functions(data, "words", "Words")
     if len(words) != FORM_TIERS[tier]:
@@ -1187,6 +1195,8 @@ def clean_form(data: dict[str, Any]) -> dict[str, Any]:
         "name": clean_text(data, "name", "A Form name"),
         "tier": tier,
         "words": words,
+        # Word Stress the Form uses up from each of its Words when cast.
+        "cost": clean_int(data.get("cost"), "Cost", 1, 10, allow_none=True) or 1,
         "effect": clean_text(data, "effect"),
         "status": clean_choice(data, "status", FORM_STATUSES, "known"),
         "projectId": clean_ref(data, "projectId"),
@@ -1283,6 +1293,7 @@ def clean_game_post(data: dict[str, Any]) -> dict[str, Any]:
         "showUntil": show_until,
         # Rules with a reading order come first, in that order (the onboarding path); the rest follow by title.
         "order": None if announcement else clean_int(data.get("order"), "Reading order", 1, 999, allow_none=True),
+        "layout": "standard" if announcement else clean_choice(data, "layout", RULE_LAYOUTS, "standard"),
         # A Recruitment Faction rule that is a Sponsor players can choose. Its ID is the Sponsor's stable ID
         # (characters and Packs point at it); not every Sponsor is a Faction record (Independent, the Company).
         "sponsor": bool(data.get("sponsor")) and not announcement,
@@ -1396,14 +1407,14 @@ COLLECTIONS: dict[str, Collection] = {
         refs=(("gateId", "gate_id", "archive"), ("projectId", "project_id", "projects")),
         unique=lambda record: ("name", record["name"]),
         public_fields=("id", "name", "sourceType", "description", "domains", "functions", "specialProperty", "availability",
-                       "supply", "gateId", "projectId", "image", "imageCrop"),
+                       "wordStress", "supply", "gateId", "projectId", "image", "imageCrop"),
         image_fields=("image",), text_fields=("description", "specialProperty"),
     ),
     "forms": Collection(
         "forms", "Form", ("name",), clean_form, lambda record: str(record.get("name", "")),
         refs=(("projectId", "project_id", "projects"),),
         unique=lambda record: ("name", record["name"]),
-        public_fields=("id", "name", "tier", "words", "effect", "status", "projectId"),
+        public_fields=("id", "name", "tier", "words", "cost", "effect", "status", "projectId"),
         text_fields=("effect",),
     ),
     # Announcements and rules share one combined public file, game.json.
@@ -1414,7 +1425,7 @@ COLLECTIONS: dict[str, Collection] = {
 }
 PAGE_COLLECTIONS = ("factions", "gear", "packs", "characters", "projects", "archive", "jobs", "resources", "forms")
 GAME_FIELDS = ("id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image",
-               "sponsor")
+               "sponsor", "layout")
 
 
 # --- Store ------------------------------------------------------------------

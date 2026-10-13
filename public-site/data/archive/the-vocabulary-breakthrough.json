@@ -1,0 +1,39 @@
+{
+  "id": "the-vocabulary-breakthrough",
+  "type": "lore",
+  "title": "The Vocabulary Breakthrough",
+  "subtitle": "How researchers found the Words inside the runework",
+  "summary": "After the first Forms, researchers compared every Form against every Rune they could reach and separated out the underlying elements of magic, the Words. The Words turned out to be the same Functions the artificers had been cataloguing in Gate materials, and the comparison began stripping the superstition out of spellcasting.",
+  "content": "> *\"Function in matter, Word in spellcasting.\"*\n> — the field's shortest summary of itself\n\nThe first Forms worked, and nobody could say why. [[the-first-three-forms|Effect Glowing, Simple Sauna and Kinetic Shove]] each came with a procedure: markings, motions, diagrams, a Rune somewhere nearby. Each procedure was followed exactly, because nobody knew which parts could be left out.\n\nThe **Vocabulary Breakthrough** is the name now given to the slow, unglamorous comparison that changed that. It did not happen in one laboratory or on one day, and the Archive does not credit it to any single researcher. Its result was the concept every caster now takes for granted: magic is built from a small number of underlying elements called **Words**.\n\n## Comparing Everything\n\nOnce several Forms existed, researchers began testing them systematically against each other and against every Rune they could reach. They asked:\n\n- which Runes allowed which Forms;\n- which symbols recurred from one technique to another;\n- which symbols could be removed without losing the effect;\n- which of the wrist markings mattered, and which motions;\n- which parts of a floor diagram did any work;\n- which conditions in the surroundings changed the result;\n- which procedures worked with more than one Rune;\n- and which elements were simply leftovers from the way the technique had first been found.\n\n> **Minutes of a joint seminar, Endros (excerpt)**\n>\n> *Item 3. The Glowing procedure was performed with the left-wrist marking omitted. Effect as normal. Performed with both wrist markings omitted. Results inconsistent across four trials; the performer reported being \"very aware of the missing paint.\"*\n>\n> *Discussion: whether the markings are necessary, or only the performer's confidence in them. Not resolved. Further trials with a performer who has not been told which markings are which.*\n>\n> *Item 4. Proposal that the group stop calling the procedure \"the ritual.\" Carried, one abstention.*\n\n## Separating Out the Words\n\nThe pattern that emerged was this. Every Form needed something that only certain Runes could provide, and that something was the same across very different procedures. A Rune that made Effect Glowing work kept making it work across many variations of the procedure, and was no use at all for Kinetic Shove; a Rune that powered Kinetic Shove did nothing for Effect Glowing. Underneath the runework was a **Vocabulary**, and its elements were **Words**.\n\nResearchers then turned the comparison round. They tested known Forms and procedures against different runic components to work out which component corresponded to which Word and which effect. Step by step, the Vocabulary took shape: `Glow`, `Heat`, `Move`, and the others that followed.\n\n## The Same Words as the Workshops\n\nThe most surprising result was not the Words themselves but where else they turned up. The artificers had been cataloguing the exceptional properties of Gate materials for years: a glass that held heat, a fibre that bent and returned, a mineral that gave off light. They called these properties **Functions**.\n\nThe Words were the same thing. `Heat` in a Rune and `Heat` in a lump of Gate glass were one property, approached from two directions. Spellcasting and artificery turned out to be two branches of one science, sharing one vocabulary, and the laboratories and the Workshops have been borrowing each other's results ever since. The current list is on the Rules page: [Resource Functions](game.html#post-resource-functions).\n\n> **At the long table in a Workshops canteen**\n>\n> \"So my heat-glass,\" said the artificer, \"and your little heating spell.\"\n>\n> \"Same Word,\" said the caster.\n>\n> \"Then I've been doing magic all along.\"\n>\n> \"No. You've been doing *engineering* with a Word in it. I've been doing magic with a Word in it.\" The caster thought. \"The Word doesn't seem to mind which.\"\n\n## Stripping the Ritual\n\nThe comparison had a second effect, slower and in some ways more important. Once researchers knew a Form needed a particular Word, they could test which parts of its procedure were actually doing the work, and which were only there because the first person to succeed had happened to do them.\n\nThat process is still going on. The early Forms still carry steps that may prove unnecessary, and the wrist markings of Effect Glowing are the most famous example: widely expected to be redundant, not yet proven so. Every step shown to be unneeded makes a Form easier for everyone who comes after, which is why careful, dull replication remains some of the most valued work in the field.\n\n## What the Vocabulary Did Not Answer\n\nKnowing that Runes supplied Words told researchers *what* the Runes did. It did not tell them *how*, or whether a person could do the same without one. Every Form still depended on a Word from somewhere outside the caster. The answer to that, when it came, was a second revolution: [[discovery-of-base-form|Base Form]].\n\n## Related Entries\n\n- [[the-era-of-magic|The Era of Magic]]: the short history of spellcasting.\n- [[the-first-three-forms|The First Three Forms]]: the techniques the comparison began with.\n- [[runes-of-the-gates|Runes]]: the artifacts that supply Words.\n- [[discovery-of-base-form|The Discovery of Base Form]]: manifesting a Word without a Rune.\n- The [Spellcasting](game.html#post-spellcasting) and [Resource Functions](game.html#post-resource-functions) rules.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Vocabulary",
+    "Words",
+    "Functions",
+    "runework",
+    "Glow",
+    "Heat",
+    "Move",
+    "ritual elements",
+    "wrist markings",
+    "floor symbol",
+    "Function in matter",
+    "Word in spellcasting",
+    "Era of Magic"
+  ],
+  "topics": [
+    "History",
+    "Events",
+    "Technology"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "event",
+    "startStep": null
+  }
+}

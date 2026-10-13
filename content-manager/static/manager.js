@@ -1273,6 +1273,8 @@ const collections = {
         <label class="publish-toggle field full"><input type="checkbox" name="pinned" ${record.pinned ? "checked" : ""} /><span><strong>Pinned</strong><span class="helper">Pinned announcements are listed first, and the newest one appears as a banner on the Overview page.</span></span></label>`)}
       ${section("rule", `
         ${selectField("Category", "category", record.category || "Campaign", categories.map((category) => [category, category]))}
+        ${selectField("Layout", "layout", record.layout || "standard", [["standard", "Standard article"], ["cheatsheet", "Cheat sheet (cards)"]],
+          { help: "Cheat sheet: each ### section becomes a compact card in a grid; ## headings group the cards." })}
         <label class="publish-toggle field"><input type="checkbox" name="sponsor" ${record.sponsor ? "checked" : ""} /><span><strong>Sponsor</strong><span class="helper">A Recruitment Faction players can choose. Characters and Expedition Packs name it as their Sponsor; put <code>{{expedition-pack}}</code> on its own line to show its Pack.</span></span></label>
         ${field("Sponsor Extra name", "extraName", record.extraName || "", { placeholder: "e.g. Self-Directed", help: "Sponsors only. Written into a character's Extras when they choose this Sponsor. Leave both blank to use the Extra of the Faction that links to this rule." })}
         ${textarea("Sponsor Extra (short)", "extraRule", record.extraRule || "", { rows: 2, help: "One or two sentences; the full rule stays in the Details." })}
@@ -1299,6 +1301,7 @@ const collections = {
         showUntil: type === "announcement" ? formText(formData, "showUntil") : "",
         pinned: type === "announcement" && formData.get("pinned") === "on",
         sponsor: type === "rule" && formData.get("sponsor") === "on",
+        layout: type === "rule" ? formText(formData, "layout") || "standard" : "standard",
         extraName: formText(formData, "extraName"), extraRule: formText(formData, "extraRule"),
         summary: formText(formData, "summary"), details: formText(formData, "details"),
         tags: linesToArray(formData.get("tags")), image: formText(formData, "image")
@@ -1414,6 +1417,7 @@ collections.resources = {
     ${textarea("Description", "description", record.description || "", { full: true, rows: 3, help: "What it looks, feels and behaves like. Fiction, not mechanics." })}
     ${functionPicker("functions", record.functions || [], "Known Functions", "What Endros currently understands it can do. Usually 1–3; 4+ is exceptional.")}
     ${textarea("Special Property", "specialProperty", record.specialProperty || "", { full: true, rows: 2, help: "Strange behavior too specific to be a Function." })}
+    ${field("Word Stress", "wordStress", record.wordStress ?? "", { type: "number", placeholder: "1–4", help: "Spellcasting: boxes the Resource offers for each of its Known Functions used as a Word. Blank shows NO DATA on the site." })}
     ${field("Supply", "supply", record.supply || "", { full: true, placeholder: "e.g. Established extraction operation", help: "Optional. How Endros gets it." })}
     ${imageField("Icon", "image", record.image, "image", "The whole painting of the material (about 256px is plenty). Choose the square the site shows in Icon framing, below.")}
     ${iconFramingField(record)}
@@ -1431,6 +1435,7 @@ collections.resources = {
     name: formText(formData, "name"), sourceType: formText(formData, "sourceType"), gateId: formText(formData, "gateId") || null,
     availability: formText(formData, "availability"), domains: formData.getAll("domains"), description: formText(formData, "description"),
     functions: formData.getAll("functions"), specialProperty: formText(formData, "specialProperty"), supply: formText(formData, "supply"),
+    wordStress: formText(formData, "wordStress"),
     projectId: formText(formData, "projectId") || null, hiddenFunctions: formData.getAll("hiddenFunctions"),
     harvestingIssue: formText(formData, "harvestingIssue"), gmNotes: formText(formData, "gmNotes"), image: formText(formData, "image") || null,
     imageCrop: { x: Number(formData.get("cropX") ?? 0), y: Number(formData.get("cropY") ?? 0), size: Number(formData.get("cropSize") ?? 100), ratio: Number(formData.get("cropRatio") ?? 1) }
@@ -1614,7 +1619,7 @@ collections.packs = {
   })
 };
 
-const FORM_TIER_LABELS = { basic: "Basic Form", first: "First Form", second: "Second Form", third: "Third Form" };
+const FORM_TIER_LABELS = { base: "Base Form", first: "First Form", second: "Second Form", third: "Third Form" };
 collections.forms = {
   title: "Spell Forms", panel: "SPELL FORMS", singular: "Form",
   name: (record) => record.name,
@@ -1627,16 +1632,17 @@ collections.forms = {
   fields: (record) => `
     ${field("Name", "name", record.name || "", { required: true, placeholder: "e.g. Flash Freeze" })}
     ${selectField("Tier", "tier", record.tier || "first", Object.entries(state.vocabulary.formTiers).map(([tier, words]) => [tier, `${FORM_TIER_LABELS[tier] || humanize(tier)} (${words} Word${words > 1 ? "s" : ""})`]),
-      { help: "Basic manifests one Word. First uses one Word for a defined effect. Second and Third combine two and three Words." })}
+      { help: "Base manifests one Word. First uses one Word for a defined effect. Second and Third combine two and three Words." })}
+    ${field("Cost", "cost", record.cost ?? 1, { type: "number", help: "Word Stress the Form uses up from each of its Words when cast (1 to 10). Extra boxes can buy a bigger effect." })}
     ${selectField("Status", "status", record.status || "known", state.vocabulary.formStatuses.map((value) => [value, humanize(value)]),
       { help: "Theoretical: proposed. In development: a Spell Innovation Project is working on it. Known: a learnable Form." })}
     ${projectSelect(record)}
     ${functionPicker("words", record.words || [], "Words", "Tick exactly as many Words as the tier uses.")}
-    ${textarea("Effect", "effect", record.effect || "", { full: true, rows: 4, help: "What the Form does. Leave costs and difficulties out until they are finalized." })}
+    ${textarea("Effect", "effect", record.effect || "", { full: true, rows: 4, help: "What the Form does. The cost goes in the Cost field." })}
     <div class="form-section cm-only">CM only · never published</div>
     ${textarea("CM notes", "gmNotes", record.gmNotes || "", { full: true, rows: 3 })}`,
   read: (formData) => ({
-    name: formText(formData, "name"), tier: formText(formData, "tier"), status: formText(formData, "status"),
+    name: formText(formData, "name"), tier: formText(formData, "tier"), status: formText(formData, "status"), cost: formText(formData, "cost"),
     projectId: formText(formData, "projectId") || null, words: formData.getAll("words"), effect: formText(formData, "effect"),
     gmNotes: formText(formData, "gmNotes")
   })

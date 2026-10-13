@@ -271,28 +271,28 @@
       "b": "Transmute",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy when the change is guided step by step; Runaway mutation when it is left to change itself."
     },
     {
       "a": "Adapt",
       "b": "Transmute",
       "kind": "instability",
       "keyword": "Runaway mutation",
-      "note": ""
+      "note": "Synergy when the change is guided step by step; Runaway mutation when it is left to change itself."
     },
     {
       "a": "Amplify",
       "b": "Conduct",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy within what the conductor can carry; Overload when pushed past it."
     },
     {
       "a": "Amplify",
       "b": "Conduct",
       "kind": "instability",
       "keyword": "Overload",
-      "note": ""
+      "note": "Synergy within what the conductor can carry; Overload when pushed past it."
     },
     {
       "a": "Amplify",
@@ -369,14 +369,14 @@
       "b": "Sense",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy for faint signals; Sensory overload near a strong source."
     },
     {
       "a": "Amplify",
       "b": "Sense",
       "kind": "instability",
       "keyword": "Sensory overload",
-      "note": ""
+      "note": "Synergy for faint signals; Sensory overload near a strong source."
     },
     {
       "a": "Amplify",
@@ -565,14 +565,14 @@
       "b": "Regenerate",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy when regrowth has a limit or template; Runaway growth when nothing stops it."
     },
     {
       "a": "Catalyze",
       "b": "Regenerate",
       "kind": "instability",
       "keyword": "Runaway growth",
-      "note": ""
+      "note": "Synergy when regrowth has a limit or template; Runaway growth when nothing stops it."
     },
     {
       "a": "Catalyze",
@@ -992,14 +992,14 @@
       "b": "Slip",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy for deliberate, frictionless motion; Loss of control when nothing can stop it."
     },
     {
       "a": "Move",
       "b": "Slip",
       "kind": "instability",
       "keyword": "Loss of control",
-      "note": ""
+      "note": "Synergy for deliberate, frictionless motion; Loss of control when nothing can stop it."
     },
     {
       "a": "Nullify",
@@ -1055,14 +1055,14 @@
       "b": "Reinforce",
       "kind": "opposition",
       "keyword": "Structural strain",
-      "note": ""
+      "note": "Opposition (Structural strain) normally; Fracture if forced while partly phased."
     },
     {
       "a": "Phase",
       "b": "Reinforce",
       "kind": "instability",
       "keyword": "Fracture",
-      "note": ""
+      "note": "Opposition (Structural strain) normally; Fracture if forced while partly phased."
     },
     {
       "a": "Phase",
@@ -1097,14 +1097,14 @@
       "b": "Regenerate",
       "kind": "synergy",
       "keyword": "",
-      "note": ""
+      "note": "Synergy when restoring to a sound recorded state; Replicated flaws when the record holds the damage."
     },
     {
       "a": "Record",
       "b": "Regenerate",
       "kind": "instability",
       "keyword": "Replicated flaws",
-      "note": ""
+      "note": "Synergy when restoring to a sound recorded state; Replicated flaws when the record holds the damage."
     },
     {
       "a": "Record",

@@ -1,0 +1,36 @@
+{
+  "id": "runes-of-the-gates",
+  "type": "lore",
+  "title": "Runes",
+  "subtitle": "The Gate artifacts that made magic possible",
+  "summary": "Runes are artifacts recovered from inside the Gates, each able to supply one magical Word. They were studied, copied and argued over long before anyone could cast a spell, and once used, they go dark. What they are, and whether anyone could ever make one, is still unknown.",
+  "content": "> *\"A Rune is a sentence in a language we did not know we were reading.\"*\n> — chalked on a laboratory blackboard in Endros, author unknown\n\nA **Rune** is an artifact recovered from inside a Gate that can supply one magical **Word**. Runes are not a human technology. They came out of the Gates already working, and for a long time nobody could say what they were doing, only that, in the right circumstances, they did it again.\n\nEvery part of modern spellcasting rests on them. The first Forms were worked out with Runes; the Words were isolated by comparing Runes; and the great open problem of the field is whether people could ever make one. This entry covers what is known about Runes and what is believed. How the first techniques were built on them is in [[the-first-three-forms|The First Three Forms]], and the larger history is in [[the-era-of-magic|The Era of Magic]].\n\n## Before Anyone Cast a Spell\n\nRunes were known, and experimented with, before either Forms or Base Forms existed. To the first people who handled them they were simply another class of impossible object coming back through the Gates: interesting, occasionally alarming, and very hard to classify.\n\nWhat made them different was that their effects could be **reproduced**. Researchers discovered that specific markings, positions, gestures, symbols and other procedures could make an impossible effect happen when a suitable Rune was present, and make it happen again the next time. This was **runework**: careful, empirical, and almost entirely without theory.\n\nAt that stage nobody knew which part of the procedure mattered. Reasonable people believed:\n\n- that the inscription on the Rune was the source of the effect;\n- that the human gesture activated the Rune;\n- that copied markings were essential, and had to be exact;\n- that the effect came from some combination of artifact, symbol, motion and surroundings.\n\nThe idea of a **Word**, a single underlying element the Rune supplied, did not yet exist. It would take the first Forms, and then a great deal of comparison, before anyone could separate it out (see [[the-vocabulary-breakthrough|The Vocabulary Breakthrough]]).\n\n> **From an early runework notebook, as preserved in a University teaching collection (excerpt)**\n>\n> *Trial 14. Same Rune, same bench, same hour. Marking copied from Trial 9 by a different hand. No effect.*\n>\n> *Trial 15. Marking re-copied by the original hand. Effect as in Trial 9.*\n>\n> *Note: either the marking must be copied more exactly than we can measure, or the hand matters, or something else changed between 14 and 15 that we did not record. I do not like any of these. Record more.*\n\n## What a Rune Does\n\nA Rune makes its Word **available**. A caster who knows a Form that needs that Word can use the Rune's Word instead of manifesting it personally. That is why it is perfectly possible to know a Form without being able to produce its Word: with a `Move` Rune at hand, someone who knows Kinetic Shove can cast it, whether or not they could ever manifest `Move` themselves.\n\nEach Rune supplies one particular Word. Sometimes which one is obvious from what it does; sometimes it takes study to be sure.\n\n## Going Dark\n\nAfter it has been used for magic, a Rune becomes **inert**. It does not crumble or vanish. It stops glowing, or otherwise loses whatever signs it showed of being active, and it no longer supplies its Word. The inert Rune stays on the bench, entirely solid, entirely present, and of continuing interest to anyone who wants to know what it was.\n\nWhat has actually happened to it is one of the field's favourite arguments. Depending on whom you ask, a used Rune is **spent**, **discharged**, **exhausted**, a **single-use** artifact by nature, or a **slowly degrading** object whose use only hastened the end. The Archive holds no settled answer, and nothing published so far rules any of them out.\n\n> **In the corridor outside a Rune storeroom**\n>\n> \"It's spent,\" said the Vesperian. \"Like a match. You strike it, you have light, you don't get the match back.\"\n>\n> \"A match turns to ash,\" said the Vard, turning the dark Rune over in a gloved hand. \"This is in exactly the shape it was. Nothing's burned. Nothing's missing. If my lathe stopped and looked like this, I wouldn't say it was *spent*. I'd say it was *off*.\"\n>\n> \"Then turn it on.\"\n>\n> \"I would,\" said the Vard, \"if anyone had found the switch.\"\n\nBecause inert Runes remain, Endros has a growing collection of them. Some laboratories catalogue every one with the care they give an active Rune, on the principle of the [[the-first-four-gates|Gate Evaluation Doctrine]]: unknown material should not be assumed worthless.\n\n## Could We Make One?\n\nHumanity does not know how to manufacture Runes. Every Rune in use was recovered from a Gate.\n\nOnce researchers understood Words, the question became impossible to avoid: *if we understand what a Rune is doing, can we create one ourselves?* Nobody has yet. Hypotheses about what makes a Rune work circulate freely in the laboratories, and Research Projects test them one by one. A wrong answer is not wasted, because each one narrows the field.\n\nThe stakes are enormous. Reliable manufactured Runes could mean portable sources of Words, standardised magical components, spell-driven machinery and much else besides, which is precisely why every power with an interest in Endros is watching the question closely. Whether a made Rune would behave like a recovered one in every respect is another open question entirely.\n\n## Runes Today\n\nFor an Expeditioner, a Rune is one of the most valuable things a Gate can give up: a Word in a box, usable by anyone who knows the right Form, and a research problem worth a career. The rules for using one are on the Rules page: [Runes](game.html#post-runes).\n\n## Related Entries\n\n- [[the-era-of-magic|The Era of Magic]]: the short history of spellcasting.\n- [[the-first-three-forms|The First Three Forms]]: the first techniques worked out with Runes.\n- [[the-vocabulary-breakthrough|The Vocabulary Breakthrough]]: how comparing Runes revealed the Words.\n- [[discovery-of-base-form|The Discovery of Base Form]]: casting without a Rune.\n- [[the-first-four-gates|Four Gates, Four Lessons]]: Specimens, Resources and why unknown material is never assumed worthless.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Runes",
+    "Rune",
+    "inert Rune",
+    "spent Rune",
+    "runework",
+    "runic experimentation",
+    "Words",
+    "Gate artifacts",
+    "Rune manufacture",
+    "artificial Runes",
+    "Era of Magic"
+  ],
+  "topics": [
+    "Technology",
+    "History"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "endros",
+    "startStep": null
+  }
+}

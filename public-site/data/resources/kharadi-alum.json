@@ -1,6 +1,6 @@
 {
   "id": "kharadi-alum",
-  "name": "Kharadi Alum",
+  "name": "Purified Alum",
   "sourceType": "ground",
   "description": "Purified mineral alum traded throughout the Compact for dyeing, tanning, water treatment, medicine and industrial processing. Kharadi merchants sell it in standardised sealed blocks marked with weight and purity.",
   "domains": [
@@ -9,13 +9,15 @@
   "functions": [],
   "specialProperty": "",
   "availability": "available",
+  "wordStress": null,
   "supply": "",
   "gateId": null,
   "projectId": null,
   "image": "data/images/kharadi-alum-icon-44a134aa.webp",
   "imageCrop": {
-    "x": 50.0,
-    "y": 32.0,
-    "zoom": 1
+    "x": 0.0,
+    "y": 0.0,
+    "size": 100.0,
+    "ratio": 1.0
   }
 }

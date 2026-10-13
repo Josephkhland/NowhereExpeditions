@@ -61,9 +61,12 @@
   {
     "key": "spellcasting",
     "title": "Spellcasting",
-    "description": "Words, Forms, and how new spells are invented. Read Resource Functions first.",
+    "description": "Words, Runes, Base Forms and Forms, and how new magic is discovered. Read Resource Functions first.",
     "ruleIds": [
       "spellcasting",
+      "runes",
+      "base-forms",
+      "forms",
       "spell-innovation"
     ]
   },
@@ -75,6 +78,15 @@
       "outpost-capabilities",
       "facilities-and-outpost-development",
       "marketplace-development"
+    ]
+  },
+  {
+    "key": "quick-reference",
+    "title": "Quick Reference",
+    "description": "Every Skill, and every mechanic on one page, for looking things up at the table.",
+    "ruleIds": [
+      "rules-at-a-glance",
+      "skill-list"
     ]
   }
 ]
