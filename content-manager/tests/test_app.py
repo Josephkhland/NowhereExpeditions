@@ -787,7 +787,14 @@ class ContentStoreTests(unittest.TestCase):
         self.assertEqual((latest["pinned"], latest["showUntil"]), (True, "2026-10-10"))
         self.assertEqual(latest["details"], "See [[g-03]] and [record unavailable].")
         self.assertEqual(set(latest), {"id", "type", "title", "category", "summary", "details", "tags", "publishedAt", "pinned", "showUntil", "order", "image",
-                                       "sponsor"})
+                                       "sponsor", "layout"})
+        # Rules choose a layout (a cheat sheet renders its sections as cards); announcements are always standard.
+        self.assertEqual(latest["layout"], "standard")
+        sheet = self.store.save_record("game", None, {"type": "rule", "title": "At a glance", "category": "Campaign", "layout": "cheatsheet"})["id"]
+        self.assertEqual(self.record("game", sheet)["layout"], "cheatsheet")
+        self.assertEqual(self.record("game", rule)["layout"], "standard")
+        with self.assertRaisesRegex(ManagerError, "layout must be one of"):
+            self.store.save_record("game", None, {"type": "rule", "title": "Odd", "category": "Campaign", "layout": "poster"})
 
     # --- Resources, Forms and Gate Domains (schema v8) ---
 
@@ -808,7 +815,11 @@ class ContentStoreTests(unittest.TestCase):
             {"name": "X", "domains": ["swamp"]},
             {"name": "X", "availability": "plentiful"},
             {"name": "Emberglass"},                                       # names are unique
+            {"name": "X", "wordStress": 5},                               # 1-4 Word Stress boxes
         ]
+        self.assertIsNone(self.record("resources", resource)["wordStress"])
+        studied = self.store.save_record("resources", None, {"name": "Studied", "functions": ["Glow"], "wordStress": "3"})["id"]
+        self.assertEqual(self.record("resources", studied)["wordStress"], 3)
         for data in bad:
             with self.assertRaises(ManagerError):
                 self.store.save_record("resources", None, data)
@@ -976,7 +987,16 @@ class ContentStoreTests(unittest.TestCase):
                 self.store.save_record("forms", None, data)
         self.store.export_site()
         exported = read_json(self.export_dir / "data" / "forms" / f"{form}.json")
-        self.assertEqual(set(exported), {"id", "name", "tier", "words", "effect", "status", "projectId"})
+        self.assertEqual(set(exported), {"id", "name", "tier", "words", "cost", "effect", "status", "projectId"})
+        # A Form's cost is the Word Stress it uses from each of its Words: 1 unless set.
+        self.assertEqual(exported["cost"], 1)
+        heavy = self.store.save_record("forms", None, {"name": "Heavy Shove", "tier": "first", "words": ["Move"], "cost": "3"})["id"]
+        self.assertEqual(self.record("forms", heavy)["cost"], 3)
+        with self.assertRaises(ManagerError):
+            self.store.save_record("forms", None, {"name": "Free", "tier": "first", "words": ["Move"], "cost": 0})
+        # A Base Form manifests one Word; the retired "basic" spelling is still accepted and stored as "base".
+        base = self.store.save_record("forms", None, {"name": "Base Form: Move", "tier": "basic", "words": ["Move"]})["id"]
+        self.assertEqual(self.record("forms", base)["tier"], "base")
 
     # --- factions ---
 

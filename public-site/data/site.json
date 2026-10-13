@@ -20,13 +20,13 @@
     {
       "title": "Game Listing Authored",
       "detail": "The rules and the game listing on the Game page.",
-      "status": "in-progress",
+      "status": "done",
       "date": "2026-10-11"
     },
     {
       "title": "Site Content Authored",
       "detail": "The real Outpost, Archive, gear, and first jobs replace the sample content.",
-      "status": "todo",
+      "status": "in-progress",
       "date": "2026-10-18"
     },
     {

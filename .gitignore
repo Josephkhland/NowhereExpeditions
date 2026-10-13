@@ -24,3 +24,16 @@ public-site/version.json
 
 # Lore entry drafts (nowhere-lore-writer skill); the content manager database is the source of truth.
 lore/
+
+# Recruitment and hype posts (drafts and an archive of what was posted). Kept out of the public repo.
+marketing_promotion/
+
+# Personal Claude Code settings (deny rules protecting the Discord bot token).
+.claude/settings.local.json
+# Skill for the private Discord bot (lives with discord_server/, kept out of the public repo).
+.claude/skills/vaultulation-bot/
+
+# Discord server planning and moderation notes. Kept out of the public repo,
+# except the bot's code (discord_server/bot/ has its own .gitignore for the venv and secrets).
+discord_server/*
+!discord_server/bot/

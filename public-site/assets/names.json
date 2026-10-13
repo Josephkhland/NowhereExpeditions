@@ -1,0 +1,74 @@
+{
+  "_comment": "Name lists for the site's Name Generator (names.html) and the bot's /names. Hand-maintained: the content manager does not export it. The bot reads it on every use; the site picks up changes on the next deploy. Patterns are picked by weight; tokens: {given} {given2} {initial} {surname} {surname2} {patronymic}. 'syllables' (Tianzhao) builds given names from one or two syllables instead of the given-name lists. *Asterisks* in a note are italics.",
+  "factions": {
+    "vardic-holds": {
+      "label": "Vardic Holds",
+      "note": "Patronymic (-sson, -sdottir) or a short family name. Epithets such as *Who Kept the Crane* are given by others and earned, never claimed.",
+      "feminine": ["Sigrun", "Yrsa", "Edda", "Kari", "Halla", "Astrid", "Brynja", "Dagny", "Eira", "Freydis", "Gudrun", "Hild", "Ingrid", "Jorunn", "Ragna", "Runa", "Solveig", "Thora", "Torvi", "Unn", "Vigdis", "Ylva", "Asa", "Geira", "Svala", "Bergljot", "Steinunn", "Hallveig"],
+      "masculine": ["Bjarni", "Torren", "Stenvar", "Halvard", "Arnulf", "Bersi", "Eskil", "Finnvard", "Gunnar", "Hakon", "Ivar", "Ketil", "Leif", "Orm", "Ragnvald", "Sigvald", "Skuli", "Snorri", "Tjorvi", "Ulfar", "Vemund", "Hrafn", "Einar", "Asgeir", "Brand", "Eyvind", "Kolbein", "Thorvald"],
+      "fathers": ["Halvard", "Veyr", "Gunnar", "Hakon", "Ivar", "Ketil", "Orm", "Ragnvald", "Sigvald", "Ulfar", "Vemund", "Grim", "Einar", "Asgeir", "Brand", "Eyvind", "Stenvar", "Torren", "Arnulf", "Eskil", "Thorvald", "Kolbein", "Hrafn", "Sven"],
+      "patronymic": {"feminine": "sdottir", "masculine": "sson"},
+      "surnames": ["Skorn", "Brenn", "Vask", "Holt", "Hammar", "Stord", "Kjell", "Rask", "Vang", "Ostvik", "Brekke", "Tind", "Skarde", "Myrr", "Hald", "Jarnvik", "Grenn", "Askel", "Stavn", "Ruud", "Hagen", "Sollund", "Dahl", "Kvarn"],
+      "patterns": [
+        {"weight": 3, "format": "{given} {patronymic}"},
+        {"weight": 2, "format": "{given} {surname}"}
+      ]
+    },
+    "aurelian-empire": {
+      "label": "Aurelian Empire",
+      "note": "Given name, sometimes a middle name or initial, then the family name. Formally it's Mr, Mrs or Miss and the surname, as with Mr Pell.",
+      "feminine": ["Adelaide", "Agatha", "Augusta", "Beatrice", "Caroline", "Charlotte", "Clementine", "Constance", "Cordelia", "Edith", "Eleanor", "Florence", "Harriet", "Honoria", "Imogen", "Isobel", "Lavinia", "Louisa", "Margaret", "Matilda", "Philippa", "Prudence", "Rosalind", "Theodora", "Verity", "Winifred"],
+      "masculine": ["Anselm", "Ambrose", "Alistair", "Augustus", "Bartholomew", "Benedict", "Cecil", "Cuthbert", "Edmund", "Edward", "Felix", "Gideon", "Horace", "Hugh", "Jasper", "Lionel", "Marcus", "Montague", "Nathaniel", "Octavius", "Percival", "Rupert", "Septimus", "Thaddeus", "Tobias", "Walter"],
+      "surnames": ["Hartree", "Pell", "Ashcombe", "Blackwood", "Brandreth", "Carrow", "Crane", "Dunmore", "Eversley", "Fairweather", "Grantham", "Halloway", "Kingsley", "Lyall", "Marlowe", "Northcote", "Penrose", "Quarrie", "Radcliffe", "Sallow", "Thorne", "Underhill", "Vane", "Whitlock", "Yardley", "Ashdown", "Templeton", "Strand"],
+      "patterns": [
+        {"weight": 3, "format": "{given} {surname}"},
+        {"weight": 2, "format": "{given} {initial} {surname}"},
+        {"weight": 1, "format": "{given} {given2} {surname}"}
+      ]
+    },
+    "vesper-republic": {
+      "label": "Vesper Republic",
+      "note": "Given name and family name, as with Celeste Marin.",
+      "feminine": ["Celeste", "Adèle", "Amélie", "Aurore", "Bérénice", "Camille", "Clémence", "Colette", "Delphine", "Éloïse", "Félicie", "Geneviève", "Héloïse", "Inès", "Joséphine", "Léonie", "Lucienne", "Mathilde", "Odile", "Rosalie", "Sabine", "Sidonie", "Valentine", "Yvette", "Margot"],
+      "masculine": ["Achille", "Alphonse", "Anatole", "Armand", "Aristide", "Bastien", "Désiré", "Émile", "Étienne", "Fabien", "Gaston", "Hippolyte", "Honoré", "Jules", "Léon", "Lucien", "Marius", "Octave", "Philippe", "Raoul", "Rémy", "Sylvain", "Théo", "Thibault", "Victor"],
+      "surnames": ["Marin", "Aubert", "Beaumont", "Carrel", "Dufresne", "Fauchet", "Garnier", "Lacombe", "Lambert", "Lemaire", "Marchand", "Mercier", "Noiret", "Perrin", "Sorel", "Tessier", "Vautrin", "Arnaud", "Brissac", "Courtois", "Desmarais", "Fontaine", "Girard", "Lavigne", "Mallet", "Renaud", "Vidal"],
+      "patterns": [
+        {"weight": 12, "format": "{given} {surname}"},
+        {"weight": 1, "format": "{given} {surname}-{surname2}"}
+      ]
+    },
+    "kharad-compact": {
+      "label": "Kharad Compact",
+      "note": "Given name, then family name.",
+      "feminine": ["Nahira", "Anahid", "Azadeh", "Darya", "Farah", "Golnar", "Ilkana", "Leyla", "Mahsa", "Naseen", "Parisa", "Roshan", "Samira", "Shirin", "Soraya", "Tahmina", "Yasmin", "Zarin", "Mehri", "Nasrin", "Ferishte", "Ladan", "Bahar", "Simin"],
+      "masculine": ["Qorvan", "Arash", "Bahram", "Behzad", "Esfan", "Faraz", "Hamid", "Javid", "Kamran", "Kasim", "Kaveh", "Mehran", "Nasir", "Navid", "Omid", "Rostam", "Sohrab", "Tahir", "Zaman", "Farrokh", "Siavash", "Payam", "Shahin", "Ardavan"],
+      "surnames": ["Sarraf", "Zargar", "Tajer", "Azhar", "Behrani", "Esfandi", "Farrokhzad", "Haddadi", "Javani", "Karimzad", "Lahouti", "Mansuri", "Nazari", "Pahlan", "Rahbar", "Sadeqi", "Vahidi", "Yazdan", "Zarrin", "Amiri", "Bakhtar", "Khorvan", "Tavrezi", "Nakhoda", "Saffari", "Kalantar"],
+      "patterns": [
+        {"weight": 1, "format": "{given} {surname}"}
+      ]
+    },
+    "tianzhao-mandate": {
+      "label": "Tianzhao Mandate",
+      "note": "Family name first, then the given name of one or two syllables: General Bao, Mistress Lin.",
+      "surnames": ["Bao", "Lin", "Wei", "Chen", "Liang", "Han", "Song", "Gao", "Xu", "Lu", "Qin", "Shen", "Fang", "Jiang", "Yan", "Tang", "Su", "Zhou", "Pei", "Cao", "Ouyang", "Shangguan", "Sima"],
+      "syllables": {
+        "feminine": ["Mei", "Lian", "Xue", "Yue", "Ling", "Hua", "Jing", "Qiao", "Ying", "Lan", "Fei", "Xiu", "Zhen", "Ning", "Rou", "Wan", "Yao", "Shu"],
+        "masculine": ["Jun", "Wen", "Hao", "Bo", "Kang", "Lei", "Feng", "Gang", "Tao", "Cheng", "Zhi", "Rui", "Heng", "Shan", "Long", "Wu", "Qiang", "Yi"],
+        "neutral": ["An", "Ming", "Qing", "Yun", "Xin", "Ping", "Jia", "Chun", "Ru", "Yu"]
+      },
+      "patterns": [
+        {"weight": 1, "format": "{surname} {given}"}
+      ]
+    },
+    "verna": {
+      "label": "Verna",
+      "note": "Given name, then family name.",
+      "feminine": ["Beatrice", "Chiara", "Livia", "Ottavia", "Serena", "Giulia", "Fiora", "Ilaria", "Marta", "Nives", "Ornella", "Tecla", "Agnese", "Costanza", "Ione", "Daphne", "Thalia", "Xanthe", "Irene", "Kallista", "Melina", "Eudora", "Phaedra", "Theano"],
+      "masculine": ["Anselmo", "Bruno", "Corrado", "Dario", "Elio", "Fabrizio", "Lorenzo", "Matteo", "Ottone", "Silvio", "Tullio", "Gualtiero", "Alexios", "Damon", "Leander", "Nikandros", "Theron", "Ilias", "Kosmas", "Lysander", "Philon", "Evander", "Stephanos", "Aristo"],
+      "surnames": ["Albrizzi", "Bellandi", "Calvi", "Ferrandi", "Lucchesi", "Pavesi", "Rinaldi", "Sartori", "Tosi", "Valli", "Zanetti", "Morandi", "Castelli", "Andrakis", "Demetrion", "Kalliades", "Makris", "Theodorou", "Philippou", "Nikolaidis", "Galanos", "Stathis", "Lekkas", "Sotiriou"],
+      "patterns": [
+        {"weight": 1, "format": "{given} {surname}"}
+      ]
+    }
+  }
+}

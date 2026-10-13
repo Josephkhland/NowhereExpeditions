@@ -1,0 +1,40 @@
+{
+  "_note": "Vaulty greets each new Expeditioner once in #expeditioners-lobby: one random greeting + one random question for the lobby. {member} becomes a mention of the newcomer. Edit freely; the bot reads this file each time.",
+  "greetings": [
+    "📋 The Relocation Office stamps another file: **{member}** has signed up for Endros! Welcome aboard.",
+    "⚓ A new name on the passenger list: **{member}**. Welcome to Nowhere Expeditions!",
+    "🧭 **{member}** just walked into the Relocation Office, and nobody even had to bribe them. Welcome!",
+    "📦 Luggage tagged, paperwork filed: welcome, **{member}**! The Gates are glad to have you. Probably.",
+    "🌊 The ferry to Endros has one more passenger. Say hello to **{member}**!",
+    "🖋️ Ink still wet on the contract: **{member}** is officially an Expeditioner. Welcome!",
+    "🔭 Somewhere beyond the horizon, a Gate flickers in anticipation. Welcome, **{member}**!",
+    "🐄 Welcome, **{member}**! Please declare any cows, sheep or family members at the counter.",
+    "🗺️ Another cartographer of the unknown? Or a cook? Or a menace? Welcome, **{member}**, whoever you turn out to be!",
+    "🏗️ Endros grows by one. Welcome, **{member}**, and mind the floating platforms."
+  ],
+  "questions": [
+    "What's your favourite food?",
+    "What was the last movie or show you watched, and would you recommend it?",
+    "What are you listening to these days?",
+    "Coffee, tea, or something else entirely?",
+    "What's a game you could replay forever?",
+    "What did you have for dinner yesterday? Rate it out of 10.",
+    "Cats, dogs, or something stranger? Pet pictures are welcome.",
+    "What's a small thing that made your week better?",
+    "Night owl or early bird?",
+    "What's the last book (or comic, or manga) you enjoyed?",
+    "What's a hobby you'd pick up if you had the time?",
+    "What's your comfort snack?",
+    "If you could be anywhere in the world right now, where would you be?",
+    "What's the most underrated movie you know?",
+    "What's something you're looking forward to this month?",
+    "Sweet or savoury breakfast?",
+    "What's a song that's been stuck in your head lately?",
+    "What kind of character are you thinking of playing? Even a vague idea counts.",
+    "What's a memorable moment you've had in an RPG?",
+    "Veterans: introduce your favourite co-player to our newcomer!",
+    "Everyone: share the funniest thing that's happened at one of our tables.",
+    "Veterans: tell our newcomer one thing you love about playing here."
+  ],
+  "closing": "Everyone, give them a wave! **For the lobby:** {question}"
+}

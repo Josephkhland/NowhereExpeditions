@@ -100,6 +100,14 @@ Then **Terminal → Run Task… → Run both**. The two servers open side by sid
 
 ---
 
+## One click: everything, including the Discord bot
+
+- **Desktop shortcut "Nowhere Expeditions"** (create it once with `powershell -ExecutionPolicy Bypass -File tools\make-shortcut.ps1`, run from your own account; or run `powershell -ExecutionPolicy Bypass -File tools\start-everything.ps1` directly): starts the content manager, the public site and the Discord bot, each in its own window, skipping anything already running. The bot opens its GM dashboard (<http://127.0.0.1:8766>, with a key in the link); the script then opens the manager and the site. Add `-NoBot` to leave the bot out.
+- **In VS Code:** **Terminal → Run Task…** → **Bot**, **Bot + dashboard** or **Everything** (manager + site + bot + dashboard, then opens the manager and the site).
+- The bot needs its virtual environment in `discord_server/bot/.venv` (see `discord_server/bot/requirements.txt`) and its token in Windows Credential Manager. Approvals can be answered in the bot's window (`y` / `n`), in the dashboard, or in the Windows dialog that pops up. The dashboard's **Restart** and **Stop** buttons control the bot.
+
+---
+
 ## Troubleshooting
 
 - **`python` is not recognized**: try `py app.py` / `py -m http.server 8000` (the Windows Python launcher). If neither works, install Python 3 from python.org and tick "Add python.exe to PATH".

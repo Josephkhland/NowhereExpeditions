@@ -429,28 +429,84 @@ const renderGame = async () => {
     </tbody></table></div>`;
   };
   // {{form-list}}: the Spell Forms Endros knows of, by tier.
-  const FORM_TIERS = [["basic", "Basic Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
+  const FORM_TIERS = [["base", "Base Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
   const formList = () => {
     if (!campaign.forms.length) return '<p class="muted">No Forms have been recorded yet.</p>';
     return FORM_TIERS.map(([tier, title]) => {
       const forms = campaign.forms.filter((form) => form.tier === tier).sort((left, right) => String(left.name).localeCompare(String(right.name)));
-      return forms.length ? `<h4 class="catalogue-heading">${title}</h4><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Effect</th></tr></thead><tbody>
+      return forms.length ? `<h4 class="catalogue-heading">${title}</h4><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Cost</th><th>Effect</th></tr></thead><tbody>
         ${forms.map((form) => `<tr><td><strong>${escapeHtml(form.name)}</strong>${form.status && form.status !== "known" ? ` <span class="form-status">${escapeHtml(humanize(form.status))}</span>` : ""}</td>
-          <td>${functionChips(form.words)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
+          <td>${functionChips(form.words)}</td><td>${formCost(form)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
       </tbody></table></div>` : "";
     }).join("");
   };
   // Markers on their own line in a post: {{reading-path}} (the Onboarding list) and {{function-picker}} (Random Resource).
   // {{expedition-pack}} in a Sponsor's rule shows that Sponsor's Pack, as the Marketplace lists it.
+  // {{name-generator}} links to the Name Generator.
   const postText = (text, post = null) => richText(text, campaign)
     .replace(/<p>\s*\{\{\s*expedition-pack\s*\}\}\s*<\/p>/g, () => post ? sponsorPackBlock(post.id, campaign) : "")
     .replace(/<p>\s*\{\{\s*reading-path\s*\}\}\s*<\/p>/g, readingPathList)
     .replace(/<p>\s*\{\{\s*function-picker\s*\}\}\s*<\/p>/g, '<p><a class="discovery-button" href="discoveries.html#functions">Try the Functions explorer →</a></p>')
+    .replace(/<p>\s*\{\{\s*name-generator\s*\}\}\s*<\/p>/g, '<p><a class="discovery-button" href="names.html">Open the Name Generator →</a></p>')
     .replace(/<p>\s*\{\{\s*resource-catalogue\s*\}\}\s*<\/p>/g, resourceCatalogue)
     .replace(/<p>\s*\{\{\s*form-list\s*\}\}\s*<\/p>/g, formList)
     .replace(/<p>\s*\{\{\s*function-vocabulary\s*\}\}\s*<\/p>/g, functionVocabulary)
     .replace(/<p>\s*\{\{\s*domain-list\s*\}\}\s*<\/p>/g, domainList)
     .replace(/<code>([A-Z][A-Za-z-]+)<\/code>/g, (match, word) => VOCABULARY_WORDS.has(word) ? functionChips([word]) : match);
+
+  // A "cheatsheet" rule: the text before the first heading is a one-line intro, each ## heading titles a group, and
+  // each ### section becomes a compact card in that group's grid. "(House rule)" at the end of a heading becomes a badge.
+  const cheatSheet = (html) => {
+    const source = document.createElement("div");
+    source.innerHTML = html;
+    const body = source.querySelector(".rich-text") || source;
+    const sheet = document.createElement("div");
+    sheet.className = "cheatsheet";
+    const intro = document.createElement("div");
+    intro.className = "cheat-intro";
+    let group = null;
+    let card = null;
+    const newGroup = (title) => {
+      group = document.createElement("section");
+      group.className = "cheat-group";
+      if (title) {
+        const heading = document.createElement("h3");
+        heading.className = "cheat-group-title";
+        heading.innerHTML = title;
+        group.append(heading);
+      }
+      const grid = document.createElement("div");
+      grid.className = "cheat-grid";
+      group.append(grid);
+      sheet.append(group);
+      card = null;
+    };
+    const badge = (heading) => {
+      const match = heading.innerHTML.match(/\s*\((house rule)\)\s*$/i);
+      if (!match) return heading.innerHTML;
+      return `${heading.innerHTML.slice(0, match.index)} <span class="cheat-badge">House rule</span>`;
+    };
+    [...body.childNodes].forEach((node) => {
+      const tag = node.nodeName;
+      if (tag === "H5" || tag === "H4") { newGroup(node.innerHTML); return; }
+      if (tag === "H6") {
+        if (!group) newGroup("");
+        card = document.createElement("section");
+        card.className = "cheat-card";
+        card.innerHTML = `<h4 class="cheat-card-title">${badge(node)}</h4>`;
+        group.querySelector(".cheat-grid").append(card);
+        return;
+      }
+      (card || (group ? group.querySelector(".cheat-grid") : intro)).append(node);
+    });
+    if (intro.textContent.trim() || intro.children.length) sheet.prepend(intro);
+    return `<div class="rich-text">${sheet.outerHTML}</div>`;
+  };
+  const ruleContent = (rule) => rule.layout === "cheatsheet"
+    ? `<div class="rule-content is-cheatsheet">
+        <p class="cheat-actions"><button type="button" class="button button-secondary cheat-print" data-print-rule>Print this sheet</button></p>
+        ${cheatSheet(postText(rule.details, rule))}</div>`
+    : `<div class="rule-content">${postText(rule.details, rule)}</div>`;
 
   const announcements = visibleAnnouncements(posts);
   announcementRoot.innerHTML = announcements.length ? announcements.map((post) => `
@@ -558,9 +614,12 @@ const renderGame = async () => {
           <span><strong>Learn more about ${escapeHtml(faction.name)}</strong>${faction.tagline ? `<span>${escapeHtml(faction.tagline)}</span>` : ""}</span>
           <span class="rule-faction-arrow" aria-hidden="true">→</span></a>` : "";
       })()}
-      ${rule.details ? `<div class="rule-content">${postText(rule.details, rule)}</div>` : ""}
+      ${rule.details ? ruleContent(rule) : ""}
       ${pathNav(rule)}
       ${tagList(rule.tags, "Related topics")}`;
+    ruleView.classList.toggle("is-cheatsheet", rule.layout === "cheatsheet");
+    document.body.classList.toggle("printing-cheatsheet", rule.layout === "cheatsheet");
+    ruleView.querySelector("[data-print-rule]")?.addEventListener("click", () => window.print());
   };
 
   // Brings the reader to the top of the open rule, and keeps its entry in view in the sidebar.
@@ -994,7 +1053,11 @@ const archiveLink = (entry, text = entry?.title) => entry
   ? `<a class="inline-link" href="${archiveHref(entry)}">${escapeHtml(text)}</a>`
   : "";
 
-const initials = (name = "") => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join("") || "?";
+// First and last name ("Manhattan R. Wylde" -> "MW"); a single word gives one letter.
+const initials = (name = "") => {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? [parts[0], parts[parts.length - 1]] : parts).map((part) => part[0].toUpperCase()).join("") || "?";
+};
 
 const avatar = (character, className = "avatar") => character.portrait
   ? `<span class="${className}"><img src="${escapeHtml(character.portrait)}" alt="" loading="lazy" /></span>`
@@ -1068,6 +1131,11 @@ const resourceIcon = (resource, className = "resource-icon") => {
     style="left: ${pct(-100 * x / size)}; top: ${pct(-100 * y / size)}; width: ${pct(10000 / size)}; height: ${pct(10000 * ratio / size)}" /></span>`;
 };
 
+// A Form's cost: the Word Stress it uses from each of its Words, e.g. "Move 1" or "Absorb 1 · Heat 1".
+const formCost = (form) => (form.words || []).length
+  ? `<span class="form-cost">${form.words.map((word) => `${escapeHtml(word)} ${escapeHtml(form.cost ?? 1)}`).join(" · ")}</span>`
+  : '<span class="muted">NO DATA</span>';
+
 const resourceCard = (resource, campaign, { showGate = true } = {}) => {
   const gate = resource.gateId ? campaign.archiveById.get(resource.gateId) : null;
   return `
@@ -1084,6 +1152,9 @@ const resourceCard = (resource, campaign, { showGate = true } = {}) => {
       ${resource.description ? `<p>${richInline(resource.description, campaign)}</p>` : ""}
       <p class="resource-functions"><span class="resource-label">Functions</span> ${resource.functions?.length ? functionChips(resource.functions) : '<span class="muted">NONE IDENTIFIED</span>'}</p>
       ${resource.specialProperty ? `<p><span class="resource-label">Special Property</span> ${richInline(resource.specialProperty, campaign)}</p>` : ""}
+      ${resource.functions?.length ? `<p class="resource-word-stress"><span class="resource-label">Word Stress</span> ${resource.wordStress
+        ? `<span class="word-boxes" aria-label="${resource.wordStress} boxes">${"□ ".repeat(resource.wordStress).trim()}</span> <span class="muted">per Word</span>`
+        : '<span class="muted">NO DATA</span>'}</p>` : ""}
       ${resource.supply ? `<p><span class="resource-label">Supply</span> ${escapeHtml(resource.supply)}</p>` : ""}
     </article>`;
 };
@@ -2462,13 +2533,15 @@ const renderCharacterRoster = async () => {
     const campaign = await loadCampaign();
     const sorted = [...campaign.characters].sort((left, right) => String(left.name).localeCompare(String(right.name)));
 
+    // Every card is the same size: the summary is cut to a few lines, and the profile has the rest.
     const rosterCard = (character) => `
       <a class="card character-card" href="#${encodeURIComponent(character.id)}">
         ${avatar(character, "avatar avatar-large")}
         <span class="character-card-body">
-          <span class="character-name">${escapeHtml(character.name)}</span>
+          <span class="character-name" title="${escapeHtml(character.name)}">${escapeHtml(character.name)}</span>
           <span class="meta-row"><span class="pill pill-small">${character.type === "npc" ? "NPC" : "PC"}</span>${statusPill(character.status, "pill pill-small")}</span>
           ${character.summary ? `<span class="character-summary">${escapeHtml(character.summary)}</span>` : ""}
+          <span class="character-card-cta">View profile <span aria-hidden="true">→</span></span>
         </span>
       </a>`;
 
@@ -2476,7 +2549,8 @@ const renderCharacterRoster = async () => {
     const createBar = `
       <div class="sheet-download roster-create">
         <a class="destination-link" href="sheet.html?new" target="_blank" rel="noopener">Create new character <span aria-hidden="true">↗</span></a>
-        <p class="muted">Opens a blank sheet in a new tab with every skill at +0. When your character is ready, press <strong>Save file</strong> there and send the file to the GM.</p>
+        <a class="destination-link" href="names.html">Name Generator <span aria-hidden="true">→</span></a>
+        <p class="muted">Opens a blank sheet in a new tab with every skill at +0. When your character is ready, press <strong>Save file</strong> there and send the file to the GM. Need a name? The Name Generator suggests some in the style of each homeland.</p>
       </div>`;
 
     const renderRoster = () => {
@@ -2975,13 +3049,13 @@ const renderDiscoveries = async () => {
   panels.domains.insertAdjacentHTML("afterbegin", '<p class="muted discovery-count">Every Gate has a Domain, and what comes from it shares that Domain. See the <a class="inline-link" href="game.html#post-domains">Domains rule</a>.</p>');
 
   /* Spell Forms, by tier. */
-  const tiers = [["basic", "Basic Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
+  const tiers = [["base", "Base Forms"], ["first", "First Forms"], ["second", "Second Forms"], ["third", "Third Forms"]];
   panels.forms.innerHTML = '<p class="muted discovery-count">The Forms Endros has recorded. How to cast them is in the <a class="inline-link" href="game.html#post-spellcasting">Spellcasting rule</a>.</p>'
     + (forms.length ? tiers.map(([tier, title]) => {
       const tierForms = forms.filter((form) => form.tier === tier).sort((left, right) => String(left.name).localeCompare(String(right.name)));
-      return tierForms.length ? `<h2 class="catalogue-heading">${title}</h2><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Effect</th></tr></thead><tbody>
+      return tierForms.length ? `<h2 class="catalogue-heading">${title}</h2><div class="rich-table"><table><thead><tr><th>Form</th><th>Words</th><th>Cost</th><th>Effect</th></tr></thead><tbody>
         ${tierForms.map((form) => `<tr id="form-${escapeHtml(form.id)}"><td><strong>${escapeHtml(form.name)}</strong>${form.status && form.status !== "known" ? ` <span class="form-status">${escapeHtml(humanize(form.status))}</span>` : ""}</td>
-          <td>${functionChips(form.words)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
+          <td>${functionChips(form.words)}</td><td>${formCost(form)}</td><td>${form.effect ? richInline(form.effect, campaign) : '<span class="muted">NO DATA</span>'}</td></tr>`).join("")}
       </tbody></table></div>` : "";
     }).join("") : '<p class="empty-state">No Forms have been recorded yet.</p>');
 
@@ -3175,7 +3249,7 @@ const renderFooterMap = () => {
   const column = (title, links) => `<div><h2>${title}</h2><ul>${links.map(([label, href]) => `<li><a href="${href}">${label}</a></li>`).join("")}</ul></div>`;
   footer.insertAdjacentHTML("afterbegin", `<nav class="footer-map wrapper" aria-label="Site map">
     ${column("The world", [["Outpost", "outpost.html"], ["Factions", "factions.html"], ["Gates", "gates.html"], ["Lore", "lore.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
-    ${column("Expeditions", [["Job Board", "jobs.html"], ["Expedition Reports", "reports.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"]])}
+    ${column("Expeditions", [["Job Board", "jobs.html"], ["Expedition Reports", "reports.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"], ["Name generator", "names.html"]])}
     ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
     ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
   </nav>`);
@@ -3313,6 +3387,8 @@ const renderFactions = async () => {
             ${section("Sponsorship", sponsorship, "faction-sponsor")}
             ${section("Relations", relations.length ? `<ul class="faction-relations">${relations.map(([other, text]) => `
               <li>${factionChip(other)}${text ? `<span>${richInline(text, campaign)}</span>` : ""}</li>`).join("")}</ul>` : "")}
+            ${section("Names", `<p>Making a character from here? Get ten names in their style.</p>
+              <a class="destination-link" href="names.html#${encodeURIComponent(faction.id)}">Name Generator <span aria-hidden="true">→</span></a>`)}
           </aside>
         </div>
         ${studied.length || connected.length ? `<div class="faction-study${studied.length && connected.length ? " has-connected" : ""}">

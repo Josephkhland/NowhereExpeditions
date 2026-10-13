@@ -1525,9 +1525,12 @@ a.entry-item { display: block; }
 
 .roster-section + .roster-section { margin-top: 2.5rem; }
 
+/* Roster cards are all one size (grid-auto-rows: 1fr): long summaries are cut after four lines, and the
+   "View profile" line sits at the bottom of every card. */
 .roster-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: minmax(15rem, 1fr); /* fits a two-line name, so cards also match across sections */
   gap: 1rem;
 }
 
@@ -1540,9 +1543,18 @@ a.entry-item { display: block; }
 
 .character-card:hover,
 .character-card:focus-visible { border-color: var(--line-strong); }
-.character-card-body { display: grid; gap: 0.4rem; min-width: 0; }
-.character-name { font-weight: 700; font-size: 1.05rem; }
-.character-summary { color: var(--muted); font-size: 0.88rem; }
+.character-card-body { display: flex; flex-direction: column; gap: 0.4rem; align-self: stretch; min-width: 0; }
+.character-name { display: -webkit-box; overflow: hidden; font-weight: 700; font-size: 1.05rem; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.character-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.character-card-cta { margin-top: auto; padding-top: 0.2rem; color: var(--accent-2); font-size: 0.85rem; font-weight: 700; }
 
 .profile-head {
   display: grid;
@@ -2428,6 +2440,103 @@ h5.rich-heading, h6.rich-heading { color: var(--muted); font-size: 0.68rem; }
 .rule-content .rich-text blockquote ul { margin-bottom: 0.5rem; }
 .rule-view .rule-tags { margin-top: 1.6rem; }
 
+.form-cost { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.word-boxes { color: var(--accent); letter-spacing: 0.1em; }
+
+/* A "cheatsheet" rule: a field reference card. Each ### section is a numbered card in a dense grid, grouped by ##. */
+.rule-content.is-cheatsheet { font-size: 0.9rem; line-height: 1.5; counter-reset: cheat-card; }
+.cheat-actions { display: flex; justify-content: flex-end; margin: -1rem 0 1rem; }
+.cheat-actions .button { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+.cheat-intro { margin-bottom: 1.4rem; padding: 0.7rem 1rem; border: 1px dashed var(--line-strong); color: var(--muted); }
+.cheat-intro p:last-child { margin-bottom: 0; }
+.cheat-group + .cheat-group { margin-top: 1.8rem; }
+.rule-content .cheat-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 0.75rem;
+  color: var(--accent-2);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.cheat-group-title::after { content: ""; flex: 1; border-top: 1px solid var(--line-strong); }
+.cheat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 0.7rem; align-items: start; }
+.cheat-card {
+  min-width: 0;
+  padding: 0.7rem 0.85rem 0.75rem;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  background: rgba(9, 14, 16, 0.6);
+  counter-increment: cheat-card;
+}
+.rule-content .cheat-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+  margin: 0 0 0.45rem;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.cheat-card-title::before {
+  content: counter(cheat-card, decimal-leading-zero);
+  color: var(--accent);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.74rem;
+  font-weight: 400;
+}
+.cheat-badge {
+  margin-left: auto;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgba(224, 168, 93, 0.5);
+  color: var(--accent-2);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.rule-content .cheat-card p { margin: 0 0 0.45rem; }
+.rule-content .cheat-card ul,
+.rule-content .cheat-card ol { margin: 0 0 0.45rem; padding-left: 1.1rem; }
+.rule-content .cheat-card li + li { margin-top: 0.15rem; }
+.rule-content .cheat-card > :last-child { margin-bottom: 0; }
+.rule-content .cheat-card .rich-table { margin: 0.2rem 0 0.45rem; }
+.rule-content .cheat-card .rich-table table { font-size: 0.82rem; }
+.rule-content .cheat-card .rich-table th,
+.rule-content .cheat-card .rich-table td { padding: 0.25rem 0.45rem; }
+.rule-content .cheat-card blockquote { margin: 0.2rem 0 0.45rem; padding: 0.4rem 0.6rem; font-size: 0.84rem; }
+.rule-content .cheat-card code { font-size: 0.85em; }
+
+@media print {
+  body.printing-cheatsheet { background: #fff; color: #000; }
+  body.printing-cheatsheet .site-header,
+  body.printing-cheatsheet .site-footer,
+  body.printing-cheatsheet footer,
+  body.printing-cheatsheet .rules-sidebar,
+  body.printing-cheatsheet .game-tabs,
+  body.printing-cheatsheet .section-header,
+  body.printing-cheatsheet .dice-roller,
+  body.printing-cheatsheet .dice-fab,
+  body.printing-cheatsheet .rule-back,
+  body.printing-cheatsheet .rule-pager,
+  body.printing-cheatsheet .rule-tags,
+  body.printing-cheatsheet .cheat-actions,
+  body.printing-cheatsheet .post-art { display: none !important; }
+  body.printing-cheatsheet .rules-layout { display: block; }
+  body.printing-cheatsheet .rule-view-head { margin-bottom: 0.8rem; padding: 0 0 0.6rem; }
+  body.printing-cheatsheet .rule-view-head h2 { font-size: 1.4rem; }
+  body.printing-cheatsheet .rule-lead { display: none; }
+  body.printing-cheatsheet .rule-view * { color: #000 !important; background: transparent !important; }
+  body.printing-cheatsheet .cheat-card { border-color: #999; break-inside: avoid; }
+  body.printing-cheatsheet .cheat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
 /* Previous / Next along the reading path. */
 .rule-pager {
   display: grid;
@@ -2971,6 +3080,19 @@ a.rule-step:hover { text-decoration: underline; }
 .rule-faction-flag { flex: 0 0 auto; width: 3.2rem; aspect-ratio: 3 / 2; object-fit: cover; border: 1px solid var(--line-strong); }
 .rule-faction-arrow { margin-left: auto; color: var(--accent-2); }
 
+/* Name Generator (names.html): homeland + style chips, then ten names in two columns beside the naming note. */
+.names-controls { margin-bottom: 1.2rem; }
+.names-controls .filter-bar { margin-bottom: 0.9rem; }
+.names-controls .filter-bar:last-child { margin-bottom: 0; }
+.name-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem 1.2rem; margin: 0 0 0.6rem; padding-left: 1.6rem; }
+.name-list li { padding: 0.35rem 0; border-bottom: 1px solid var(--line); color: var(--muted); }
+.name-list li::marker { font-size: 0.8rem; }
+.name-text { color: var(--text); font-size: 1.05rem; }
+.name-copy { float: right; padding: 0.1rem 0.5rem; border: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 0.72rem; cursor: pointer; }
+.name-copy:hover, .name-copy:focus-visible { color: var(--accent); border-color: var(--accent); }
+.names-about p { color: var(--text-soft); }
+.page-subtitle a { color: var(--accent); }
+
 @media (max-width: 800px) {
   /* One column on phones: the essentials and the sponsorship first, the rest after. */
   .faction-layout { display: flex; flex-direction: column; gap: 1.2rem; }
@@ -2982,6 +3104,8 @@ a.rule-step:hover { text-decoration: underline; }
   .faction-hero.has-art::after { background: linear-gradient(0deg, rgba(13, 21, 23, 0.97) 35%, rgba(13, 21, 23, 0.35) 100%); }
   .faction-section { padding: 1rem; }
   .faction-glance div { grid-template-columns: minmax(0, 1fr); }
+  .name-list { grid-template-columns: minmax(0, 1fr); }
+  .names-layout > * { align-self: stretch; }
 }
 
 /* ---------- Header: the Encyclopedia dropdown (Factions, Archive, Discoveries) ---------- */

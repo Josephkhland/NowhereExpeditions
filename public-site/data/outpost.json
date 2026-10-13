@@ -113,7 +113,13 @@
     "current": 0,
     "max": 3
   },
-  "consequences": [],
+  "consequences": [
+    {
+      "name": "Strained Harbour",
+      "severity": "Low",
+      "detail": "The harbour and the support structures beneath the platforms were built fast and have been worked hard ever since. Cracked moorings, overloaded cranes and patched supports slow every delivery. Recovering it is a Public Recovery Project (Low: 2 Progress) anyone can work on, supported by Industry or Infrastructure."
+    }
+  ],
   "facilities": [
     {
       "id": "workshops",

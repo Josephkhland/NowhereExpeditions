@@ -1,6 +1,6 @@
 {
   "id": "vardic-bloom-iron",
-  "name": "Vardic Bloom Iron",
+  "name": "Bloom Iron",
   "sourceType": "ground",
   "description": "Dense iron produced in traditional Vardic bloom furnaces and refined by repeated folding, hammering and slag removal. Modern foundries can produce cleaner industrial steel, but Vardic smiths continue to value bloom iron for tools, fittings, structural reinforcement and hand-forged components. Maker's marks are commonly stamped directly into finished pieces.",
   "domains": [
@@ -9,13 +9,15 @@
   "functions": [],
   "specialProperty": "",
   "availability": "available",
+  "wordStress": null,
   "supply": "",
   "gateId": null,
   "projectId": null,
   "image": "data/images/vardic-bloom-iron-icon-1aa6f312.webp",
   "imageCrop": {
-    "x": 50.0,
-    "y": 23.0,
-    "zoom": 1.1
+    "x": 4.55,
+    "y": 4.55,
+    "size": 90.91,
+    "ratio": 1.0
   }
 }

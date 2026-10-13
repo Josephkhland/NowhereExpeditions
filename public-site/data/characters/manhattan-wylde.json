@@ -1,0 +1,16 @@
+{
+  "id": "manhattan-wylde",
+  "name": "Manhattan R. Wylde",
+  "type": "npc",
+  "status": "active",
+  "portrait": null,
+  "summary": "Professor of the University of Verna and the discoverer of Effect Glowing, the first practical spell Form ever demonstrated. His paper on it, describing a technique of runic markings painted on the wrists, became major news and set off the research rush that opened the Era of Magic. He is the doctoral supervisor of Palava Bansz.\n\nAsked by a newspaper whether his method could be learned by ordinary people, he is reported to have said that it could be learned by anyone with patience, a steady hand and access to a Rune, \"which is to say, at present, almost nobody.\"",
+  "playerName": "",
+  "sheet": null,
+  "stash": [],
+  "coins": 0,
+  "downtime": 0,
+  "sponsorId": null,
+  "packs": [],
+  "carryModifier": 0
+}

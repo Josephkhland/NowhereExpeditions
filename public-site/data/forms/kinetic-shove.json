@@ -1,0 +1,12 @@
+{
+  "id": "kinetic-shove",
+  "name": "Kinetic Shove",
+  "tier": "first",
+  "words": [
+    "Move"
+  ],
+  "cost": 1,
+  "effect": "Forcefully shove a target, suddenly giving it motion. Developed from the method of the Effect Glowing paper. See [[the-first-three-forms|The First Three Forms]].",
+  "status": "known",
+  "projectId": null
+}

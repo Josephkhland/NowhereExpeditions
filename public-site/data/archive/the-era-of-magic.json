@@ -1,0 +1,41 @@
+{
+  "id": "the-era-of-magic",
+  "type": "lore",
+  "title": "The Era of Magic",
+  "subtitle": "How spellcasting began, and how new it still is",
+  "summary": "Magic did not begin with spells. It began with Runes recovered from the Gates, then a handful of techniques nobody fully understood, then a theory, and only last a way to cast without a Rune. A short history of a very young science.",
+  "content": "> *\"Nobody invented magic. We found it lying about, and have been trying to read the instructions ever since.\"*\n> — said in the University laboratories in Endros\n\nBefore the Gates, the world had no magic. Tianzhao had the most thorough administration for the possibility (see [[the-tianzhao-mandate|The Tianzhao Mandate]]), the faiths had their miracles and their arguments, and the natural philosophers had nothing at all to measure. Then the [[why-we-call-them-the-valeoran-ruins|Valeoran Ruins]] began to form Gates, and things started coming back through them that did impossible things.\n\nNewspapers call what followed **the Era of Magic**. The phrase makes it sound settled and grand. It is neither. Practical spellcasting is only a few years old, its first textbooks are still being written, and its basic rules are still being argued over. This entry is the short version of how it happened. The longer versions are in [[runes-of-the-gates|Runes]], [[the-first-three-forms|The First Three Forms]], [[the-vocabulary-breakthrough|The Vocabulary Breakthrough]] and [[discovery-of-base-form|The Discovery of Base Form]].\n\n## The Order of Discovery\n\nThe most important thing to know about the history of magic is the order in which things were found, because it is not the order a textbook would choose.\n\n1. **Runes.** Researchers studying Gate artifacts found objects that could make certain impossible effects happen, and happen again. These are **Runes**. Nobody understood them.\n2. **The first Forms.** By copying markings, gestures and diagrams, researchers learned to make Runes produce particular effects on purpose. The first such technique to work reliably was **Effect Glowing**, demonstrated by Professor [Manhattan R. Wylde](characters.html#manhattan-wylde) of the University of Verna. Its publication started a rush, and two more Forms, **Simple Sauna** and **Kinetic Shove**, followed quickly.\n3. **The Vocabulary.** Comparing those Forms against different Runes, researchers worked out that each Rune supplied one underlying element, a **Word**, and that the Words were the same **Functions** the artificers had been cataloguing in Gate materials.\n4. **Base Form.** Last of all came a way for a person to manifest a Word *without* a Rune. It is called **Base Form**, and it is fundamental, not basic: it was the second great revolution, not the first step.\n\nSpellcasting was usable before it was understood, and understood before anyone could do it unaided.\n\n> **From an introductory lecture, University of Verna Laboratories, Endros**\n>\n> \"If you remember one thing from today, remember this. The Forms came first. We were casting with borrowed Words for some time before anyone could make one. So when your notes tell you that Base Form is *basic*, cross it out. It is *base*, as in foundation. It is the hardest thing we teach.\"\n>\n> A hand went up at the back. \"Then why do we learn it after the Forms?\"\n>\n> \"Because that,\" said the lecturer, \"is the order in which we learned it.\"\n\n## One Science, Two Branches\n\nMagic and artificery are two branches of the same discovery. An artificer studies **Functions** embodied in matter: a glass that holds heat, a fibre that bends and returns. A spellcaster manifests the same Functions directly, as **Words**. The Workshops and the laboratories use one shared vocabulary, which is why a Resource catalogued for an engineer can matter just as much to a caster. The rules for both are on the Rules page: [Resource Functions](game.html#post-resource-functions) and [Spellcasting](game.html#post-spellcasting).\n\n## What Casting Is Like\n\nNothing about early magic is effortless.\n\n- **Forms are physical.** A Form is a learned technique of gestures, stances and sometimes markings. A caster has to be free to perform it.\n- **Base Forms are calculations.** To manifest a Word, a caster works through a demanding derivation in their head, using parameters such as the positions of celestial bodies, angles, distances and the time. Then they make the right sound.\n- **Spellbooks are reference books.** A caster's book looks more like an astronomy handbook crossed with a laboratory notebook than a book of incantations.\n- **Every technique is learned separately.** Being able to manifest `Move` does not let anyone improvise every use of movement magic. Each Form is its own discovery.\n\n> **Overheard on a Workshops gantry**\n>\n> \"I thought wizards just pointed.\"\n>\n> \"Wizards are in stories. These are researchers.\" The foreman nodded down at the woman sitting cross-legged on the decking with a book of star tables open across her knees, lips moving silently. \"She's been working on that sum for four minutes. When she gets it right, the crate moves.\"\n>\n> \"And if she gets it wrong?\"\n>\n> \"Then she starts again, and we all wait.\"\n\n## Who Is Doing the Work\n\nThe publication of Effect Glowing drew everyone who could reach a Rune or a laboratory into the field at once: universities, independent natural philosophers, artificers, industrial laboratories, governments and their military offices, wealthy patrons, engineers and, inevitably, Expeditioners. The [[university-of-verna|University of Verna]] is prominent among them; it is far from alone.\n\nThe powers read the new science through their own convictions. Aurelia treats Gate-derived magic as a strategic asset requiring responsible administration (see [[the-aurelian-empire|The Aurelian Empire]]). Vesper's instinct is that *No Crown Owns the Impossible* (see [[the-vesper-republic|The Vesper Republic]]). The University's habit is to publish what is true and to think hard before publishing instructions. These positions collide most often over a single question: when someone discovers a new Form, who gets to know it?\n\n## What Nobody Knows Yet\n\nThe open questions of the Era of Magic are larger than its answers:\n\n- why Words work at all, and why the universe answers a correct derivation;\n- what a Rune actually *is*, and whether a used one is finished for good;\n- whether people can ever **make** a Rune;\n- which steps in the early techniques are really needed;\n- how far casting can be simplified, and by what means: better notation, instruments, new methods nobody has imagined.\n\nEach of these is a research question, and each could be answered in Endros. A Form discovered by an Expeditioner is as real as one discovered by a professor, and the history of magic is short enough that the next chapter could easily be written by someone reading this.\n\n## Related Entries\n\n- [[runes-of-the-gates|Runes]]: the Gate artifacts that made magic possible.\n- [[the-first-three-forms|The First Three Forms]]: Effect Glowing, Simple Sauna, Kinetic Shove, and the rush.\n- [[the-vocabulary-breakthrough|The Vocabulary Breakthrough]]: how researchers isolated the Words.\n- [[discovery-of-base-form|The Discovery of Base Form]]: casting without a Rune, and the spellbook.\n- [[university-of-verna|The University of Verna]]: one of the institutions at the centre of the field.\n- The [Spellcasting](game.html#post-spellcasting) rules, and the Forms recorded in [Discoveries](discoveries.html#forms).",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Era of Magic",
+    "magic",
+    "spellcasting",
+    "Runes",
+    "Words",
+    "Vocabulary",
+    "Forms",
+    "First Form",
+    "Base Form",
+    "Effect Glowing",
+    "Simple Sauna",
+    "Kinetic Shove",
+    "spellbook",
+    "Functions",
+    "artificery",
+    "research rush"
+  ],
+  "topics": [
+    "History",
+    "Technology"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "overview",
+    "startStep": null
+  }
+}
