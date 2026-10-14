@@ -10,6 +10,9 @@ site-export/
 # Full-size source artwork (e.g. the original logos); the site uses resized copies in public-site/assets/images/.
 artwork/
 
+# The desktop app's Electron install (npm install in desktop-app/ restores it).
+node_modules/
+
 # Python caches
 __pycache__/
 *.py[cod]
@@ -21,6 +24,7 @@ desktop.ini
 
 # Written by the deploy workflow (.github/scripts/release_version.py); never committed.
 public-site/version.json
+public-site/changes.json
 
 # Lore entry drafts (nowhere-lore-writer skill); the content manager database is the source of truth.
 lore/
@@ -30,8 +34,11 @@ marketing_promotion/
 
 # Personal Claude Code settings (deny rules protecting the Discord bot token).
 .claude/settings.local.json
-# Skill for the private Discord bot (lives with discord_server/, kept out of the public repo).
-.claude/skills/vaultulation-bot/
+# Project skills (the Discord bot, table insights, ...) stay local, out of the public repo.
+.claude/skills/
+
+# Table insights results: stats, moments and quotes about real players. Never commit them.
+table-insights/data/
 
 # Discord server planning and moderation notes. Kept out of the public repo,
 # except the bot's code (discord_server/bot/ has its own .gitignore for the venv and secrets).

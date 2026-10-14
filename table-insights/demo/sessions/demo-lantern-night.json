@@ -1,0 +1,489 @@
+{
+ "schema": 1,
+ "id": "demo-lantern-night",
+ "generated_at": "2026-10-14T13:43:37+00:00",
+ "source": {
+  "transcript": "demo-lantern-night.json",
+  "transcript_path": "table-insights/demo/transcripts/demo-lantern-night.json",
+  "channel": "rp-hub",
+  "read_at": "2026-10-06T22:08:00+00:00",
+  "from": null,
+  "to": null,
+  "message_count": 22
+ },
+ "settings": {
+  "gap_minutes": 60,
+  "long_turn_words": 250,
+  "burst_messages": 4,
+  "burst_words": 200,
+  "dominance_factor": 2.0,
+  "min_players_for_balance": 3,
+  "min_sitting_turns": 10,
+  "quiet_max_turns": 1
+ },
+ "people": {
+  "900000000000000001": {
+   "name": "Narrator",
+   "player": "GM",
+   "character": "GM",
+   "role": "gm",
+   "note": "",
+   "messages": 1,
+   "turns": 1,
+   "ooc_messages": 0,
+   "words": 26,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 26,
+    "p90": 26,
+    "max": 26
+   },
+   "words_per_message": {
+    "median": 26,
+    "max": 26
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000001",
+    "words": 26
+   },
+   "response_minutes": {
+    "median": null,
+    "count": 0
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 0
+  },
+  "900000000000000002": {
+   "name": "Wren",
+   "player": "Wren",
+   "character": "Ilse Varga",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 7,
+   "ooc_messages": 0,
+   "words": 66,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 10,
+    "p90": 15,
+    "max": 16
+   },
+   "words_per_message": {
+    "median": 10,
+    "max": 16
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000019",
+    "words": 16
+   },
+   "response_minutes": {
+    "median": 1.0,
+    "count": 6
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 3,
+   "share_words": 0.131,
+   "share_turns": 0.333,
+   "sittings_present": 2
+  },
+  "900000000000000003": {
+   "name": "Bolt",
+   "player": "Bolt",
+   "character": "Cassian Ardent",
+   "role": "player",
+   "note": "",
+   "messages": 6,
+   "turns": 6,
+   "ooc_messages": 0,
+   "words": 357,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 24.0,
+    "p90": 27,
+    "max": 256
+   },
+   "words_per_message": {
+    "median": 24.0,
+    "max": 256
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000005",
+    "words": 256
+   },
+   "response_minutes": {
+    "median": 2.0,
+    "count": 6
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 0,
+   "share_words": 0.711,
+   "share_turns": 0.286,
+   "sittings_present": 1
+  },
+  "900000000000000004": {
+   "name": "Moss",
+   "player": "Moss",
+   "character": "Pell Morrow",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 7,
+   "ooc_messages": 0,
+   "words": 53,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 9,
+    "p90": 10,
+    "max": 13
+   },
+   "words_per_message": {
+    "median": 9,
+    "max": 13
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000022",
+    "words": 13
+   },
+   "response_minutes": {
+    "median": 2.0,
+    "count": 7
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 0,
+   "share_words": 0.106,
+   "share_turns": 0.333,
+   "sittings_present": 2
+  },
+  "900000000000000007": {
+   "name": "Fennel",
+   "player": "Fennel",
+   "character": "Theo Quill",
+   "role": "player",
+   "note": "joined the hub scene late",
+   "messages": 1,
+   "turns": 1,
+   "ooc_messages": 0,
+   "words": 26,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 26,
+    "p90": 26,
+    "max": 26
+   },
+   "words_per_message": {
+    "median": 26,
+    "max": 26
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000012",
+    "words": 26
+   },
+   "response_minutes": {
+    "median": 3.0,
+    "count": 1
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 2,
+   "share_words": 0.052,
+   "share_turns": 0.048,
+   "sittings_present": 1
+  }
+ },
+ "sections": [
+  {
+   "title": "#rp-hub",
+   "truncated": false,
+   "messages": 16,
+   "turns": 16,
+   "sittings": 1
+  },
+  {
+   "title": "🧵 Late watch",
+   "truncated": false,
+   "messages": 6,
+   "turns": 6,
+   "sittings": 1
+  }
+ ],
+ "sittings": [
+  {
+   "section": "#rp-hub",
+   "start": "2026-10-06T19:00:00+00:00",
+   "end": "2026-10-06T19:28:00+00:00",
+   "duration_minutes": 28.0,
+   "turns": 16,
+   "player_count": 4,
+   "even_share": 0.25,
+   "authors": {
+    "900000000000000001": {
+     "turns": 1,
+     "words": 26
+    },
+    "900000000000000002": {
+     "turns": 4,
+     "words": 34,
+     "share_turns": 0.267,
+     "share_words": 0.077
+    },
+    "900000000000000004": {
+     "turns": 4,
+     "words": 25,
+     "share_turns": 0.267,
+     "share_words": 0.057
+    },
+    "900000000000000003": {
+     "turns": 6,
+     "words": 357,
+     "share_turns": 0.4,
+     "share_words": 0.808
+    },
+    "900000000000000007": {
+     "turns": 1,
+     "words": 26,
+     "share_turns": 0.067,
+     "share_words": 0.059
+    }
+   },
+   "top_player": "900000000000000003",
+   "top_share_words": 0.808,
+   "quiet": [
+    "900000000000000007"
+   ]
+  },
+  {
+   "section": "🧵 Late watch",
+   "start": "2026-10-06T20:58:00+00:00",
+   "end": "2026-10-06T21:08:00+00:00",
+   "duration_minutes": 10.0,
+   "turns": 6,
+   "player_count": 2,
+   "even_share": 0.5,
+   "authors": {
+    "900000000000000002": {
+     "turns": 3,
+     "words": 32,
+     "share_turns": 0.5,
+     "share_words": 0.533
+    },
+    "900000000000000004": {
+     "turns": 3,
+     "words": 28,
+     "share_turns": 0.5,
+     "share_words": 0.467
+    }
+   },
+   "top_player": "900000000000000002",
+   "top_share_words": 0.533,
+   "quiet": []
+  }
+ ],
+ "flags": [
+  {
+   "kind": "spotlight-dominance",
+   "author_id": "900000000000000003",
+   "section": "#rp-hub",
+   "at": "2026-10-06T19:00:00+00:00",
+   "detail": "81% of player words (even share 25%)"
+  },
+  {
+   "kind": "quiet-player",
+   "author_id": "900000000000000007",
+   "section": "#rp-hub",
+   "at": "2026-10-06T19:00:00+00:00",
+   "detail": "1 turn(s) in a sitting of 16"
+  },
+  {
+   "kind": "long-turn",
+   "author_id": "900000000000000003",
+   "section": "#rp-hub",
+   "at": "2026-10-06T19:09:00+00:00",
+   "message_id": "910000000000000005",
+   "detail": "256 words in 1 message(s)"
+  }
+ ],
+ "moments": [
+  {
+   "id": "m1",
+   "section": "#rp-hub",
+   "message_numbers": [
+    5
+   ],
+   "message_ids": [
+    "910000000000000005"
+   ],
+   "at": "2026-10-06T19:09:00+00:00",
+   "status": "confirmed",
+   "gm_note": "Lovely, but Bolt had 70% of the scene: a gentle word about leaving room.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000003",
+   "kind": "character",
+   "summary": "Gives a sweeping toast to the crew, the Job Board and the Sample Case.",
+   "why": "A big character moment, though it filled most of the scene.",
+   "quote": "To the Sample Case, which held.",
+   "helped": []
+  },
+  {
+   "id": "m2",
+   "section": "#rp-hub",
+   "message_numbers": [
+    12
+   ],
+   "message_ids": [
+    "910000000000000012"
+   ],
+   "at": "2026-10-06T19:23:00+00:00",
+   "status": "confirmed",
+   "gm_note": "Theo had one line all night. Aim the next hook at him.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000007",
+   "kind": "discovery",
+   "summary": "From the next table: the early echo is described in a book, chapter four.",
+   "why": "One line that linked the expedition's mystery to a lead. Worth a follow-up hook.",
+   "quote": "the early echo is in chapter four",
+   "helped": []
+  },
+  {
+   "id": "m3",
+   "section": "🧵 Late watch",
+   "message_numbers": [
+    19
+   ],
+   "message_ids": [
+    "910000000000000019"
+   ],
+   "at": "2026-10-06T21:03:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "author_id": "900000000000000002",
+   "kind": "assist",
+   "summary": "Offers to teach Pell her knot on the late watch.",
+   "why": "Gave a quieter scene room and a reason to continue.",
+   "quote": "I'll teach you the knot that made the rope complain.",
+   "helped": [
+    "900000000000000004"
+   ]
+  },
+  {
+   "id": "m4",
+   "section": "🧵 Late watch",
+   "message_numbers": [
+    18
+   ],
+   "message_ids": [
+    "910000000000000018"
+   ],
+   "at": "2026-10-06T21:00:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "author_id": "900000000000000004",
+   "kind": "character",
+   "summary": "Shares his last ration with a lantern moth.",
+   "why": "A small, warm character beat.",
+   "quote": "He's had a hard week too.",
+   "helped": []
+  }
+ ],
+ "humor_candidates": [
+  {
+   "id": "h1",
+   "section": "#rp-hub",
+   "message_numbers": [
+    12
+   ],
+   "message_ids": [
+    "910000000000000012"
+   ],
+   "at": "2026-10-06T19:23:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "authors": [
+    "900000000000000007"
+   ],
+   "setup": "Cassian's toasts have gone on for a while. A stranger at the next table speaks up.",
+   "quote": "I'd like the record to show the early echo is in chapter four. I was right.",
+   "rank": 3,
+   "signals": {
+    "reactions": {
+     "😂": 2
+    },
+    "laughing_replies": []
+   },
+   "feature_ok": true
+  },
+  {
+   "id": "h2",
+   "section": "#rp-hub",
+   "message_numbers": [
+    5,
+    6,
+    7,
+    8
+   ],
+   "message_ids": [
+    "910000000000000005",
+    "910000000000000006",
+    "910000000000000007",
+    "910000000000000008"
+   ],
+   "at": "2026-10-06T19:09:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "authors": [
+    "900000000000000002",
+    "900000000000000003",
+    "900000000000000004"
+   ],
+   "setup": "Ilse throws a bread roll; Cassian toasts it.",
+   "quote": "Did he just give a toast to a bread roll?",
+   "rank": 6,
+   "signals": {
+    "reactions": {
+     "😂": 3
+    },
+    "laughing_replies": []
+   },
+   "feature_ok": null
+  }
+ ],
+ "review": {
+  "status": "ai-draft",
+  "reviewed_by": "GM (demo)",
+  "reviewed_at": null,
+  "notes": ""
+ }
+}

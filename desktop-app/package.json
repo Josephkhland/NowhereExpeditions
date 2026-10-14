@@ -1,0 +1,19 @@
+{
+  "name": "nowhere-expeditions-desktop",
+  "productName": "Nowhere Expeditions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "One window for the Nowhere Expeditions toolkit: runs the servers and the bot in its Terminal tab (with Claude Code), has a Git tab for diffs and publishing, and shows the live site, content manager, draft site, table insights and bot dashboard.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "43.7.11"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0"
+  }
+}

@@ -173,6 +173,8 @@ def message_info(message):
         "attachments": [{"name": a.filename, "url": a.url} for a in message.attachments],
         "embeds": [e.title or e.description or "(embed)" for e in message.embeds],
         "thread": {"id": str(message.thread.id), "name": message.thread.name} if message.thread else None,
+        # Counts only (who reacted would cost a request per reaction). Custom emoji come out as <:name:id>.
+        "reactions": [{"emoji": str(r.emoji), "count": r.count} for r in message.reactions],
     }
 
 
@@ -195,6 +197,20 @@ def parse_time(value, name):
     except ValueError:
         raise web.HTTPBadRequest(text=f"{name} must be an ISO date/time")
     return moment if moment.tzinfo else moment.replace(tzinfo=datetime.timezone.utc)
+
+
+APP_PIPE = r"\\.\pipe\nowhere-expeditions-app"  # desktop-app/main.js listens here
+
+
+def hand_to_app(link):
+    """Pass the dashboard link to the desktop app (write-only: the app never sends anything back).
+    False when the app isn't running."""
+    try:
+        with open(APP_PIPE, "w", encoding="utf-8") as pipe:
+            pipe.write(json.dumps({"open": "dashboard", "url": link}) + "\n")
+        return True
+    except OSError:
+        return False
 
 
 def bad_request(message):
@@ -857,6 +873,7 @@ class Vaultulation(discord.Client):
             web.get("/read", self.api_read),
             web.post("/actions/post-embed", self.action_post_embed),
             web.post("/actions/delete-message", self.action_delete_message),
+            web.post("/actions/funny-poll", self.action_funny_poll),
             web.get("/tarot/{poll_id}", self.api_tarot),
             web.post("/actions/tarot-deal", self.action_tarot_deal),
             web.post("/actions/tarot-reveal", self.action_tarot_reveal),
@@ -1011,7 +1028,18 @@ class Vaultulation(discord.Client):
         print(f"Dashboard: {link}")
         print("  (this link is your key: keep it to yourself and don't paste it into a chat)")
         if OPEN_DASHBOARD:
-            webbrowser.open(link)
+            asyncio.create_task(self.open_dashboard(link))
+
+    async def open_dashboard(self, link):
+        """Show the dashboard in the Nowhere Expeditions desktop app if it's running (it may still be starting),
+        otherwise in the browser. The link goes through the app's private pipe, never a command line or file."""
+        loop = asyncio.get_running_loop()
+        for _ in range(16):
+            if await loop.run_in_executor(None, hand_to_app, link):
+                print("Dashboard opened in the desktop app.")
+                return
+            await asyncio.sleep(0.5)
+        webbrowser.open(link)
 
     async def dashboard_bot(self, request):
         verb = request.match_info["verb"]
@@ -1329,6 +1357,76 @@ class Vaultulation(discord.Client):
         await message.delete()
         self.log_action(title, lines, "approved", "deleted")
         return web.json_response({"status": "deleted"})
+
+    # --- funny-moments poll ----------------------------------------------------
+
+    async def action_funny_poll(self, request):
+        """Post a funny-moments poll drafted by Table Insights: an embed with the moments, then a native poll.
+        The draft only holds moments the GM confirmed and everyone in them agreed to feature."""
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return bad_request("Body must be JSON")
+        channel = self.find_text_channel(body.get("channel", ""), body.get("guild"))
+        if channel is None:
+            return bad_request(f"No text channel called or with id '{body.get('channel')}'")
+        perms = channel.permissions_for(channel.guild.me)
+        missing = [name for name, ok in (("View Channel", perms.view_channel), ("Send Messages", perms.send_messages),
+                                         ("Embed Links", perms.embed_links), ("Create Polls", perms.send_polls)) if not ok]
+        if missing:
+            return web.json_response(
+                {"status": "error", "error": f"Vaulty lacks {', '.join(missing)} in #{channel.name}"}, status=403)
+
+        draft = body.get("poll") or {}
+        if draft.get("kind") != "funny-moments-poll":
+            return bad_request("Not a funny-moments poll draft (make one with table-insights/moments.py poll)")
+        try:
+            embed, problems = build_embed(draft.get("embed") or {})
+        except (KeyError, TypeError, ValueError) as error:
+            return bad_request(f"Malformed embed: {error}")
+        question = (draft.get("question") or "").strip()
+        answers = draft.get("answers") or []
+        hours = draft.get("duration_hours")
+        if not 1 <= len(question) <= 300:
+            problems.append("the question needs 1-300 characters")
+        if not 2 <= len(answers) <= 10:
+            problems.append("a poll needs 2-10 answers")
+        for answer in answers:
+            if not 1 <= len((answer.get("text") or "").strip()) <= 55:
+                problems.append(f"answer '{(answer.get('text') or '')[:30]}' needs 1-55 characters")
+        if not isinstance(hours, int) or not 1 <= hours <= 768:
+            problems.append("duration_hours must be a whole number from 1 to 768")
+        if problems:
+            return bad_request("; ".join(problems))
+
+        title = f"Post a funny-moments poll in #{channel.name}"
+        category = channel.category.name if channel.category else "no category"
+        lines = [f"Channel: #{channel.name} ({category})",
+                 f"Embed: {embed.title or '-'} · {len(embed.fields)} moments: " + " | ".join(f.name for f in embed.fields),
+                 f"Poll: {question} ({'several choices' if draft.get('multiple') else 'one vote each'}, "
+                 f"open {hours} h; Discord shows who voted for what)"]
+        lines += [f"  {a.get('emoji') or '-'} {a['text']}" for a in answers]
+        lines.append("Mentions are disabled: nobody gets pinged.")
+        if not await self.ask_gm(title, lines):
+            self.log_action(title, lines, "rejected")
+            print("Rejected.")
+            return web.json_response({"status": "rejected"})
+
+        poll = discord.Poll(question=question, duration=datetime.timedelta(hours=hours), multiple=bool(draft.get("multiple")))
+        for answer in answers:
+            poll.add_answer(text=answer["text"].strip(), emoji=answer.get("emoji") or None)
+        no_pings = discord.AllowedMentions.none()
+        try:
+            intro = await channel.send(embed=embed, allowed_mentions=no_pings)
+            message = await channel.send(poll=poll, allowed_mentions=no_pings)
+        except discord.HTTPException as error:
+            self.log_action(title, lines, "failed", error.text)
+            print(f"Discord refused: {error.text}")
+            return web.json_response({"status": "error", "error": f"Discord refused: {error.text}"}, status=502)
+        self.log_action(title, lines, "approved", f"{intro.jump_url} + poll {message.jump_url}")
+        print(f"Posted funny-moments poll: {message.jump_url}")
+        return web.json_response({"status": "posted", "intro_url": intro.jump_url, "url": message.jump_url,
+                                  "message_id": str(message.id)})
 
     # --- tarot readings --------------------------------------------------------
 

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' file:">
+  <title>Nowhere Expeditions</title>
+  <link rel="stylesheet" href="shell.css">
+</head>
+<body>
+  <header class="bar">
+    <img class="logo" src="../tools/nowhere-expeditions.png" alt="">
+    <nav id="tabs" class="tabs" role="tablist" aria-label="Tools"></nav>
+    <form id="address" class="address" hidden>
+      <input id="address-input" type="text" spellcheck="false" autocomplete="off" aria-label="Live site address" title="Live site address (Ctrl+L); Enter to go, Esc to undo">
+    </form>
+    <div class="actions">
+      <button type="button" id="back" title="Back (Alt+Left)" aria-label="Back">←</button>
+      <button type="button" id="reload" title="Reload (Ctrl+R)" aria-label="Reload">↻</button>
+      <button type="button" id="browser" title="Open this page in the browser" aria-label="Open in browser">↗</button>
+    </div>
+  </header>
+  <script src="shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+:root {
+  --bar: #141210;
+  --tab: #1f1b17;
+  --tab-hover: #2a2520;
+  --tab-active: #f3ece0;
+  --ink: #e9e2d6;
+  --ink-active: #141210;
+  --muted: #9b9184;
+  --online: #3ec46d;
+  --starting: #e8a530;
+  --offline: #d9534f;
+  --line: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bar);
+  color: var(--ink);
+  font: 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.bar {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.logo { width: 26px; height: 26px; border-radius: 6px; flex: none; }
+
+.tabs { display: flex; gap: 4px; min-width: 0; flex: 0 1 auto; overflow: hidden; }
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tab);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tab:hover { background: var(--tab-hover); }
+.tab[aria-selected="true"] { background: var(--tab-active); color: var(--ink-active); }
+.tab:disabled { cursor: default; color: var(--muted); background: transparent; }
+.tab kbd { font: inherit; font-weight: 400; font-size: 11px; opacity: 0.55; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+.dot.online { background: var(--online); }
+.dot.starting { background: var(--starting); }
+.dot.offline, .dot.exited { background: var(--offline); }
+
+.address { flex: 1 1 220px; min-width: 180px; max-width: 440px; margin-left: auto; }
+/* With the address field showing, the Ctrl+N hints make room on narrower windows. */
+@media (max-width: 1500px) { body.addressing .tab kbd { display: none; } }
+.address[hidden] { display: none; }
+.address input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tab);
+  color: var(--ink);
+  font: inherit;
+  user-select: text;
+}
+.address input:focus { outline: none; border-color: var(--tab-active); background: var(--bar); }
+
+.actions { display: flex; gap: 4px; flex: none; margin-left: auto; }
+.actions button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.actions button:hover:not(:disabled) { background: var(--tab-hover); }
+.actions button:disabled { color: var(--muted); opacity: 0.5; cursor: default; }

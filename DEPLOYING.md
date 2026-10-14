@@ -51,6 +51,8 @@ content manager (local)  ──Sync data──►  public-site/data  ──git p
    git push
    ```
 
+   Or use the desktop app's **Git** tab (see [desktop-app/README.md](desktop-app/README.md)): stage, commit, then **Publish**, which shows the diffs first and merges a branch into `main` for you.
+
 4. The Action deploys within a minute or two. Pushes that don't touch `public-site/` (for example, content-manager code) don't redeploy.
 
 To redeploy without a change, use **Actions → Deploy public site → Run workflow**.
@@ -77,6 +79,13 @@ Each release becomes a git tag (`v1.4.2`) and a **GitHub Release** with auto-gen
 | `major` / `minor` → `markers` | Text that, anywhere in a commit message since the last release, triggers that bump (case-insensitive). |
 | `major` / `minor` → `labels` | Pull request labels that trigger that bump. |
 | `major` / `minor` → `paths` | File patterns that trigger the bump when changed, e.g. `"public-site/*.js"` to make site code changes a minor release while data-only updates stay patches. |
+| `changelogFrom` | The first release listed on the site's **What's Changed** page (`changes.html`). |
+
+### What's Changed page
+
+Each deploy also writes `public-site/changes.json` (Git ignores it) with `.github/scripts/site_changelog.py`. It compares the exported data of every release since `changelogFrom` with the release before it, record by record: rules, lore, Gates, factions, Resources, Forms, Functions, Domains, Gear, Packs, characters, jobs and the Outpost. For each record it says whether it is new, edited or removed, which fields changed, and for long texts which `##` sections were added, edited or removed. Nobody has to keep notes; it all comes from the data. The page is `changes.html`, and the footer version links to it. `changes.html?since=1.0.9` merges every release after 1.0.9 into a single re-reading list. The same list opens each GitHub Release's notes.
+
+Only exported data counts. A change to page code or styles shows up as a release with "no rules or records changed".
 
 Major wins over minor, and minor over patch. To preview what the next deploy would be numbered, run `python .github/scripts/release_version.py` (it only writes `public-site/version.json`, which Git ignores). The rule tests run with `python -m unittest discover -s .github/scripts`.
 

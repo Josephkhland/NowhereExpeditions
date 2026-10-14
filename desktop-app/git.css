@@ -1,0 +1,259 @@
+:root {
+  --bg: #141210;
+  --panel: #1a1714;
+  --raised: #1f1b17;
+  --hover: #2a2520;
+  --active: #f3ece0;
+  --ink: #e9e2d6;
+  --ink-active: #141210;
+  --muted: #9b9184;
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #e8a530;
+  --good: #3ec46d;
+  --bad: #d9534f;
+  --add-bg: rgba(62, 196, 109, 0.12);
+  --add-ink: #8fe0a8;
+  --del-bg: rgba(217, 83, 79, 0.14);
+  --del-ink: #f0a19e;
+  --hunk: #7fb2e5;
+  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+body { display: flex; flex-direction: column; }
+
+button, select, input, textarea { font: inherit; color: inherit; }
+
+button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { background: var(--hover); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.small { height: 24px; padding: 0 8px; font-size: 12px; }
+button.primary { background: var(--active); color: var(--ink-active); border-color: transparent; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: #fff; }
+
+/* --- toolbar --- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.branch { display: flex; align-items: center; gap: 8px; }
+.branch .label { color: var(--muted); font-size: 12px; }
+.branch select, .branch-form input {
+  height: 30px;
+  min-width: 180px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+}
+.branch select { font-weight: 600; }
+.branch-form { display: flex; gap: 6px; }
+.branch-form[hidden] { display: none; }
+.sync { color: var(--muted); font-size: 12px; }
+.spacer { flex: 1; }
+
+.notice {
+  margin: 10px 12px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  flex: none;
+}
+.notice.good { border-color: rgba(62, 196, 109, 0.5); }
+.notice.bad { border-color: rgba(217, 83, 79, 0.6); color: var(--del-ink); }
+
+/* --- body --- */
+
+.body { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 12px; }
+
+.side {
+  width: 360px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.views { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); }
+.views button { flex: 1; border-color: transparent; background: transparent; font-weight: 600; }
+.views button[aria-selected="true"] { background: var(--active); color: var(--ink-active); }
+
+.view { flex: 1; min-height: 0; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 10px; }
+.view[hidden] { display: none; }
+/* The file lists scroll; the commit box stays at the bottom. */
+.view.changes { overflow: hidden; }
+.lists { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+
+.count { font-weight: 400; color: var(--muted); }
+[aria-selected="true"] .count { color: inherit; opacity: 0.6; }
+
+.group-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
+.group-head h3 { margin: 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.files, .commits { list-style: none; margin: 0; padding: 0; }
+.empty { padding: 6px 8px; color: var(--muted); font-style: italic; }
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.file:hover { background: var(--hover); }
+.file.selected { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+.badge {
+  width: 18px;
+  flex: none;
+  text-align: center;
+  font: 600 11px/18px var(--mono);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.badge.A, .badge.\? { color: var(--add-ink); }
+.badge.D { color: var(--del-ink); }
+.badge.M, .badge.R { color: var(--accent); }
+.badge.U { color: var(--bad); }
+.path { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.path .dir { color: var(--muted); }
+.file button { height: 22px; width: 24px; padding: 0; flex: none; }
+
+.commit { flex: none; display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+.commit textarea {
+  resize: vertical;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.commit textarea:focus, .branch-form input:focus { outline: none; border-color: var(--active); }
+
+.commits li {
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.commits li:hover { background: var(--hover); }
+.commits li.selected { background: var(--hover); box-shadow: inset 2px 0 0 var(--accent); }
+.commits .subject { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.commits .meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+.commits .hash { font-family: var(--mono); }
+.tag { padding: 0 6px; border-radius: 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.tag.unpushed { background: rgba(232, 165, 48, 0.18); color: var(--accent); }
+.tag.unmerged { background: rgba(127, 178, 229, 0.16); color: var(--hunk); }
+
+/* --- publish --- */
+
+.publish { display: flex; flex-direction: column; gap: 12px; }
+.publish h3 { margin: 4px 4px 0; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.publish p { margin: 0 4px; }
+.card { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); }
+.card.good { border-color: rgba(62, 196, 109, 0.45); }
+.card.quiet { color: var(--muted); }
+.card.bad { border-color: rgba(217, 83, 79, 0.6); color: var(--del-ink); }
+.card ul { margin: 4px 0 0; padding-left: 18px; }
+.publish .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.publish .actions .primary { flex: 1; height: 36px; }
+
+/* --- diff --- */
+
+.diff-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.diff-title { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.diff { flex: 1; overflow: auto; font: 12px/1.5 var(--mono); padding: 6px 0; outline: none; }
+.diff .line { white-space: pre; padding: 0 12px; min-height: 1.5em; }
+.diff .add { background: var(--add-bg); color: var(--add-ink); }
+.diff .del { background: var(--del-bg); color: var(--del-ink); }
+.diff .hunk { color: var(--hunk); margin-top: 6px; }
+.diff .meta { color: var(--muted); }
+.diff .file-head { color: var(--ink); font-weight: 700; margin-top: 14px; padding-top: 6px; border-top: 1px solid var(--line); }
+.diff .file-head:first-child { margin-top: 0; border-top: 0; }
+.diff .text { color: var(--ink); }
+
+/* --- output --- */
+
+.output { flex: none; border-top: 1px solid var(--line); }
+.output summary { padding: 6px 12px; color: var(--muted); cursor: pointer; user-select: none; }
+.output pre { margin: 0; max-height: 180px; overflow: auto; padding: 0 12px 10px; font: 12px/1.45 var(--mono); color: var(--muted); white-space: pre-wrap; }
+
+body.busy .toolbar button, body.busy .publish .primary, body.busy #commit-button { pointer-events: none; opacity: 0.45; }
+
+/* --- History: the commit graph --- */
+
+/* The history needs room for its lanes and chips. */
+.side.wide { width: 620px; }
+
+.history-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; flex: none; }
+.history-bar label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.history-bar select { height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); }
+.history-key { display: flex; gap: 4px; }
+
+.graph-list li.graph-row {
+  display: flex;
+  align-items: stretch;
+  height: 44px;
+  padding: 0 8px 0 0;
+  border-radius: 6px;
+}
+.graph-cell { flex: none; display: block; }
+.graph-cell path { fill: none; stroke-width: 2; }
+.graph-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.graph-line { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.graph-line .subject { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.graph-line .subject.merge { color: var(--muted); }
+.graph-row .meta { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+
+.ref {
+  flex: none;
+  max-width: 190px;
+  padding: 0 6px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ref.ref-branch { color: var(--accent); border-color: rgba(232, 165, 48, 0.55); background: rgba(232, 165, 48, 0.08); }
+.ref.ref-branch.head { color: var(--ink-active); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+.ref.ref-remote { color: var(--hunk); border-color: rgba(127, 178, 229, 0.5); background: rgba(127, 178, 229, 0.08); }
+.ref.ref-tag { color: #c58fe0; border-color: rgba(197, 143, 224, 0.5); background: rgba(197, 143, 224, 0.08); }
+.ref.main { font-weight: 700; }

@@ -15,6 +15,12 @@ Never touches the token: the bot must already be running in the GM's terminal.
     python ask.py tarot-reveal <reading id>
     python ask.py action <create-role|post-terms|apply-structure> <file.json> [--channel NAME]
     python ask.py consent
+    python ask.py funny-poll <channel> <draft.json> [--preview]
+
+funny-poll posts a funny-moments poll drafted by table-insights/moments.py poll (only
+moments the GM confirmed and everyone in them agreed to feature): an embed with the
+moments, then a native Discord poll. Needs the GM's approval like every write.
+--preview checks the draft and shows what would be posted, without contacting the bot.
 
 action sends the JSON file to that write action (always approved by the GM first);
 --channel overrides the file's "channel" (e.g. to test terms in bot-debug).
@@ -27,7 +33,9 @@ cards face up for everyone with the counts (both deal and reveal need GM approva
 
 Add --json to channels or roles for the full data (topics, who can see each channel).
 
-read writes a Markdown transcript (default: discord_server/transcripts/). TIME is an
+read writes a Markdown transcript (default: discord_server/transcripts/) and, next to it,
+a .json file with the same name holding the raw messages (exact UTC times, ids, author
+ids, replies, reaction counts) for analysis. TIME is an
 ISO date or date-time ("2026-10-01" or "2026-10-01T18:00"); without an offset it is
 this computer's local time. --threads also reads the channel's threads (always on
 for a forum: each post is a thread). Authors are matched to characters through
@@ -178,6 +186,8 @@ def render_section(title, data, players, index):
             lines.append(f"📎 [{a['name']}]({a['url']})")
         for e in m["embeds"]:
             lines.append(f"🔗 embed: {e[:120]}")
+        if m.get("reactions"):  # missing when the bot predates reaction counts
+            lines.append("reactions: " + " · ".join(f"{r['emoji']} {r['count']}" for r in m["reactions"]))
         if m["thread"]:
             lines.append(f"🧵 started thread **{m['thread']['name']}** (id {m['thread']['id']})")
         lines.append("")
@@ -195,6 +205,7 @@ def command_read(args):
     ref = args[0]
     players = load_player_map(map_path)
     index, sections, authors, total = {}, [], {}, 0
+    raw_sections = []  # the bot's answers as they came, for analysis (the Markdown is for reading)
 
     def add(title, data):
         nonlocal total
@@ -202,6 +213,8 @@ def command_read(args):
         for m in data["messages"]:
             authors.setdefault(m["author_id"], m["author"])
         sections.extend(render_section(title, data, players, index))
+        raw_sections.append({"title": title, "channel": data.get("channel"),
+                             "truncated": data["truncated"], "messages": data["messages"]})
 
     channel_name, is_forum = ref, False
     try:
@@ -241,14 +254,73 @@ def command_read(args):
         slug = re.sub(r"[^a-z0-9-]+", "-", channel_name.lower()).strip("-") or "channel"
         path = TRANSCRIPTS / f"{slug}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.md"
     path.write_text("\n".join(header + sections), encoding="utf-8")
-    print(f"{total} messages from {len(authors)} authors → {path}")
+    raw = {
+        "channel": channel_name,
+        "read_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "from": after,
+        "to": before,
+        "message_count": total,
+        "authors": {author_id: {"name": name, **players.get(author_id, {})} for author_id, name in authors.items()},
+        "sections": raw_sections,
+    }
+    raw_path = path.with_suffix(".json")
+    raw_path.write_text(json.dumps(raw, indent=1, ensure_ascii=False), encoding="utf-8")
+    print(f"{total} messages from {len(authors)} authors → {path} (+ {raw_path.name})")
+
+
+# --- funny-moments poll --------------------------------------------------------
+
+def poll_problems(draft):
+    """The same limits the bot checks, so a preview catches them without the bot."""
+    problems = []
+    if draft.get("kind") != "funny-moments-poll":
+        problems.append("not a funny-moments poll draft (make one with table-insights/moments.py poll)")
+    embed = draft.get("embed") or {}
+    if len(embed.get("title") or "") > 256 or len(embed.get("description") or "") > 4096:
+        problems.append("embed title or description too long")
+    for field in embed.get("fields") or []:
+        if not field.get("name") or not field.get("value") or len(field["name"]) > 256 or len(field["value"]) > 1024:
+            problems.append(f"embed field '{(field.get('name') or '')[:30]}' is empty or too long")
+    total = sum(len(embed.get(k) or "") for k in ("title", "description", "footer")) + sum(
+        len(f.get("name") or "") + len(f.get("value") or "") for f in embed.get("fields") or [])
+    if total > 6000:
+        problems.append(f"embed is {total} characters (Discord allows 6000)")
+    if not 1 <= len((draft.get("question") or "").strip()) <= 300:
+        problems.append("the question needs 1-300 characters")
+    answers = draft.get("answers") or []
+    if not 2 <= len(answers) <= 10:
+        problems.append("a poll needs 2-10 answers")
+    for answer in answers:
+        if not 1 <= len((answer.get("text") or "").strip()) <= 55:
+            problems.append(f"answer '{(answer.get('text') or '')[:30]}' needs 1-55 characters")
+    hours = draft.get("duration_hours")
+    if not isinstance(hours, int) or not 1 <= hours <= 768:
+        problems.append("duration_hours must be a whole number from 1 to 768")
+    return problems
+
+
+def preview_poll(channel, draft):
+    embed = draft.get("embed") or {}
+    print(f"Would post in #{channel} (after the GM's approval), with no pings:\n")
+    print(f"  ┌ {embed.get('title', '')}")
+    print(f"  │ {embed.get('description', '')}")
+    for field in embed.get("fields") or []:
+        print(f"  │\n  │ {field['name']}")
+        for line in field["value"].splitlines():
+            print(f"  │   {line}")
+    if embed.get("footer"):
+        print(f"  │\n  └ {embed['footer']}")
+    print(f"\n  📊 {draft.get('question')}  ({'several choices' if draft.get('multiple') else 'one vote'}, "
+          f"open {draft.get('duration_hours')} h)")
+    for answer in draft.get("answers") or []:
+        print(f"     {answer.get('emoji') or '•'} {answer.get('text')}  [{len(answer.get('text') or '')}/55]")
 
 
 # --- main ----------------------------------------------------------------------
 
 def main(argv):
     commands = {"status", "guilds", "channels", "roles", "threads", "read", "embed", "delete",
-                "tarot", "tarot-status", "tarot-reveal", "action", "consent"}
+                "tarot", "tarot-status", "tarot-reveal", "action", "consent", "funny-poll"}
     if not argv or argv[0] not in commands:
         sys.exit(__doc__)
     command, args = argv[0], [a for a in argv[1:] if a != "--json"]
@@ -265,6 +337,23 @@ def main(argv):
                 payload["channel"] = channel
             print("Waiting for the GM to approve (terminal, dashboard or dialog)...")
             status, body = post(f"/actions/{args[0]}", payload)
+            print(json.dumps(body, indent=2, ensure_ascii=False))
+            sys.exit(0 if status == 200 else 1)
+        elif command == "funny-poll":
+            preview = take_option(args, "--preview", has_value=False)
+            if len(args) != 2:
+                sys.exit("Usage: python ask.py funny-poll <channel> <draft.json> [--preview]")
+            with open(args[1], encoding="utf-8") as draft_file:
+                draft = json.load(draft_file)
+            problems = poll_problems(draft)
+            if preview:
+                preview_poll(args[0], draft)
+                print("\n" + ("Problems: " + "; ".join(problems) if problems else "Draft OK. Nothing was sent."))
+                sys.exit(1 if problems else 0)
+            if problems:
+                sys.exit("Fix the draft first: " + "; ".join(problems))
+            print("Waiting for the GM to approve (terminal, dashboard or dialog)...")
+            status, body = post("/actions/funny-poll", {"channel": args[0], "poll": draft})
             print(json.dumps(body, indent=2, ensure_ascii=False))
             sys.exit(0 if status == 200 else 1)
         elif command == "consent":

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Table Insights</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="sticky-head">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">◐</span>
+      <div>
+        <h1>Table Insights</h1>
+        <p class="brand-sub">Private · local only · prompts, not verdicts</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="source-toggle" role="group" aria-label="Data source">
+        <button type="button" data-source="real" aria-pressed="true">Real data</button>
+        <button type="button" data-source="demo" aria-pressed="false">Demo data</button>
+      </div>
+      <nav class="tabs" aria-label="Views">
+        <a href="#/sessions" data-tab="sessions">Sessions</a>
+        <a href="#/players" data-tab="players">Players</a>
+      </nav>
+    </div>
+  </header>
+  <div id="demo-banner" class="demo-banner" hidden>
+    <strong>Demo data.</strong> Invented players and scenes, safe to show anyone. Changes you make here aren't saved.
+  </div>
+  </div>
+  <main id="app" class="layout" aria-live="polite"></main>
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

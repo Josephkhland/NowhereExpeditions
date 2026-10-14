@@ -20,6 +20,16 @@
       "problemMatcher": []
     },
     {
+      "label": "Table insights",
+      "detail": "Local dashboard for transcript stats and the moments review (http://127.0.0.1:8002).",
+      "type": "shell",
+      "command": "python -I app.py",
+      "options": { "cwd": "${workspaceFolder}/table-insights" },
+      "isBackground": true,
+      "presentation": { "group": "servers", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
       "label": "Run both",
       "dependsOn": ["Content manager", "Public site"],
       "problemMatcher": []
@@ -48,7 +58,7 @@
     },
     {
       "label": "Open site and manager",
-      "detail": "Waits for the content manager and the site, then opens both in the browser.",
+      "detail": "Opens the Nowhere Expeditions desktop app (or, without it, the pages in the browser).",
       "type": "process",
       "command": "powershell",
       "args": ["-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/start-everything.ps1", "-OpenOnly"],
@@ -57,8 +67,8 @@
     },
     {
       "label": "Everything",
-      "detail": "Content manager, public site, bot + dashboard, then opens the site and the manager.",
-      "dependsOn": ["Content manager", "Public site", "Bot + dashboard", "Open site and manager"],
+      "detail": "Content manager, public site, table insights, bot + dashboard, all shown in the desktop app.",
+      "dependsOn": ["Content manager", "Public site", "Table insights", "Bot + dashboard", "Open site and manager"],
       "problemMatcher": []
     }
   ]
