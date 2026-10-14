@@ -775,7 +775,7 @@ const renderFooterCommunity = async () => {
   slot.hidden = false;
 };
 
-// Every page: the release version beside the copyright, e.g. "v1.4.2 (2026-10-04)", linking to its release notes.
+// Every page: the release version beside the copyright, e.g. "v1.4.2 (2026-10-04)", linking to what it changed.
 // version.json is written by the deploy workflow, so a local preview has none and says so.
 const renderSiteVersion = async () => {
   const slot = document.getElementById("site-version");
@@ -788,8 +788,7 @@ const renderSiteVersion = async () => {
     // Offline or a local preview: fall through to the label below.
   }
   const label = release?.version ? `v${release.version}${release.date ? ` (${release.date})` : ""}` : "Local preview";
-  const href = safeUrl(release?.url);
-  slot.innerHTML = ` · ${href ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" title="Release notes">${escapeHtml(label)}</a>` : escapeHtml(label)}`;
+  slot.innerHTML = ` · ${release?.version ? `<a href="changes.html#v${escapeHtml(release.version)}" title="What changed in this release">${escapeHtml(label)}</a>` : escapeHtml(label)}`;
   slot.hidden = false;
 };
 
@@ -3119,7 +3118,7 @@ const PAGE_ENTRIES = [
   ["Gates", "gates.html", "Every Gate on record, with its poster, Resources and expeditions"], ["Lore", "lore.html", "History, religion, culture and folklore"],
   ["Discoveries", "discoveries.html", "Resources, Functions, Domains and spell Forms"], ["Marketplace", "marketplace.html", "Equipment for sale"],
   ["Characters", "characters.html", "Expeditioners and known figures"], ["Rules & News", "game.html", "Announcements and rules"],
-  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"],
+  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"], ["What's Changed", "changes.html", "Updates per release version changelog what to re-read new edited"],
   ["Onboarding", "game.html#onboarding", "start here the essential rules new players read first reading path"], ["Create a character", "sheet.html?new", "make build start a new character Expeditioner on a blank sheet"],
 ];
 let searchIndexPromise = null;
@@ -3251,8 +3250,132 @@ const renderFooterMap = () => {
     ${column("The world", [["Outpost", "outpost.html"], ["Factions", "factions.html"], ["Gates", "gates.html"], ["Lore", "lore.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
     ${column("Expeditions", [["Job Board", "jobs.html"], ["Expedition Reports", "reports.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"], ["Name generator", "names.html"]])}
     ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
-    ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
+    ${column("News", [["Announcements", "game.html#announcements"], ["What's changed", "changes.html"], ["Overview", "index.html"]])}
   </nav>`);
+};
+
+/* ---------- What's changed: the records each release added, edited or removed ---------- */
+
+// changes.json is written by the deploy workflow (.github/scripts/site_changelog.py) from the exported data of each
+// release, so it lists what changed for readers without anyone keeping notes. ?since=1.0.9 folds every release after
+// 1.0.9 into one list: what someone who last read 1.0.9 should re-read.
+const CHANGE_WORDS = { added: "New", updated: "Edited", removed: "Removed" };
+
+// Two changes to one record, older first, as one: new then edited is still new, new then removed never happened.
+const mergeChange = (older, newer) => {
+  if (older.change === "added" && newer.change === "removed") return null;
+  if (older.change === "added" || newer.change === "removed") return { ...newer, change: older.change === "added" ? "added" : "removed", fields: undefined };
+  if (older.change === "removed") return { ...newer, change: "updated", fields: undefined };
+  const fields = new Map((older.fields || []).map((field) => [field.field, { ...field, sections: [...(field.sections || [])] }]));
+  (newer.fields || []).forEach((field) => {
+    const merged = fields.get(field.field);
+    if (!merged) { fields.set(field.field, field); return; }
+    const sections = new Map(merged.sections.map((section) => [section.title, section]));
+    (field.sections || []).forEach((section) => {
+      const before = sections.get(section.title);
+      if (before?.change === "added" && section.change === "removed") sections.delete(section.title);
+      else sections.set(section.title, before?.change === "added" ? before : section);
+    });
+    merged.sections = [...sections.values()];
+  });
+  return { ...newer, previousTitle: older.previousTitle || newer.previousTitle, fields: [...fields.values()] };
+};
+
+const renderChanges = async () => {
+  const root = document.getElementById("changes-root");
+  if (!root) return;
+  let changelog = null;
+  try {
+    const response = await fetch("changes.json", { cache: "no-cache" });
+    if (response.ok) changelog = await response.json();
+  } catch {
+    // A local preview has no changes.json: the deploy writes it.
+  }
+  if (!changelog) {
+    root.innerHTML = '<p class="empty-state">The list of changes is written when the site is deployed, so a local preview has none.</p>';
+    return;
+  }
+  const releases = changelog.releases || [];
+  if (!releases.length) {
+    root.innerHTML = `<p class="empty-state">Changes are listed from version ${escapeHtml(changelog.from || "")} onwards, and nothing has been released since then yet.</p>`;
+    return;
+  }
+  const sectionRank = new Map((changelog.sectionOrder || []).map((name, index) => [name, index]));
+  const releaseLabel = (release) => `v${release.version}${release.date ? ` · ${formatDate(release.date)}` : ""}`;
+
+  const changeRow = (item) => {
+    // Long texts name the sections to re-read, one line each; other changed fields share a line.
+    const withSections = (item.fields || []).filter((field) => field.sections?.length);
+    const others = (item.fields || []).filter((field) => !field.sections?.length).map((field) => escapeHtml(field.field));
+    const fields = [
+      ...withSections.map((field) => `<li><span class="change-field">${escapeHtml(field.field)}:</span>${field.sections.map((section) =>
+        `<span class="change-section is-${section.change}">§ ${escapeHtml(section.title)}${section.change === "updated" ? "" : ` <em>(${section.change === "added" ? "new" : "removed"})</em>`}</span>`).join("")}</li>`),
+      ...(others.length ? [`<li><span class="change-field">${withSections.length ? "Also" : "Changed"}:</span>${others.join(", ")}</li>`] : []),
+    ];
+    const title = item.href && item.change !== "removed" ? `<a href="${escapeHtml(item.href)}">${escapeHtml(item.title)}</a>` : escapeHtml(item.title);
+    return `<li class="change-row">
+      <span class="change-badge is-${escapeHtml(item.change)}">${CHANGE_WORDS[item.change] || escapeHtml(item.change)}</span>
+      <div>
+        <p class="change-title">${title} <span class="muted">${escapeHtml(item.label)}</span>${item.previousTitle ? ` <span class="muted">· was ${escapeHtml(item.previousTitle)}</span>` : ""}</p>
+        ${fields.length ? `<ul class="change-fields">${fields.join("")}</ul>` : ""}
+      </div></li>`;
+  };
+
+  // Grouped by site section. Reading material is always open; a long batch of anything else (Gear, Functions) starts folded.
+  const READING_SECTIONS = new Set(["Rules", "News", "Lore", "Gates", "Factions", "Expedition Reports"]);
+  const changeGroups = (changes) => {
+    const groups = new Map();
+    [...changes].sort((left, right) => (sectionRank.get(left.section) ?? 99) - (sectionRank.get(right.section) ?? 99))
+      .forEach((item) => groups.set(item.section, [...(groups.get(item.section) || []), item]));
+    return [...groups].map(([section, items]) => `
+      <details class="change-group"${items.length > 12 && !READING_SECTIONS.has(section) ? "" : " open"}>
+        <summary><span>${escapeHtml(section)}</span> <span class="muted">${items.length}</span></summary>
+        <ul class="change-list">${items.map(changeRow).join("")}</ul>
+      </details>`).join("");
+  };
+  const counts = (changes) => ["added", "updated", "removed"].map((kind) => [kind, changes.filter((item) => item.change === kind).length])
+    .filter(([, count]) => count).map(([kind, count]) => `${count} ${CHANGE_WORDS[kind].toLowerCase()}`).join(" · ") || "No records changed";
+
+  const render = () => {
+    const since = new URLSearchParams(window.location.search).get("since") || "";
+    const sinceIndex = releases.findIndex((release) => release.version === since);
+    const picker = `<label class="changes-since"><span class="kicker">Changes since</span>
+      <select id="changes-since">
+        <option value="">Every release, one by one</option>
+        ${releases.slice(1).map((release) => `<option value="${escapeHtml(release.version)}"${release.version === since ? " selected" : ""}>I last read ${escapeHtml(releaseLabel(release))}</option>`).join("")}
+      </select></label>`;
+    let body;
+    if (sinceIndex > 0) {
+      // releases are newest first: fold the newer ones in from oldest to newest.
+      const merged = new Map();
+      releases.slice(0, sinceIndex).reverse().forEach((release) => release.changes.forEach((item) => {
+        const result = merged.has(item.key) ? mergeChange(merged.get(item.key), item) : item;
+        if (result) merged.set(item.key, result);
+        else merged.delete(item.key);
+      }));
+      const changes = [...merged.values()];
+      body = `<article class="change-release">
+        <header><h2>Since v${escapeHtml(since)}</h2><p class="muted">${releases.slice(0, sinceIndex).length} releases up to ${escapeHtml(releaseLabel(releases[0]))} · ${counts(changes)}</p></header>
+        ${changes.length ? changeGroups(changes) : '<p class="muted">Nothing to re-read.</p>'}</article>`;
+    } else {
+      body = releases.map((release) => `<article class="change-release" id="v${escapeHtml(release.version)}">
+        <header><h2>${escapeHtml(releaseLabel(release))}</h2><p class="muted">${counts(release.changes)}${safeUrl(release.url)
+          ? ` · <a href="${escapeHtml(release.url)}" target="_blank" rel="noopener">Release notes</a>` : ""}</p></header>
+        ${release.changes.length ? changeGroups(release.changes) : '<p class="muted">Site improvements only; no rules or records changed.</p>'}</article>`).join("");
+    }
+    root.innerHTML = `${picker}<div class="change-releases">${body}</div>`;
+    root.querySelector("#changes-since").addEventListener("change", (event) => {
+      const url = new URL(window.location.href);
+      if (event.target.value) url.searchParams.set("since", event.target.value);
+      else url.searchParams.delete("since");
+      url.hash = "";
+      history.replaceState(null, "", url);
+      render();
+    });
+  };
+  render();
+  const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+  if (target) target.scrollIntoView();
 };
 
 /* ---------- Factions: the powers Expeditioners come from and deal with ---------- */
@@ -3414,7 +3537,7 @@ const renderFactions = async () => {
 };
 
 const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchiveRedirect, lore: renderLore, reports: renderReports, gates: renderGates,
-  marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries, factions: renderFactions };
+  marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries, factions: renderFactions, changes: renderChanges };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();

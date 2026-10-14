@@ -3091,6 +3091,38 @@ a.rule-step:hover { text-decoration: underline; }
 .name-copy { float: right; padding: 0.1rem 0.5rem; border: 1px solid var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 0.72rem; cursor: pointer; }
 .name-copy:hover, .name-copy:focus-visible { color: var(--accent); border-color: var(--accent); }
 .names-about p { color: var(--text-soft); }
+
+/* What's changed: one panel per release, the changed records grouped by site section. */
+.changes-since { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin: 0 0 1.2rem; }
+.changes-since .kicker { margin: 0; }
+.changes-since select { max-width: 100%; padding: 0.45rem 0.6rem; border: 1px solid var(--line-strong); background: var(--panel-strong); color: var(--text); font: inherit; }
+.change-releases { display: grid; gap: 1.2rem; }
+.change-release { padding: 1.1rem 1.3rem; border: 1px solid var(--line); background: var(--panel); scroll-margin-top: 6rem; }
+.change-release header { margin: 0 0 0.8rem; }
+.change-release h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.3rem; font-weight: 500; }
+.change-release header p { margin: 0.2rem 0 0; font-size: 0.88rem; }
+.change-release header a { color: var(--accent); }
+.change-group { padding: 0; border: 0; border-top: 1px solid var(--line); background: transparent; }
+.change-group summary { padding: 0.6rem 0; color: var(--muted); font-size: 0.78rem; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; }
+.change-group summary::before { content: "▸"; display: inline-block; width: 1.1rem; color: var(--muted); }
+.change-group[open] summary::before { content: "▾"; }
+.change-group summary span:first-child { color: var(--accent); }
+.change-group:not([open]) summary::after { content: "Show all"; margin-left: 0.8rem; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.08em; }
+.change-list { display: grid; gap: 0.55rem; margin: 0 0 0.9rem; padding: 0; list-style: none; }
+.change-row { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); gap: 0.8rem; align-items: start; }
+.change-badge { padding: 0.15rem 0; border: 1px solid var(--line-strong); color: var(--muted); font-size: 0.68rem; letter-spacing: 0.1em; text-align: center; text-transform: uppercase; }
+.change-badge.is-added { border-color: var(--success); color: var(--success); }
+.change-badge.is-updated { border-color: var(--accent-2); color: var(--accent-2); }
+.change-badge.is-removed { border-color: var(--danger); color: var(--danger); }
+.change-title { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.change-title a { color: var(--text); font-weight: 700; }
+.change-title a:hover, .change-title a:focus-visible { color: var(--accent); }
+.change-fields { margin: 0.2rem 0 0; padding: 0; list-style: none; color: var(--text-soft); font-size: 0.86rem; }
+.change-field { margin-right: 0.4rem; color: var(--muted); }
+.change-section { display: inline-block; margin-right: 0.6rem; }
+.change-section em { color: var(--muted); font-style: normal; }
+.change-section.is-added { color: var(--success); }
+.change-section.is-removed { color: var(--danger); text-decoration: line-through; }
 .page-subtitle a { color: var(--accent); }
 
 @media (max-width: 800px) {
