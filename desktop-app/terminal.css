@@ -1,0 +1,305 @@
+:root {
+  --bg: #141210;
+  --panel: #1a1714;
+  --row-hover: #2a2520;
+  --row-active: #f3ece0;
+  --ink: #e9e2d6;
+  --ink-active: #141210;
+  --muted: #9b9184;
+  --online: #3ec46d;
+  --starting: #e8a530;
+  --offline: #d9534f;
+  --line: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+body { display: flex; }
+
+.panel {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  user-select: none;
+}
+
+.panel h2 {
+  margin: 0 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sessions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.session {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+.session:hover { background: var(--row-hover); }
+.session.active { background: var(--row-active); color: var(--ink-active); }
+
+.session .select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.session .label { min-width: 0; }
+.session .name { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session .status { display: block; font-size: 11px; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.session .act {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-right: 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.session .act:hover { opacity: 1; background: rgba(127, 127, 127, 0.2); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+.dot.running { background: var(--online); }
+.dot.external { background: var(--starting); }
+.dot.stopped { background: var(--offline); }
+
+.restart-all {
+  margin-top: auto;
+  flex: none;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.restart-all:hover { background: var(--row-hover); }
+
+/* --- Claude Code actions (a tree under the sessions) --- */
+
+.actions { display: flex; flex-direction: column; gap: 6px; min-height: 0; flex: 1; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.actions[hidden] { display: none; }
+.actions .hint { margin: 0 4px; font-size: 11px; color: var(--muted); }
+.tree { overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+.tree details summary {
+  list-style: none;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tree details summary::-webkit-details-marker { display: none; }
+.tree details summary::before { content: "▸"; display: inline-block; width: 14px; color: var(--muted); }
+.tree details[open] summary::before { content: "▾"; }
+.tree details summary:hover { background: var(--row-hover); }
+.tree ul { list-style: none; margin: 0 0 4px 13px; padding: 0 0 0 8px; border-left: 1px solid var(--line); }
+.tree .item {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tree .item:hover:not(:disabled) { background: var(--row-hover); }
+.tree .item:disabled { color: var(--muted); cursor: default; }
+.tree .item .kind { color: var(--muted); font-size: 11px; margin-left: 4px; }
+.tree .error { color: var(--offline); font-size: 12px; margin: 0 4px; }
+
+/* --- the session's folder --- */
+
+.main { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.folder-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; flex: none; }
+.folder-bar label { color: var(--muted); font-size: 12px; }
+.folder-bar input {
+  flex: 1;
+  min-width: 0;
+  max-width: 720px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: 12px "Cascadia Mono", Consolas, monospace;
+}
+.folder-bar input:focus { outline: none; border-color: var(--row-active); }
+.folder-bar input[readonly] { color: var(--muted); background: transparent; }
+.folder-note { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folder-note.bad { color: var(--offline); }
+
+.screens { position: relative; flex: 1; min-width: 0; min-height: 0; }
+
+/* Every session's terminal keeps its size (only the shown one is visible), so they all lay out alike. */
+.screen { position: absolute; inset: 8px 4px 4px 12px; visibility: hidden; }
+.screen.shown { visibility: visible; }
+
+/* --- Claude's memory (memory-view.js) --- */
+
+.memory-button {
+  flex: none;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--row-hover);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.memory-button:hover { border-color: var(--row-active); }
+.memory-button .count { font-weight: 400; color: var(--muted); }
+
+.memory {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg);
+}
+.memory[hidden] { display: none; }
+.memory button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.memory button:hover { background: var(--row-hover); }
+
+.memory-head { display: flex; align-items: center; gap: 12px; flex: none; }
+.memory-title { flex: 1; min-width: 0; }
+.memory-title h1 { margin: 0; font-size: 16px; }
+.memory-title p { margin: 2px 0 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+.memory-notice { flex: none; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 12px; }
+.memory-notice.bad { border-color: rgba(217, 83, 79, 0.6); color: #f0a19e; }
+
+.memory-body { flex: 1; min-height: 0; display: flex; gap: 12px; }
+.graph {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 22px 22px,
+    var(--panel);
+}
+.edges { position: absolute; inset: 0; width: 100%; height: 100%; }
+.edges line { stroke: rgba(233, 226, 214, 0.18); stroke-width: 1.5; }
+.edges line.ghost { stroke-dasharray: 4 4; }
+.edges line.hot { stroke: var(--row-active); stroke-width: 2; }
+.graph.focus .edges line:not(.hot) { opacity: 0.35; }
+
+.nodes { position: absolute; inset: 0; }
+.node {
+  position: absolute;
+  width: 184px;
+  padding: 7px 26px 7px 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--type);
+  border-radius: 8px;
+  background: #221e1a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.node:active { cursor: grabbing; }
+.node .name { display: block; font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node .kind { display: block; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--type); }
+.node.selected { background: #2f2923; border-color: var(--row-active); border-left-color: var(--type); }
+.graph.focus .node:not(.near) { opacity: 0.4; }
+.node.ghost { border-style: dashed; border-left-style: dashed; background: transparent; box-shadow: none; color: var(--muted); cursor: default; }
+.node .delete {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9534f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  cursor: pointer;
+}
+.node .delete:hover { background: #d9534f; color: #fff; }
+
+.memory-detail {
+  width: 380px;
+  flex: none;
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.memory-detail .placeholder { color: var(--muted); margin: 0; }
+.memory-detail h2 { margin: 4px 0 2px; font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.memory-detail .kind { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.memory-detail .meta { font-size: 11px; color: var(--muted); margin: 2px 0 10px; font-family: "Cascadia Mono", Consolas, monospace; }
+.memory-detail .description { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: var(--row-hover); }
+.memory-detail .body { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; }
+.memory-detail .links { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.memory-detail .links button { height: 24px; padding: 0 8px; font-size: 12px; }
+.memory-detail .links button.ghost { border-style: dashed; color: var(--muted); }
+.memory-detail .danger { color: #f0a19e; border-color: rgba(217, 83, 79, 0.6); }
+.memory-detail .danger:hover { background: #d9534f; color: #fff; }
+
+.memory-trash { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.memory-trash[hidden] { display: none; }
+.memory-trash button { height: 24px; padding: 0 8px; font-size: 12px; }

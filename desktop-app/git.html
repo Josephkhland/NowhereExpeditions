@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
+  <title>Git</title>
+  <link rel="stylesheet" href="git.css">
+</head>
+<body>
+  <header class="toolbar">
+    <label class="branch">
+      <span class="label">Branch</span>
+      <select id="branch" aria-label="Current branch"></select>
+    </label>
+    <button type="button" id="new-branch" title="Start a new branch from here (your changes come along)">＋ New branch</button>
+    <form id="branch-form" class="branch-form" hidden>
+      <input id="branch-name" type="text" spellcheck="false" autocomplete="off" placeholder="new-branch-name" aria-label="New branch name">
+      <button type="submit">Create</button>
+    </form>
+    <span id="sync" class="sync"></span>
+    <span class="spacer"></span>
+    <button type="button" id="fetch" title="Check GitHub for new commits">Fetch</button>
+    <button type="button" id="pull" title="Bring in new commits from GitHub (only if no merge is needed)">Pull</button>
+    <button type="button" id="push" title="Send this branch's commits to GitHub">Push</button>
+    <button type="button" id="refresh" title="Refresh" aria-label="Refresh">↻</button>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <div class="body">
+    <aside class="side">
+      <nav class="views" role="tablist">
+        <button type="button" data-view="changes" role="tab">Changes <span id="count-changes" class="count"></span></button>
+        <button type="button" data-view="history" role="tab">History</button>
+        <button type="button" data-view="publish" role="tab">Publish</button>
+      </nav>
+
+      <section id="view-changes" class="view changes">
+        <div class="lists">
+        <div class="group">
+          <div class="group-head"><h3>Staged <span id="count-staged" class="count"></span></h3><button type="button" id="unstage-all" class="small">Unstage all</button></div>
+          <ul id="staged" class="files"></ul>
+        </div>
+        <div class="group">
+          <div class="group-head"><h3>Not staged <span id="count-unstaged" class="count"></span></h3><button type="button" id="stage-all" class="small">Stage all</button></div>
+          <ul id="unstaged" class="files"></ul>
+        </div>
+        </div>
+        <form id="commit" class="commit">
+          <textarea id="message" rows="3" placeholder="Commit message (Ctrl+Enter to commit)" spellcheck="true"></textarea>
+          <button type="submit" id="commit-button" class="primary">Commit</button>
+        </form>
+      </section>
+
+      <section id="view-history" class="view" hidden>
+        <div class="history-bar">
+          <label>Show
+            <select id="history-scope" aria-label="Which branches to show">
+              <option value="all">All branches</option>
+              <option value="current">This branch only</option>
+            </select>
+          </label>
+          <span class="history-key"><span class="ref ref-branch">branch</span><span class="ref ref-remote">☁ GitHub</span><span class="ref ref-tag">◆ release</span></span>
+        </div>
+        <ul id="history" class="commits graph-list"></ul>
+      </section>
+
+      <section id="view-publish" class="view" hidden>
+        <div id="publish" class="publish"></div>
+      </section>
+    </aside>
+
+    <main class="diff-pane">
+      <div id="diff-title" class="diff-title">Pick a file or a commit to see its changes.</div>
+      <div id="diff" class="diff" tabindex="0"></div>
+    </main>
+  </div>
+
+  <details class="output">
+    <summary>Output</summary>
+    <pre id="log"></pre>
+  </details>
+
+  <script src="git-page.js"></script>
+</body>
+</html>

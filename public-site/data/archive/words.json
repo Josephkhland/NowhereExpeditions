@@ -1,0 +1,35 @@
+{
+  "id": "words",
+  "type": "lore",
+  "title": "Words",
+  "subtitle": "The few underlying elements all magic is built from",
+  "summary": "A Word is one of the underlying elements magic is built from, such as Glow, Heat or Move. Words are the same thing as the Functions artificers find in Gate materials.",
+  "content": "> *\"Function in matter, Word in spellcasting.\"*\n> — the field's shortest summary of itself\n\nA **Word** is one of the small number of underlying elements that magic is built from: `Glow`, `Heat`, `Move` and the others. Every [[forms|Form]] needs a Word, which comes either from a [[runes-of-the-gates|Rune]] or from a caster's own [[base-form|Base Form]]. The full list is the **Vocabulary**.\n\nWords were found by comparison, not invention. Once a few Forms existed, researchers tested them against every Rune they could reach, and the pattern was clear: a Rune that made Effect Glowing work kept making it work across many variations of the procedure, and was useless for Kinetic Shove. Each Rune supplied one thing, and that thing was a Word. This slow, unglamorous work is now called the **Vocabulary Breakthrough**, and the Archive doesn't credit it to any single researcher.\n\nThe surprise was where else the Words turned up. Artificers had been cataloguing the exceptional properties of Gate materials for years, a glass that holds heat, a fibre that bends and returns, and calling them **Functions**. They're the same thing. `Heat` in a Rune and `Heat` in a lump of Gate glass are one property seen from two sides, so spellcasting and artificery are two branches of one science. The current list is on the Rules page: [Resource Functions](game.html#post-resource-functions).",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Word",
+    "Words",
+    "Vocabulary",
+    "Vocabulary Breakthrough",
+    "Function",
+    "Functions",
+    "Glow",
+    "Heat",
+    "Move",
+    "artificery"
+  ],
+  "topics": [
+    "Technology",
+    "History"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": null
+  }
+}

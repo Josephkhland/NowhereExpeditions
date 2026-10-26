@@ -1,0 +1,752 @@
+{
+ "schema": 1,
+ "id": "demo-first-crossing",
+ "generated_at": "2026-10-14T13:43:37+00:00",
+ "source": {
+  "transcript": "demo-first-crossing.json",
+  "transcript_path": "table-insights/demo/transcripts/demo-first-crossing.json",
+  "channel": "expedition-sessions",
+  "read_at": "2026-10-03T20:44:00+00:00",
+  "from": null,
+  "to": null,
+  "message_count": 53
+ },
+ "settings": {
+  "gap_minutes": 60,
+  "long_turn_words": 250,
+  "burst_messages": 4,
+  "burst_words": 200,
+  "dominance_factor": 2.0,
+  "min_players_for_balance": 3,
+  "min_sitting_turns": 10,
+  "quiet_max_turns": 1
+ },
+ "people": {
+  "900000000000000001": {
+   "name": "Narrator",
+   "player": "GM",
+   "character": "GM",
+   "role": "gm",
+   "note": "",
+   "messages": 11,
+   "turns": 11,
+   "ooc_messages": 0,
+   "words": 237,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 20,
+    "p90": 32,
+    "max": 36
+   },
+   "words_per_message": {
+    "median": 20,
+    "max": 36
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000001",
+    "words": 36
+   },
+   "response_minutes": {
+    "median": 3.0,
+    "count": 8
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 0
+  },
+  "900000000000000002": {
+   "name": "Wren",
+   "player": "Wren",
+   "character": "Ilse Varga",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 6,
+   "ooc_messages": 0,
+   "words": 94,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 9.5,
+    "p90": 23,
+    "max": 38
+   },
+   "words_per_message": {
+    "median": 10,
+    "max": 27
+   },
+   "messages_per_turn": {
+    "mean": 1.17,
+    "max": 2
+   },
+   "longest_turn": {
+    "start_id": "910000000000000018",
+    "words": 38
+   },
+   "response_minutes": {
+    "median": 1.0,
+    "count": 6
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 1,
+   "reactions_received": 0,
+   "share_words": 0.219,
+   "share_turns": 0.167,
+   "sittings_present": 3
+  },
+  "900000000000000003": {
+   "name": "Bolt",
+   "player": "Bolt",
+   "character": "Cassian Ardent",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 7,
+   "ooc_messages": 0,
+   "words": 62,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 9,
+    "p90": 13,
+    "max": 14
+   },
+   "words_per_message": {
+    "median": 9,
+    "max": 14
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000047",
+    "words": 14
+   },
+   "response_minutes": {
+    "median": 1.0,
+    "count": 7
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 0,
+   "reactions_received": 0,
+   "share_words": 0.145,
+   "share_turns": 0.194,
+   "sittings_present": 3
+  },
+  "900000000000000004": {
+   "name": "Moss",
+   "player": "Moss",
+   "character": "Pell Morrow",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 7,
+   "ooc_messages": 0,
+   "words": 65,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 8,
+    "p90": 12,
+    "max": 22
+   },
+   "words_per_message": {
+    "median": 8,
+    "max": 22
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000004",
+    "words": 22
+   },
+   "response_minutes": {
+    "median": 1.0,
+    "count": 7
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 1,
+   "reactions_received": 2,
+   "share_words": 0.152,
+   "share_turns": 0.194,
+   "sittings_present": 3
+  },
+  "900000000000000005": {
+   "name": "Juniper",
+   "player": "Juniper",
+   "character": "Dagny Stone",
+   "role": "player",
+   "note": "",
+   "messages": 7,
+   "turns": 7,
+   "ooc_messages": 0,
+   "words": 93,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 13,
+    "p90": 20,
+    "max": 21
+   },
+   "words_per_message": {
+    "median": 13,
+    "max": 21
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000031",
+    "words": 21
+   },
+   "response_minutes": {
+    "median": 2.0,
+    "count": 7
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 1,
+   "reactions_received": 2,
+   "share_words": 0.217,
+   "share_turns": 0.194,
+   "sittings_present": 3
+  },
+  "900000000000000006": {
+   "name": "Kit",
+   "player": "Kit",
+   "character": "Mei Lan",
+   "role": "player",
+   "note": "",
+   "messages": 9,
+   "turns": 9,
+   "ooc_messages": 0,
+   "words": 115,
+   "ooc_words": 0,
+   "words_per_turn": {
+    "median": 11,
+    "p90": 22,
+    "max": 24
+   },
+   "words_per_message": {
+    "median": 11,
+    "max": 24
+   },
+   "messages_per_turn": {
+    "mean": 1.0,
+    "max": 1
+   },
+   "longest_turn": {
+    "start_id": "910000000000000008",
+    "words": 24
+   },
+   "response_minutes": {
+    "median": 2.0,
+    "count": 9
+   },
+   "edited": 0,
+   "attachments": 0,
+   "rolls": 2,
+   "reactions_received": 8,
+   "share_words": 0.268,
+   "share_turns": 0.25,
+   "sittings_present": 3
+  }
+ },
+ "sections": [
+  {
+   "title": "🧵 Briefing · Job 03",
+   "truncated": false,
+   "messages": 16,
+   "turns": 15,
+   "sittings": 1
+  },
+  {
+   "title": "🧵 Underway · Job 03",
+   "truncated": false,
+   "messages": 29,
+   "turns": 24,
+   "sittings": 1
+  },
+  {
+   "title": "🧵 Returned · Job 03",
+   "truncated": false,
+   "messages": 8,
+   "turns": 8,
+   "sittings": 1
+  }
+ ],
+ "sittings": [
+  {
+   "section": "🧵 Briefing · Job 03",
+   "start": "2026-10-03T17:00:00+00:00",
+   "end": "2026-10-03T17:25:00+00:00",
+   "duration_minutes": 25.0,
+   "turns": 15,
+   "player_count": 5,
+   "even_share": 0.2,
+   "authors": {
+    "900000000000000001": {
+     "turns": 3,
+     "words": 78
+    },
+    "900000000000000002": {
+     "turns": 2,
+     "words": 33,
+     "share_turns": 0.167,
+     "share_words": 0.209
+    },
+    "900000000000000003": {
+     "turns": 3,
+     "words": 19,
+     "share_turns": 0.25,
+     "share_words": 0.12
+    },
+    "900000000000000004": {
+     "turns": 2,
+     "words": 30,
+     "share_turns": 0.167,
+     "share_words": 0.19
+    },
+    "900000000000000006": {
+     "turns": 3,
+     "words": 49,
+     "share_turns": 0.25,
+     "share_words": 0.31
+    },
+    "900000000000000005": {
+     "turns": 2,
+     "words": 27,
+     "share_turns": 0.167,
+     "share_words": 0.171
+    }
+   },
+   "top_player": "900000000000000006",
+   "top_share_words": 0.31,
+   "quiet": []
+  },
+  {
+   "section": "🧵 Underway · Job 03",
+   "start": "2026-10-03T17:55:00+00:00",
+   "end": "2026-10-03T18:42:00+00:00",
+   "duration_minutes": 47.0,
+   "turns": 24,
+   "player_count": 5,
+   "even_share": 0.2,
+   "authors": {
+    "900000000000000001": {
+     "turns": 6,
+     "words": 123
+    },
+    "900000000000000002": {
+     "turns": 3,
+     "words": 55,
+     "share_turns": 0.167,
+     "share_words": 0.255
+    },
+    "900000000000000004": {
+     "turns": 3,
+     "words": 28,
+     "share_turns": 0.167,
+     "share_words": 0.13
+    },
+    "900000000000000005": {
+     "turns": 4,
+     "words": 49,
+     "share_turns": 0.222,
+     "share_words": 0.227
+    },
+    "900000000000000006": {
+     "turns": 5,
+     "words": 55,
+     "share_turns": 0.278,
+     "share_words": 0.255
+    },
+    "900000000000000003": {
+     "turns": 3,
+     "words": 29,
+     "share_turns": 0.167,
+     "share_words": 0.134
+    }
+   },
+   "top_player": "900000000000000002",
+   "top_share_words": 0.255,
+   "quiet": []
+  },
+  {
+   "section": "🧵 Returned · Job 03",
+   "start": "2026-10-03T19:32:00+00:00",
+   "end": "2026-10-03T19:44:00+00:00",
+   "duration_minutes": 12.0,
+   "turns": 8,
+   "player_count": 5,
+   "even_share": 0.2,
+   "authors": {
+    "900000000000000001": {
+     "turns": 2,
+     "words": 36
+    },
+    "900000000000000003": {
+     "turns": 1,
+     "words": 14,
+     "share_turns": 0.167,
+     "share_words": 0.255
+    },
+    "900000000000000005": {
+     "turns": 1,
+     "words": 17,
+     "share_turns": 0.167,
+     "share_words": 0.309
+    },
+    "900000000000000004": {
+     "turns": 2,
+     "words": 7,
+     "share_turns": 0.333,
+     "share_words": 0.127
+    },
+    "900000000000000002": {
+     "turns": 1,
+     "words": 6,
+     "share_turns": 0.167,
+     "share_words": 0.109
+    },
+    "900000000000000006": {
+     "turns": 1,
+     "words": 11,
+     "share_turns": 0.167,
+     "share_words": 0.2
+    }
+   },
+   "top_player": "900000000000000005",
+   "top_share_words": 0.309,
+   "quiet": []
+  }
+ ],
+ "flags": [],
+ "moments": [
+  {
+   "id": "m1",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    20
+   ],
+   "message_ids": [
+    "910000000000000020"
+   ],
+   "at": "2026-10-03T18:00:00+00:00",
+   "status": "confirmed",
+   "gm_note": "Textbook assist.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000002",
+   "kind": "assist",
+   "summary": "Anchors a rope line down the drop and hands the free invoke to whoever goes first.",
+   "why": "Set the whole descent up for the others; Pell used the invoke straight away.",
+   "quote": "Free invoke for whoever goes first.",
+   "helped": [
+    "900000000000000004"
+   ]
+  },
+  {
+   "id": "m2",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    18
+   ],
+   "message_ids": [
+    "910000000000000018"
+   ],
+   "at": "2026-10-03T17:57:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000002",
+   "kind": "story-choice",
+   "summary": "Decides the crew descends into the basin instead of skirting it.",
+   "why": "Took the expedition to where the discoveries were.",
+   "quote": "Nobody step anywhere until I say so",
+   "helped": []
+  },
+  {
+   "id": "m3",
+   "section": "🧵 Returned · Job 03",
+   "message_numbers": [
+    47
+   ],
+   "message_ids": [
+    "910000000000000047"
+   ],
+   "at": "2026-10-03T19:35:00+00:00",
+   "status": "rejected",
+   "gm_note": "Funny, not a moment.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000003",
+   "kind": "character",
+   "summary": "Volunteers to give the report and is elbowed aside by Dagny.",
+   "why": "Shows the crew's dynamic in one line.",
+   "quote": "I'll do the talking.",
+   "helped": []
+  },
+  {
+   "id": "m4",
+   "section": "🧵 Briefing · Job 03",
+   "message_numbers": [
+    4
+   ],
+   "message_ids": [
+    "910000000000000004"
+   ],
+   "at": "2026-10-03T17:07:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000004",
+   "kind": "character",
+   "summary": "Packs rations for five, then realises there are five of them.",
+   "why": "Set up a running joke the whole crew picked up.",
+   "quote": "I packed rations for five.",
+   "helped": []
+  },
+  {
+   "id": "m5",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    21
+   ],
+   "message_ids": [
+    "910000000000000021"
+   ],
+   "at": "2026-10-03T18:02:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "author_id": "900000000000000004",
+   "kind": "mechanics",
+   "summary": "Goes first down the line, invoking Ilse's aspect, and lands it.",
+   "why": "A clean use of another player's advantage.",
+   "quote": "I'll go first.",
+   "helped": []
+  },
+  {
+   "id": "m6",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    28,
+    31
+   ],
+   "message_ids": [
+    "910000000000000028",
+    "910000000000000031"
+   ],
+   "at": "2026-10-03T18:15:00+00:00",
+   "status": "confirmed",
+   "gm_note": "Hook for next session.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000005",
+   "kind": "discovery",
+   "summary": "Rings the Echo Bell and hears something answer before the bell finished.",
+   "why": "The session's central mystery, now an open thread.",
+   "quote": "Something down there rang back before the bell finished.",
+   "helped": []
+  },
+  {
+   "id": "m7",
+   "section": "🧵 Returned · Job 03",
+   "message_numbers": [
+    48
+   ],
+   "message_ids": [
+    "910000000000000048"
+   ],
+   "at": "2026-10-03T19:37:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "author_id": "900000000000000005",
+   "kind": "story-choice",
+   "summary": "Gives the intake report herself: short, factual, complete.",
+   "why": "Turned the session into a clean record for the Archive.",
+   "quote": "Basin of black glass.",
+   "helped": []
+  },
+  {
+   "id": "m8",
+   "section": "🧵 Briefing · Job 03",
+   "message_numbers": [
+    10
+   ],
+   "message_ids": [
+    "910000000000000010"
+   ],
+   "at": "2026-10-03T17:18:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "author_id": "900000000000000006",
+   "kind": "discovery",
+   "summary": "Reads the barometer before crossing: pressure falling on the far side.",
+   "why": "Earned the aspect Pressure Falling, which framed the whole trip.",
+   "quote": "I want to know if the air on the other side is lying to us.",
+   "helped": []
+  },
+  {
+   "id": "m9",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    36
+   ],
+   "message_ids": [
+    "910000000000000036"
+   ],
+   "at": "2026-10-03T18:28:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "author_id": "900000000000000006",
+   "kind": "story-choice",
+   "summary": "Collects the floating specimen with the Sample Case instead of touching it.",
+   "why": "Secured the job's payment and the session's only sample.",
+   "quote": "We don't touch it. We collect it.",
+   "helped": []
+  }
+ ],
+ "humor_candidates": [
+  {
+   "id": "h1",
+   "section": "🧵 Underway · Job 03",
+   "message_numbers": [
+    39
+   ],
+   "message_ids": [
+    "910000000000000039"
+   ],
+   "at": "2026-10-03T18:33:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "authors": [
+    "900000000000000006"
+   ],
+   "setup": "The crew's map of the basin is blank. Mei reads it aloud.",
+   "quote": "The map says 'here be nothing.' Bold of the map.",
+   "rank": 1,
+   "signals": {
+    "reactions": {
+     "😂": 4,
+     "🔥": 1
+    },
+    "laughing_replies": [
+     {
+      "n": 40,
+      "author_id": "900000000000000004"
+     }
+    ]
+   },
+   "feature_ok": true
+  },
+  {
+   "id": "h2",
+   "section": "🧵 Briefing · Job 03",
+   "message_numbers": [
+    4
+   ],
+   "message_ids": [
+    "910000000000000004"
+   ],
+   "at": "2026-10-03T17:07:00+00:00",
+   "status": "confirmed",
+   "gm_note": "",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "authors": [
+    "900000000000000004"
+   ],
+   "setup": "Pell explains why he packed rations for five.",
+   "quote": "Do not ask me why there are five.",
+   "rank": 2,
+   "signals": {
+    "reactions": {},
+    "laughing_replies": []
+   },
+   "feature_ok": true
+  },
+  {
+   "id": "h3",
+   "section": "🧵 Briefing · Job 03",
+   "message_numbers": [
+    14,
+    15
+   ],
+   "message_ids": [
+    "910000000000000014",
+    "910000000000000015"
+   ],
+   "at": "2026-10-03T17:23:00+00:00",
+   "status": "rejected",
+   "gm_note": "Needs too much context.",
+   "decided_at": "2026-10-14T13:43:37+00:00",
+   "authors": [
+    "900000000000000003",
+    "900000000000000005"
+   ],
+   "setup": "Cassian is optimistic about the falling pressure. Dagny isn't.",
+   "quote": "Statistically you've never been right about anything.",
+   "rank": 4,
+   "signals": {
+    "reactions": {
+     "😂": 2
+    },
+    "laughing_replies": [
+     {
+      "n": 16,
+      "author_id": "900000000000000003"
+     }
+    ]
+   },
+   "feature_ok": null
+  },
+  {
+   "id": "h4",
+   "section": "🧵 Returned · Job 03",
+   "message_numbers": [
+    49,
+    50,
+    51
+   ],
+   "message_ids": [
+    "910000000000000049",
+    "910000000000000050",
+    "910000000000000051"
+   ],
+   "at": "2026-10-03T19:38:00+00:00",
+   "status": "proposed",
+   "gm_note": "",
+   "decided_at": null,
+   "authors": [
+    "900000000000000002",
+    "900000000000000004"
+   ],
+   "setup": "At intake, Pell insists the report mention the rations.",
+   "quote": "Somebody should.",
+   "rank": 5,
+   "signals": {
+    "reactions": {
+     "😂": 2
+    },
+    "laughing_replies": []
+   },
+   "feature_ok": null
+  }
+ ],
+ "review": {
+  "status": "ai-draft",
+  "reviewed_by": "GM (demo)",
+  "reviewed_at": null,
+  "notes": ""
+ }
+}

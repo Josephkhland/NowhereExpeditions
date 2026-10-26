@@ -6,7 +6,7 @@
     "Glow"
   ],
   "cost": 1,
-  "effect": "Make an object shed light and glow. A small object can glow very brightly; a larger one spreads the light over more material and looks dimmer. The first practical Form ever demonstrated; first performed with runic markings painted on the wrists. See [[the-first-three-forms|The First Three Forms]].",
+  "effect": "Make an object shed light and glow. A small object can glow very brightly; a larger one spreads the light over more material and looks dimmer. The first practical Form ever demonstrated; first performed with runic markings painted on the wrists. See The First Three Forms.",
   "status": "known",
   "projectId": null
 }

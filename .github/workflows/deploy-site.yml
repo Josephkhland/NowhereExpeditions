@@ -12,6 +12,7 @@ on:
       - ".github/workflows/deploy-site.yml"
       - ".github/versioning.json"
       - ".github/scripts/release_version.py"
+      - ".github/scripts/site_changelog.py"
   # Allows a manual redeploy from the Actions tab, optionally forcing the version bump.
   workflow_dispatch:
     inputs:
@@ -71,9 +72,10 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
           DATE: ${{ steps.version.outputs.date }}
           TITLE: ${{ steps.version.outputs.version }} (${{ steps.version.outputs.date }})
+          NOTES: ${{ steps.version.outputs.notes }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "$TAG ($DATE)" "$GITHUB_SHA"
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" --verify-tag --title "$TITLE" --generate-notes
+          gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file "$NOTES" --generate-notes

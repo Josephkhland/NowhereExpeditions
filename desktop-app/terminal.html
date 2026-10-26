@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- xterm.js writes its own <style> elements, hence 'unsafe-inline' for styles only. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Terminal</title>
+  <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="terminal.css">
+</head>
+<body>
+  <aside class="panel">
+    <h2>Sessions</h2>
+    <ul id="sessions" class="sessions"></ul>
+    <section id="actions" class="actions" hidden>
+      <button type="button" id="open-memory" class="memory-button" title="What Claude Code remembers about this project, as a graph">◉ Claude's memory <span id="memory-count" class="count"></span></button>
+      <h2>Claude Code actions</h2>
+      <p class="hint">Click to type the request into Claude Code: fill in the &lt;…&gt; parts, then press Enter.</p>
+      <div id="action-tree" class="tree"></div>
+    </section>
+    <button type="button" id="restart-servers" class="restart-all">↻ Restart all servers</button>
+  </aside>
+  <div class="main">
+    <form id="folder-bar" class="folder-bar">
+      <label for="folder">Folder</label>
+      <input id="folder" type="text" spellcheck="false" autocomplete="off">
+      <span id="folder-note" class="folder-note"></span>
+    </form>
+    <main id="screens" class="screens"></main>
+    <section id="memory" class="memory" hidden aria-label="Claude's memory">
+      <header class="memory-head">
+        <div class="memory-title">
+          <h1>Claude's memory</h1>
+          <p id="memory-summary"></p>
+        </div>
+        <div id="memory-legend" class="legend"></div>
+        <button type="button" id="memory-refresh" title="Read the notes again">↻ Refresh</button>
+        <button type="button" id="memory-close" title="Back to the terminal (Esc)">✕ Close</button>
+      </header>
+      <div id="memory-notice" class="memory-notice" hidden></div>
+      <div class="memory-body">
+        <div id="graph" class="graph">
+          <svg id="edges" class="edges" aria-hidden="true"></svg>
+          <div id="nodes" class="nodes"></div>
+        </div>
+        <aside id="memory-detail" class="memory-detail">
+          <p class="placeholder">Click a note to read it. Drag notes to arrange them; × deletes one (you can restore it below).</p>
+        </aside>
+      </div>
+      <footer id="memory-trash" class="memory-trash" hidden></footer>
+    </section>
+  </div>
+  <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="terminal-page.js"></script>
+  <script src="memory-view.js"></script>
+</body>
+</html>

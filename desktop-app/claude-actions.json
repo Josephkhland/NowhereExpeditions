@@ -1,0 +1,105 @@
+{
+  "about": "The Claude Code actions tree in the desktop app's Terminal tab. A 'prompt' item types its text into Claude Code's input (nothing is sent until you press Enter, so fill in the <...> parts first); a 'tab' item opens that tab (live, manager, site, insights, bot, terminal, git). Edit freely; Reload interface (Ctrl+Alt+R) picks up changes.",
+  "groups": [
+    {
+      "title": "Transcripts & session reports",
+      "items": [
+        {
+          "title": "Read a channel into a transcript",
+          "description": "Vaulty reads a Discord channel (and its threads) into discord_server/transcripts/: a .md to read and a .json for the stats.",
+          "prompt": "/vaultulation-bot Read the Discord channel #<channel> with its threads into a transcript (ask.py read), from <date> to <date>."
+        },
+        {
+          "title": "Write a session report",
+          "description": "GM notes first (never published), then the in-character version: an official GEC return report for expeditions, a witness or participant account for RP scenes.",
+          "prompt": "Write a session report from discord_server/transcripts/<transcript>.md: the GM notes first, then the in-character published version."
+        }
+      ]
+    },
+    {
+      "title": "Table insights",
+      "items": [
+        {
+          "title": "Analyse the latest session (all steps)",
+          "description": "Transcript → stats → moments and funniest bits, ready for your review in the dashboard.",
+          "prompt": "/table-insights Analyse the latest session from #<channel>: read the transcript, run the stats, then do the moments and humor pass."
+        },
+        {
+          "title": "Stats for a transcript",
+          "description": "Code only, no AI: spotlight shares, turns, bursts, quiet players and 'worth a look' flags (analyze.py).",
+          "prompt": "/table-insights Run the stats for discord_server/transcripts/<transcript>.json as session <session-id>."
+        },
+        {
+          "title": "Moments & funniest bits",
+          "description": "The AI reading pass: 1–3 moments per player and up to 10 humor candidates, quotes checked word for word (moments.py import).",
+          "prompt": "/table-insights Do the moments and humor reading pass for session <session-id>."
+        },
+        {
+          "title": "Draft the funny-moments poll",
+          "description": "Only confirmed humor candidates whose players agreed to be featured; drafts the poll, nothing is posted.",
+          "prompt": "/table-insights Draft the funny-moments poll from session(s) <session-id>, and show me the preview."
+        },
+        {
+          "title": "Open the dashboard",
+          "description": "Review moments, confirm or reject, record poll consent.",
+          "tab": "insights"
+        }
+      ]
+    },
+    {
+      "title": "Lore & the Archive",
+      "items": [
+        {
+          "title": "Write entries from a canon packet",
+          "description": "Encyclopedia-style Archive entries with canon-safety checks, written to lore/entries/.",
+          "prompt": "/nowhere-lore-writer Write Archive entries from this canon packet: <paste the packet or describe it>"
+        },
+        {
+          "title": "Expand or fix existing entries",
+          "prompt": "/nowhere-lore-writer Revise the Archive entry <entry> : <what to change>"
+        },
+        {
+          "title": "Load lore drafts into the content manager",
+          "description": "As drafts: you publish them from the content manager.",
+          "prompt": "/nowhere-lore-writer Load the new lore entries into the content manager as drafts."
+        }
+      ]
+    },
+    {
+      "title": "Discord bot (Vaulty)",
+      "items": [
+        {
+          "title": "Add or change a bot command",
+          "prompt": "/vaultulation-bot <describe the command or change>"
+        },
+        {
+          "title": "Preview a post before it goes out",
+          "description": "Preview only; posting needs your approval in the bot.",
+          "prompt": "/vaultulation-bot Preview <the post or embed> for #<channel>. Don't post it."
+        },
+        {
+          "title": "Open the bot dashboard",
+          "tab": "bot"
+        }
+      ]
+    },
+    {
+      "title": "Site & publishing",
+      "items": [
+        {
+          "title": "Summarise what's changed",
+          "description": "Uncommitted changes grouped by area, with suggested commit messages.",
+          "prompt": "Summarise the uncommitted changes in this repository, grouped by area, and suggest how to split them into commits."
+        },
+        {
+          "title": "Check the draft site",
+          "tab": "site"
+        },
+        {
+          "title": "Review and publish (Git tab)",
+          "tab": "git"
+        }
+      ]
+    }
+  ]
+}

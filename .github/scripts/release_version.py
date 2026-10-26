@@ -149,6 +149,7 @@ def plan(config, forced="auto"):
         "tag": tag,
         "date": today(config.get("timezone", "UTC")) if is_new else tag_date(tag),
         "previous": format_version(previous) if previous else None,
+        "previousTag": previous_tag,
         "bump": level,
         "reason": reason,
         "new": is_new,
@@ -166,14 +167,27 @@ def main():
     commit = git("rev-parse", "HEAD").strip()
     repo = os.environ.get("GITHUB_REPOSITORY")
     server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+
+    def release_url(tag):
+        return f"{server}/{repo}/releases/tag/{tag}" if repo else ""
+
     site_info = {
         "version": release["version"],
         "date": release["date"],
         "tag": release["tag"],
         "commit": commit[:7],
-        "url": f"{server}/{repo}/releases/tag/{release['tag']}" if repo else "",
+        "url": release_url(release["tag"]),
     }
     Path(args.output).write_text(json.dumps(site_info, indent=2) + "\n", encoding="utf-8")
+
+    # What changed per release, for the site's "What's changed" page (changes.json beside version.json).
+    import site_changelog
+    changelog = site_changelog.build(config, release, release_url, tag_date, parse_version)
+    site_changelog.write(changelog, Path(args.output).with_name("changes.json"))
+    this_release = next((item for item in changelog["releases"] if item["version"] == release["version"]), None)
+    notes = site_changelog.markdown_summary(this_release) if this_release else ""
+    if this_release:
+        print(f"{len(this_release['changes'])} record(s) changed in {release['version']}")
 
     summary = (f"{release['version']} ({release['date']}) - "
                + (f"{release['bump']} bump from {release['previous']}: {release['reason']}" if release["previous"] and release["new"]
@@ -184,9 +198,13 @@ def main():
             for key in ("version", "tag", "date", "bump"):
                 out.write(f"{key}={release[key]}\n")
             out.write(f"new={'true' if release['new'] else 'false'}\n")
+            # The list of changed records opens the GitHub Release notes.
+            notes_path = Path(os.environ.get("RUNNER_TEMP", ".")) / "release-changes.md"
+            notes_path.write_text(notes, encoding="utf-8")
+            out.write(f"notes={notes_path}\n")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
-            out.write(f"### Site version {release['version']} ({release['date']})\n\n{summary}\n")
+            out.write(f"### Site version {release['version']} ({release['date']})\n\n{summary}\n\n{notes}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,31 @@
+{
+  "id": "endros",
+  "type": "lore",
+  "title": "Endros",
+  "subtitle": "The settlement at the Valeoran Ruins, where everybody is in charge of something",
+  "summary": "The research settlement of docks, workshops and floating platforms around and beneath the Valeoran Ruins, named for a mythical son who sailed into the unknown, and governed in practice by nobody.",
+  "content": "> *\"In Endros, everybody is in charge of something, and nobody is in charge of Endros.\"*\n> — said on the docks\n\n**Endros** is the settlement that grew up around and beneath the [[valeoran-ruins|Valeoran Ruins]]: docks, workshops, housing blocks and floating platforms over a still ocean, built fast and built to work. Nearly everyone who goes through a [[gates|Gate]] lives here.\n\nUniversity scholars named it after **Endros**, the half-divine son in the [[valeor|myth of Valeor]], who grew up with the sea and sailed into the unknown and never came back in a way that answered the question. With the Gates open, Expeditioners find the name more fitting than anyone intended, and slightly ominous.\n\nAsk who governs Endros and the official answer is the University of Verna, but its authority is real over the Ruins and almost nowhere else. The Gates belong to the [[gate-evaluation-committee|Gate Evaluation Committee]]. The settlement itself answers to nobody: Aurelia offers its standards to anyone who'll adopt them, Kharad finances and insures, Vesper works through its clubs, Tianzhao keeps its Pavilion of Celestial Affairs, the Vards look after their own, and **Nowhere Expeditions**, the company, brings people in and keeps the expeditions running.\n\n> **A newcomer's first question, at the docks**\n>\n> \"Who's in charge here?\"\n>\n> The harbour hand looked up from the cargo net. \"Of what?\"\n>\n> \"Of... Endros.\"\n>\n> \"The University, if you ask the University. The Committee, if you want to go through a Gate. Nobody, if you want your crate off this ship before dark.\" She tied it off. \"That one's me. Where's it going?\"\n\nOne question has no owner at all: who owns what crews bring back from beyond a Gate.\n\n## Related Entries\n\n- The [Outpost Sheet](outpost.html): what Endros can do right now.\n- [[gate-evaluation-committee|The Gate Evaluation Committee]]: who decides about the Gates.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Endros",
+    "Outpost",
+    "settlement",
+    "Nowhere Expeditions",
+    "who runs Endros",
+    "Pavilion of Celestial Affairs"
+  ],
+  "topics": [
+    "Institutions",
+    "Politics"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "place",
+    "startStep": 2
+  }
+}

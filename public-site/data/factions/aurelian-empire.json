@@ -7,20 +7,20 @@
     "Aurelian"
   ],
   "tagline": "Maritime empire of navy and bureaucracy",
-  "summary": "A powerful maritime empire defined by navy, bureaucracy, standardization, etiquette and the belief that power creates responsibility.",
-  "government": "",
-  "knownFor": "",
+  "summary": "A huge maritime empire that holds the world's ports and straits rather than its continents, runs on standard parts and paperwork, and sincerely believes that **power creates obligation**.",
+  "government": "The Crown rules in name; in practice ministries, colonial offices, the navy, governors, courts, chartered companies and the civil service share the work.",
+  "knownFor": "Its navy, treaty ports and customs offices, standard parts and serial numbers, forms that exist for a reason, and tea.",
   "coreValues": [
     "Standardization",
     "Etiquette",
     "Responsibility"
   ],
   "gateAttitude": "Aurelia treats magic as a strategic asset requiring responsible administration.",
-  "beliefs": "Aurelia follows the **Faith of the First Light**, a religious family it shares with Vesper, in the form of the **Aurelian Communion**, also called the **Crowned Sun**. It emphasizes order, duty, stewardship, continuity and reciprocal hierarchy. Older folklore that predates the First Light also survives.",
-  "history": "",
-  "visualSummary": "Polished brass, navy and cream uniforms, monumental institutions and standardized equipment.",
+  "beliefs": "Aurelia follows the **Crowned Sun**, its branch of the **Faith of the First Light** (Vesper's branch is the Sacred Flame). Its central teaching is *Light reveals the proper relationship between things*: ruler and subject, captain and crew, parent and child, the living and the dead, each binding both sides. **Aurelion**, the Light Enthroned, is the First Light in its sovereign aspect, and the idea behind it is authority under obligation. If you call Aurelion a god of monarchy, Aurelian theologians will correct you.\n\nEveryday morality is the **Three Duties**: to those above, to those beside and to those below. A clerk owes respect to the ministry, fairness to colleagues and care to the junior clerk; a monarch owes the same, only more of it. What goes wrong is the **Shadow Behind the Crown**, the official who wants the privileges of office without the burdens.\n\nFour **Lantern-Bearers** are loved by every Aurelian child: **Ser Ardan**, the Last Watch (soldiers, staying at your post); **Lady Meriel** of the Open Hand (healers: *\"Compassion without competence is merely grief\"*); **Corven**, Keeper of Measures (engineers and administrators; the Kharadi honour him as a mortal Messenger, which both sides think the other has badly wrong); and **Admiral Sevrane**, whose rule is the most quoted sentence in the navy: **the captain leaves last**.\n\nThe dead face the **Final Accounting** in the Hall of Morning, with one question: *what was entrusted to you, and what did you do with it?* At memorial meals families keep an **Empty Chair** and pour a cup for the absent. Since the Gates opened, Expeditioners hang a lantern at the threshold before they cross, half out of habit and half because nobody can say whether the Light can find the dead beyond a Gate.\n\nOlder customs survive underneath, without explanations: sailors who won't whistle in certain winds, coins and salt left at the harbour's edge, bonfires lit on particular hills. Nobody has recovered the beliefs they came from.",
+  "history": "Aurelia started as an island kingdom on important trade routes. It couldn't do much on land, so it put everything into ships: trade paid for warships, warships protected trade, and every turn of that cycle carried Aurelian influence a bit further from home.\n\nThe turning point was the **Bluewater Wars**. The Archive holds no settled account of their battles, opponents or dates, but every Aurelian officer learns the lesson:\n\n> *It is not necessary to conquer every country if you control the ports, straits, canals, islands and supply points that connect them.*\n\nSo the Empire grows in a recognisable way: a warehouse, a treaty port, a protection agreement, a naval station, then roads, courts and customs offices, and then the map quietly changes colour. Steamships, railways and the telegraph tied it together, and standard measures and interchangeable parts made it governable. Aurelia's real advantage isn't genius, it's **repeatability**. A shipyard saying: *a Vard might build one extraordinary engine; Aurelia will build ten thousand acceptable ones, train the crews, ship the spare parts and file the paperwork.*\n\n**Tea** came from the [Tianzhao Mandate](factions.html#tianzhao-mandate) and spread until most Aurelians treat it as if it had always been theirs, which Tianzhao finds amusing, flattering and now and then absurd. Diplomats still retell the reception where an Aurelian noble explained that you can judge a people's refinement by how they prepare their tea, and the Tianzhao ambassador answered: *\"How fortunate you have had so much practice.\"* Tea has no religious meaning; it comes with negotiations, briefings, mourning and naval routine.\n\nThe Empire's central moral question is stewardship. What Aurelia builds is often real (ports, hospitals, schools, courts), and it points at those as proof that it should stay in charge. Critics ask whether building the hospital gives it *permanent* authority. Aurelians find the question ungrateful, and their critics find the answer convenient.\n\n**The Gates.** Aurelia isn't comfortable with the world's only source of magic sitting outside anyone's control, but seizing Endros would cause an international crisis. So it works indirectly, with engineers, naval protection, banks, diplomats and technical assistance, and an Admiralty line that sums it up: *assistance offered is more durable than authority claimed.* Endros has a joke about it: leave a Gate open long enough and an Aurelian clerk will set up a customs office inside it.",
+  "visualSummary": "Everything Aurelian is meant to look like it belongs to a big, orderly institution that will still be there in a hundred years. The palette is **navy, cream, black and white** with polished brass and gold trim; the emblem is a crown, a sun with compass points, an anchor and a laurel wreath, and the eight-pointed compass star turns up on epaulettes, cuffs and badges. Buildings are symmetrical, columned stone, and even a minor customs house is built to outlive everyone working in it.\n\nPeople dress for fit, upkeep and regulation: tailored coats, high collars, polished boots and precise rank insignia, with each ministry guarding the differences in its badge. Machinery has labels, serial numbers and standard parts, and the forms are the most mocked thing about the Empire. Aurelians know, and are privately rather proud of it: a lot of their forms exist because something once went badly wrong.\n\nThe ideal Aurelian is composed, prepared and polite. Conflict happens through formal wording, rank and very carefully phrased disapproval. Foreigners decide Aurelians are cold, rigid and unable to improvise; the first is mostly restraint, the second mostly preference, and the third is just wrong. They improvise all the time. They fill in the form afterwards.",
   "palette": "Navy, cream, polished brass",
-  "materials": "",
+  "materials": "Polished brass, gold trim, dark wood, steel and monumental white stone",
   "relations": [
     {
       "factionId": "vardic-holds",
@@ -55,11 +55,5 @@
     "data/images/aurelian-empire-clothing-ef0470e2.jpg"
   ],
   "order": 2,
-  "readingPath": [
-    "the-aurelian-empire",
-    "imperial-standard",
-    "faith-of-the-first-light",
-    "crowned-sun",
-    "before-the-crowned-sun"
-  ]
+  "readingPath": []
 }

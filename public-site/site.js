@@ -775,7 +775,7 @@ const renderFooterCommunity = async () => {
   slot.hidden = false;
 };
 
-// Every page: the release version beside the copyright, e.g. "v1.4.2 (2026-10-04)", linking to its release notes.
+// Every page: the release version beside the copyright, e.g. "v1.4.2 (2026-10-04)", linking to what it changed.
 // version.json is written by the deploy workflow, so a local preview has none and says so.
 const renderSiteVersion = async () => {
   const slot = document.getElementById("site-version");
@@ -788,8 +788,7 @@ const renderSiteVersion = async () => {
     // Offline or a local preview: fall through to the label below.
   }
   const label = release?.version ? `v${release.version}${release.date ? ` (${release.date})` : ""}` : "Local preview";
-  const href = safeUrl(release?.url);
-  slot.innerHTML = ` · ${href ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener" title="Release notes">${escapeHtml(label)}</a>` : escapeHtml(label)}`;
+  slot.innerHTML = ` · ${release?.version ? `<a href="changes.html#v${escapeHtml(release.version)}" title="What changed in this release">${escapeHtml(label)}</a>` : escapeHtml(label)}`;
   slot.hidden = false;
 };
 
@@ -1361,7 +1360,7 @@ const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
 
 // What kind of reading a lore entry is, set in the manager. The order is also a faction's default reading order.
 const LORE_KINDS = { overview: "Overview", society: "Society", faith: "Faith", folklore: "Folklore", institution: "Institution",
-  event: "Event", endros: "Endros & the Gates" };
+  place: "Place", person: "Person", event: "Event", term: "Term", endros: "Endros & the Gates" };
 const LORE_KIND_KEYS = Object.keys(LORE_KINDS);
 const loreKind = (entry) => entry?.type === "lore" ? LORE_KINDS[entry.details?.kind] || "" : "";
 const archiveEntryKind = (entry) => entry.type === "lore" ? loreKind(entry) || "Lore" : archiveTypeLabel(entry.type);
@@ -1616,7 +1615,7 @@ const loreShapeIcon = (kind) => kind === "job"
 
 /* A browsable list of Archive entries with one entry open beside it. The Lore page and the Expedition Reports page
    are two configurations of it; Gates have their own page (renderGates). */
-const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, searchLabel, emptyText, newestFirst = false, shelves = false }) => {
+const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, searchLabel, emptyText, newestFirst = false }) => {
   const root = document.getElementById(rootId);
   if (!root) return;
   const pageName = window.location.pathname.split("/").pop() || `${rootId}.html`;
@@ -1641,10 +1640,8 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
     // Factions used by at least one entry can filter the list; ?faction=<id> (from a faction page) sets it.
     const usedFactions = campaign.factions.filter((item) => entries.some((entry) => (entry.factionIds || []).includes(item.id)))
       .sort((left, right) => String(left.name).localeCompare(String(right.name)));
-    // On the Lore page the filter also offers the shelf of lore about no faction (?faction=world).
-    const worldPath = shelves ? readingPaths(campaign).find((path) => path.key === "world") : null;
     let faction = new URLSearchParams(window.location.search).get("faction") || "";
-    if (!usedFactions.some((item) => item.id === faction) && !(worldPath && faction === "world")) faction = "";
+    if (!usedFactions.some((item) => item.id === faction)) faction = "";
     // Lore topics in use, most used first; ?topic=<name> sets the filter.
     const topicCounts = new Map();
     entries.forEach((entry) => (entry.topics || []).forEach((name) => topicCounts.set(name, (topicCounts.get(name) || 0) + 1)));
@@ -1657,58 +1654,8 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
       else url.searchParams.delete(name);
       window.history.replaceState(null, "", url);
     };
-    // The Lore page is arranged as reading paths; the path being followed decides "next" and "previous".
-    const paths = shelves ? readingPaths(campaign) : [];
-    const startPath = paths.find((path) => path.key === "start");
-    let currentPath = new URLSearchParams(window.location.search).get("path") || "";
-    const pathOf = (entry) => {
-      const has = (path) => path.entries.includes(entry);
-      return paths.find((path) => path.key === currentPath && has(path)) || paths.find((path) => path.faction && has(path)) || paths.find(has) || null;
-    };
-    const kindLabel = (entry) => `<span class="lore-kind">${escapeHtml(archiveEntryKind(entry))}</span>`;
-    const startStrip = () => startPath ? `
-      <div class="lore-start-head">
-        <h2 id="lore-start-head">New to the world? Start here</h2>
-        <p>Read these first, in order. Then choose a faction below and follow its path.</p>
-      </div>
-      <ol class="lore-start-path">${startPath.entries.map((entry, index) => `
-        <li><a class="lore-start-step" href="#${encodeURIComponent(entry.id)}" data-path="start">
-          <span class="lore-step-number" aria-hidden="true">${index + 1}</span>
-          ${kindLabel(entry)}
-          <strong>${escapeHtml(entry.title)}</strong>
-          ${entry.subtitle ? `<span class="lore-start-sub">${escapeHtml(entry.subtitle)}</span>` : ""}
-          <span class="lore-minutes">${readingMinutes(entry)} min read</span>
-        </a></li>`).join("")}
-      </ol>` : "";
-    // Where the opened entry sits in its path, and the way on.
-    const pathNav = (entry) => {
-      const path = pathOf(entry);
-      if (!path) return { where: "", nav: "" };
-      const index = path.entries.indexOf(entry);
-      if (index < 0) return { where: "", nav: "" };
-      const label = path.key === "start" ? "Start here" : path.faction ? `${path.title} reading path` : path.title;
-      const step = (other, direction) => other ? `
-        <a class="reading-step is-${direction}" href="#${encodeURIComponent(other.id)}" data-path="${escapeHtml(path.key)}">
-          <span class="reading-step-label">${direction === "prev" ? "Previous" : "Next"}</span>
-          ${kindLabel(other)}
-          <strong>${escapeHtml(other.title)}</strong>
-        </a>` : "";
-      const finish = path.faction ? `<a class="reading-step is-next is-finish" href="factions.html#${encodeURIComponent(path.faction.id)}">
-          <span class="reading-step-label">Path complete</span><strong>Back to ${escapeHtml(path.faction.shortName || path.title)}</strong></a>`
-        : path.key === "start" ? `<a class="reading-step is-next is-finish" href="factions.html">
-          <span class="reading-step-label">Path complete</span><strong>Choose a faction to read about</strong></a>` : "";
-      return {
-        where: `<p class="reading-where">Step ${index + 1} of ${path.entries.length} · ${path.faction
-          ? `<a class="inline-link" href="factions.html#${encodeURIComponent(path.faction.id)}">${escapeHtml(label)}</a>` : escapeHtml(label)}</p>`,
-        nav: `<nav class="reading-nav" aria-label="${escapeHtml(label)}">
-          <p class="reading-nav-head">${escapeHtml(label)} <span class="muted">· ${index + 1} of ${path.entries.length}</span></p>
-          <div class="reading-nav-links">${step(path.entries[index - 1], "prev") || "<span></span>"}${step(path.entries[index + 1], "next") || finish}</div>
-        </nav>`,
-      };
-    };
     root.innerHTML = `
       <div id="archive-browse">
-      ${startPath ? '<section id="lore-start" class="lore-start" aria-labelledby="lore-start-head"></section>' : ""}
       ${categories ? `<div class="filter-bar" role="group" aria-label="${escapeHtml(noun)} categories">
         ${categories.map(([type, label]) => `<button type="button" class="filter-chip" data-archive-type="${type}" aria-pressed="${type === category}">${label}</button>`).join("")}
       </div>` : ""}
@@ -1722,12 +1669,11 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
             <span class="sr-only">${escapeHtml(searchLabel)}</span>
             <input id="archive-search" class="search-input" type="search" placeholder="${escapeHtml(searchLabel)}..." />
           </label>
-          ${usedFactions.length || worldPath ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
+          ${usedFactions.length ? `<label class="search-wrap archive-faction-wrap" for="archive-faction">
             <span class="sr-only">Show entries about a faction</span>
             <select id="archive-faction" class="search-input archive-faction-filter">
-              <option value="">${shelves ? "All shelves" : "Any faction"}</option>
+              <option value="">Any faction</option>
               ${usedFactions.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === faction ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
-              ${worldPath ? `<option value="world" ${faction === "world" ? "selected" : ""}>${escapeHtml(worldPath.title)}</option>` : ""}
             </select>
           </label>` : ""}
           <div id="archive-list" class="entry-list"></div>
@@ -1780,7 +1726,6 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
         ...references.entries.map((other) => `<li>${archiveLink(other)} <span class="muted">${escapeHtml(archiveTypeLabel(other.type))}</span></li>`)
       ];
       const bulletinGates = entry.type === "newspaper" ? gatesOf(entry) : [];
-      const reading = shelves ? pathNav(entry) : { where: "", nav: "" };
       detail.innerHTML = `
         <a class="back-link archive-back" href="#">← All ${escapeHtml(noun.toLowerCase())}</a>
         <article class="detail-surface archive-entry archive-${escapeHtml(entry.type)}">
@@ -1789,7 +1734,6 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
               <span class="pill">${escapeHtml(archiveEntryKind(entry))}</span>
               <h2>${escapeHtml(entry.title)}</h2>
               ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
-              ${reading.where}
               ${dateline ? `<p class="muted dossier-meta">${dateline}</p>` : ""}
               ${entry.topics?.length ? `<p class="entry-topics"><span class="muted">Topics</span>${entry.topics.map((name) => `<button type="button" class="topic-link" data-archive-topic="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</p>` : ""}
               ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
@@ -1805,7 +1749,6 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
           ${entry.type === "session-record" ? sessionFacts(entry) : ""}
           <div class="detail-block archive-body">${richText(entry.content, campaign, "No text on record.")}</div>
           ${(entry.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${entry.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-          ${reading.nav}
           ${referenceRows.length ? `<div class="detail-block"><h3>Referenced In</h3><ul class="clean-list">${referenceRows.join("")}</ul></div>` : ""}
         </article>`;
     };
@@ -1813,46 +1756,13 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
     const renderList = () => {
       const list = document.getElementById("archive-list");
       const filtered = entries.filter((entry) => (!category || entry.type === category)
-        && (!faction || (faction === "world" ? worldPath?.entries.includes(entry) : (entry.factionIds || []).includes(faction))) && (!topic || (entry.topics || []).includes(topic))
+        && (!faction || (entry.factionIds || []).includes(faction)) && (!topic || (entry.topics || []).includes(topic))
         && [entry.title, entry.subtitle, entry.summary, entry.content, entry.author, ...(entry.tags || []), ...(entry.topics || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query));
       // A linked entry always opens, even when the current filter hides it from the list.
       const linked = campaign.archiveById.get(selectedHash());
       // Phones show either the list or the opened entry, never both stacked.
       document.getElementById("archive-browse").classList.toggle("is-reading", Boolean(linked));
-      if (shelves) {
-        // The lore as shelves: one per path, numbered in reading order; lore left out of a faction's path follows it.
-        const browsing = !query && !topic && !faction;
-        const start = document.getElementById("lore-start");
-        if (start) {
-          start.hidden = Boolean(linked) || !browsing;
-          if (!start.hidden && !start.childElementCount) start.innerHTML = startStrip();
-        }
-        const groups = paths.filter((path) => path.key !== "start" && (!faction || path.key === faction))
-          .map((path) => ({ path, items: [...path.entries.map((entry, index) => [entry, index + 1]), ...path.extra.map((entry) => [entry, null])]
-            .filter(([entry]) => filtered.includes(entry)) }))
-          .filter((group) => group.items.length);
-        const firstShown = groups[0]?.items[0]?.[0];
-        const selected = linked && types.includes(linked.type) ? linked : (browsing && startPath?.entries[0]) || firstShown;
-        // The landing page opens the first Start here entry: read it as part of that path.
-        if (!linked && browsing && startPath && selected === startPath.entries[0]) currentPath = "start";
-        start?.querySelectorAll(".lore-start-step").forEach((link) => link.classList.toggle("selected", link.getAttribute("href") === `#${encodeURIComponent(selected?.id || "")}`));
-        list.innerHTML = groups.length ? groups.map(({ path, items }) => `
-          <section class="shelf" aria-label="${escapeHtml(path.title)}">
-            <h3 class="shelf-head">${path.faction ? factionFlag(path.faction, "shelf-flag") : ""}<span>${escapeHtml(path.title)}</span></h3>
-            ${items.map(([entry, step]) => `
-            <a class="entry-item lore-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" data-path="${escapeHtml(path.key)}" ${entry === selected ? 'aria-current="true"' : ""}>
-              <span class="lore-item-step" aria-hidden="true">${step || "·"}</span>
-              <span class="lore-item-body">
-                ${kindLabel(entry)}
-                <span class="entry-name">${escapeHtml(entry.title)}</span>
-                ${entry.subtitle ? `<span class="entry-meta">${escapeHtml(entry.subtitle)}</span>` : ""}
-              </span>
-            </a>`).join("")}
-          </section>`).join("") : `<div class="empty-state">${escapeHtml(entries.length ? "No entries match the current filter." : emptyText)}</div>`;
-        renderDetail(selected);
-        return;
-      }
       const selected = linked && types.includes(linked.type) ? linked : filtered[0];
       list.innerHTML = filtered.length ? filtered.map((entry) => `
         <a class="entry-item ${entry === selected ? "selected" : ""}" href="#${encodeURIComponent(entry.id)}" ${entry === selected ? 'aria-current="true"' : ""}>
@@ -1863,13 +1773,6 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
       renderDetail(selected);
     };
 
-    // Following a link in a path remembers the path, so "next" stays on it.
-    root.addEventListener("click", (event) => {
-      const link = event.target.closest("[data-path]");
-      if (!link) return;
-      currentPath = link.dataset.path;
-      setParam("path", currentPath);
-    });
     root.querySelectorAll("[data-archive-type]").forEach((button) => button.addEventListener("click", () => {
       category = button.dataset.archiveType;
       root.querySelectorAll("[data-archive-type]").forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
@@ -1935,8 +1838,234 @@ const renderArchiveBrowser = async ({ rootId, types, categories = null, noun, se
 
 const EXPLORE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="currentColor"/><circle cx="4.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="5" r="2.2" fill="currentColor"/><circle cx="19.5" cy="19" r="2.2" fill="currentColor"/><circle cx="4.5" cy="19" r="2.2" fill="currentColor"/><path d="M6 6.5l4 3.5M18 6.5l-4 3.5M18 17.5l-4-3.5M6 17.5l4-3.5" stroke="currentColor" stroke-width="1.5"/></svg>';
 
-const renderLore = () => renderArchiveBrowser({ rootId: "lore", types: ["lore"], noun: "Lore", searchLabel: "Search the lore",
-  emptyText: "No lore is on public record yet.", shelves: true });
+// The Lore page is the encyclopedia: an A–Z index of every lore entry, with the factions and Gates listed too (they open
+// on their own pages), and one entry per page. Titles are filed under their first significant word, so "The Valeoran
+// Ruins" sits under V. Search covers every letter; a faction's study guide (?path=<faction>) keeps its reading order.
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const sortTitle = (title) => String(title || "").normalize("NFD").replace(/\p{M}/gu, "").replace(/^(the|a|an)\s+/i, "").trim();
+const indexLetter = (title) => { const first = sortTitle(title).charAt(0).toUpperCase(); return ALPHABET.includes(first) ? first : "#"; };
+const byIndexTitle = (left, right) => sortTitle(left.title).localeCompare(sortTitle(right.title), undefined, { sensitivity: "base", numeric: true });
+
+const renderLore = async () => {
+  const root = document.getElementById("lore");
+  if (!root) return;
+  const baseTitle = document.title;
+  try {
+    const campaign = await loadCampaign();
+    // An old link to a Gate or report that used to live in the Archive goes to its own page.
+    const moved = (id) => { const entry = campaign.archiveById.get(id); return entry && entry.type !== "lore" ? entry : null; };
+    if (moved(selectedHash())) { window.location.replace(archiveHref(moved(selectedHash()))); return; }
+
+    const lore = campaign.archive.filter((entry) => entry.type === "lore").sort(byIndexTitle);
+    const rows = [
+      ...lore.map((entry) => ({ title: entry.title, kind: archiveEntryKind(entry), blurb: entry.subtitle || entry.summary, href: `#${encodeURIComponent(entry.id)}`, entry,
+        text: [entry.title, entry.subtitle, entry.summary, entry.content, ...(entry.tags || []), ...(entry.topics || [])] })),
+      ...campaign.factions.map((faction) => ({ title: faction.name, kind: "Faction", blurb: faction.tagline || faction.summary, href: `factions.html#${encodeURIComponent(faction.id)}`,
+        text: [faction.name, faction.shortName, ...(faction.aliases || []), faction.tagline, faction.summary, faction.history, faction.beliefs, faction.visualSummary] })),
+      ...campaign.archive.filter((entry) => entry.type === "gate-record").map((gate) => ({ title: gate.title, kind: ["Gate", gate.details?.designation].filter(Boolean).join(" · "),
+        blurb: gate.details?.significance || gate.summary, href: archiveHref(gate), text: [gate.title, gate.details?.designation, gate.summary, gate.content] })),
+    ].map((row) => ({ ...row, letter: indexLetter(row.title), haystack: row.text.filter(Boolean).join(" ").toLowerCase() })).sort(byIndexTitle);
+    const present = new Set(rows.map((row) => row.letter));
+    const letters = [...ALPHABET, ...(present.has("#") ? ["#"] : [])];
+
+    const params = new URLSearchParams(window.location.search);
+    let letter = present.has(params.get("letter")) ? params.get("letter") : "";
+    let topic = params.get("topic") || "";
+    let faction = campaign.factionById.get(params.get("faction")) ? params.get("faction") : "";
+    const pathKey = params.get("path") || "";
+    let query = "";
+    const setParam = (name, value) => {
+      const url = new URL(window.location.href);
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+      window.history.replaceState(null, "", url);
+    };
+
+    root.innerHTML = `
+      <div id="encyclopedia">
+        <div class="encyclopedia-tools">
+          <label class="search-wrap encyclopedia-search" for="lore-search">
+            <span class="sr-only">Search the encyclopedia</span>
+            <input id="lore-search" class="search-input" type="search" placeholder="Search the encyclopedia..." />
+          </label>
+          <nav class="letter-bar" aria-label="Browse by letter">
+            <button type="button" class="letter-tab is-all" data-letter="">All</button>
+            ${letters.map((key) => `<button type="button" class="letter-tab" data-letter="${key}" ${present.has(key) ? "" : "disabled"}>${key}</button>`).join("")}
+          </nav>
+          <div id="encyclopedia-filter"></div>
+        </div>
+        <div id="encyclopedia-body"></div>
+      </div>
+      <section id="archive-explore" class="explore" aria-label="Explore connections" hidden></section>`;
+    const body = document.getElementById("encyclopedia-body");
+    const graph = buildLoreGraph(campaign);
+    let redrawExplore = null;
+
+    const markTabs = () => root.querySelectorAll(".letter-tab").forEach((tab) =>
+      tab.setAttribute("aria-pressed", String(!query && tab.dataset.letter === letter)));
+
+    const renderFilterNote = () => {
+      const about = faction ? campaign.factionById.get(faction)?.name : "";
+      const note = [topic ? `topic <strong>${escapeHtml(topic)}</strong>` : "", about ? `about <strong>${escapeHtml(about)}</strong>` : ""].filter(Boolean).join(" and ");
+      document.getElementById("encyclopedia-filter").innerHTML = note
+        ? `<p class="encyclopedia-filter">Showing entries with ${note}. <button type="button" class="topic-link" data-clear-filter>Show everything</button></p>` : "";
+    };
+
+    const renderIndex = () => {
+      document.title = baseTitle;
+      const filtered = rows.filter((row) => (!query || row.haystack.includes(query))
+        && (!topic || (row.entry?.topics || []).includes(topic)) && (!faction || (row.entry?.factionIds || []).includes(faction)));
+      const shown = query ? filtered : filtered.filter((row) => !letter || row.letter === letter);
+      const groups = letters.map((key) => [key, shown.filter((row) => row.letter === key)]).filter(([, items]) => items.length);
+      // New readers get the Start here path as one line above the full index.
+      const start = readingPaths(campaign).find((path) => path.key === "start");
+      const startLine = start && !query && !topic && !faction && !letter ? `<p class="encyclopedia-start"><span class="lore-kind">New to Endros? Start with</span>
+        ${start.entries.map((entry) => `<a class="inline-link" href="${loreHref(entry, "start")}">${escapeHtml(entry.title)}</a>`).join('<span aria-hidden="true"> → </span>')}</p>` : "";
+      body.innerHTML = `
+        ${startLine}
+        ${query ? `<p class="encyclopedia-count">${shown.length} ${shown.length === 1 ? "entry matches" : "entries match"} “${escapeHtml(query)}”.</p>` : ""}
+        ${groups.length ? groups.map(([key, items]) => `
+          <section class="encyclopedia-group" aria-labelledby="letter-${key === "#" ? "other" : key}">
+            <h2 class="encyclopedia-letter" id="letter-${key === "#" ? "other" : key}">${key}</h2>
+            <ul class="encyclopedia-list">${items.map((row) => `
+              <li><a class="encyclopedia-item${row.entry ? "" : " is-elsewhere"}" href="${escapeHtml(row.href)}">
+                <span class="lore-kind">${escapeHtml(row.kind)}</span>
+                <strong>${escapeHtml(row.title)}</strong>
+                ${row.blurb ? `<span class="encyclopedia-blurb">${richInline(row.blurb, campaign)}</span>` : ""}
+              </a></li>`).join("")}
+            </ul>
+          </section>`).join("") : `<div class="empty-state">${rows.length ? "Nothing in the encyclopedia matches that." : "No lore is on public record yet."}</div>`}`;
+    };
+
+    // Next and previous: the faction study guide being followed, if any; otherwise the neighbours in A–Z order.
+    const entryNav = (entry) => {
+      const path = pathKey ? readingPaths(campaign).find((item) => item.key === pathKey && item.entries.includes(entry)) : null;
+      const list = path ? path.entries : lore;
+      const index = list.indexOf(entry);
+      const label = path ? (path.key === "start" ? "Start here" : path.faction ? `${path.title} reading path` : path.title) : "A–Z";
+      const href = (other) => path ? loreHref(other, path.key) : `#${encodeURIComponent(other.id)}`;
+      const step = (other, direction) => other ? `
+        <a class="reading-step is-${direction}" href="${href(other)}">
+          <span class="reading-step-label">${direction === "prev" ? "Previous" : "Next"}</span>
+          <span class="lore-kind">${escapeHtml(archiveEntryKind(other))}</span>
+          <strong>${escapeHtml(other.title)}</strong>
+        </a>` : "";
+      const finish = path?.faction ? `<a class="reading-step is-next is-finish" href="factions.html#${encodeURIComponent(path.faction.id)}">
+          <span class="reading-step-label">Path complete</span><strong>Back to ${escapeHtml(path.faction.shortName || path.title)}</strong></a>`
+        : path ? `<a class="reading-step is-next is-finish" href="lore.html">
+          <span class="reading-step-label">Path complete</span><strong>Browse the encyclopedia</strong></a>` : "";
+      return {
+        where: path ? `<p class="reading-where">Step ${index + 1} of ${list.length} · ${path.faction
+          ? `<a class="inline-link" href="factions.html#${encodeURIComponent(path.faction.id)}">${escapeHtml(label)}</a>` : escapeHtml(label)}</p>` : "",
+        nav: `<nav class="reading-nav" aria-label="${escapeHtml(label)}">
+          <p class="reading-nav-head">${escapeHtml(label)} <span class="muted">· ${index + 1} of ${list.length}</span></p>
+          <div class="reading-nav-links">${step(list[index - 1], "prev") || "<span></span>"}${step(list[index + 1], "next") || finish}</div>
+        </nav>`,
+      };
+    };
+
+    const renderEntry = (entry) => {
+      document.title = `${entry.title} | ${baseTitle}`;
+      const references = campaign.referencesTo(entry.id);
+      const referenceRows = [
+        ...references.jobs.map((job) => `<li><a class="inline-link" href="jobs.html#${encodeURIComponent(job.id)}">${escapeHtml(jobLabel(job))}</a> <span class="muted">Job</span></li>`),
+        ...references.entries.map((other) => `<li>${archiveLink(other)} <span class="muted">${escapeHtml(archiveEntryKind(other))}</span></li>`)
+      ];
+      const reading = entryNav(entry);
+      body.innerHTML = `
+        <a class="back-link" href="#">← Encyclopedia${letter ? `: ${escapeHtml(letter)}` : ""}</a>
+        <article class="detail-surface archive-entry archive-lore encyclopedia-entry">
+          <div class="detail-heading">
+            <div>
+              <span class="pill">${escapeHtml(archiveEntryKind(entry))}</span>
+              <h2>${escapeHtml(entry.title)}</h2>
+              ${entry.subtitle ? `<p class="archive-subtitle">${escapeHtml(entry.subtitle)}</p>` : ""}
+              ${reading.where}
+              ${entry.topics?.length ? `<p class="entry-topics"><span class="muted">Topics</span>${entry.topics.map((name) => `<button type="button" class="topic-link" data-topic="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("")}</p>` : ""}
+              ${(entry.factionIds || []).length ? `<p class="entry-factions"><span class="muted">About</span>${entry.factionIds
+                .map((id) => campaign.factionById.get(id)).filter(Boolean).map(factionChip).join("")}</p>` : ""}
+            </div>
+            <div class="detail-actions">
+              <a class="explore-link" href="#explore/archive/${encodeURIComponent(entry.id)}">${EXPLORE_ICON}Explore connections</a>
+            </div>
+          </div>
+          ${entry.image ? `<figure class="archive-figure"><img src="${escapeHtml(entry.image)}" alt="${escapeHtml(entry.imageCaption || entry.title)}" loading="lazy" />${entry.imageCaption ? `<figcaption>${richInline(entry.imageCaption, campaign)}</figcaption>` : ""}</figure>` : ""}
+          ${entry.summary ? `<p class="lede archive-summary">${richInline(entry.summary, campaign)}</p>` : ""}
+          <div class="detail-block archive-body">${richText(entry.content, campaign, "No text on record.")}</div>
+          ${(entry.tags || []).length ? `<div class="rule-tags" aria-label="Tags">${entry.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+          ${reading.nav}
+          ${referenceRows.length ? `<div class="detail-block"><h3>Referenced In</h3><ul class="clean-list">${referenceRows.join("")}</ul></div>` : ""}
+        </article>`;
+    };
+
+    // #explore/<archive|job|character>/<id> opens Explore mode, a lore id opens its page, anything else the index.
+    const route = () => {
+      const explore = /^#explore\/(archive|job|character)\/(.+)$/.exec(window.location.hash);
+      const panel = document.getElementById("archive-explore");
+      document.getElementById("encyclopedia").hidden = Boolean(explore);
+      panel.hidden = !explore;
+      if (explore) {
+        redrawExplore = renderLoreExplorer(panel, graph, `${explore[1]}:${decodeURIComponent(explore[2])}`, "lore.html");
+        return;
+      }
+      redrawExplore = null;
+      if (moved(selectedHash())) { window.location.assign(archiveHref(moved(selectedHash()))); return; }
+      markTabs();
+      renderFilterNote();
+      const entry = campaign.archiveById.get(selectedHash());
+      if (entry) renderEntry(entry);
+      else renderIndex();
+    };
+    const showIndex = () => {
+      if (window.location.hash) window.history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
+      route();
+    };
+
+    root.addEventListener("click", (event) => {
+      const tab = event.target.closest(".letter-tab");
+      const topicButton = event.target.closest("[data-topic]");
+      if (tab) {
+        letter = tab.dataset.letter;
+        query = "";
+        document.getElementById("lore-search").value = "";
+        setParam("letter", letter);
+        showIndex();
+      } else if (topicButton) {
+        topic = topicButton.dataset.topic;
+        letter = "";
+        setParam("topic", topic);
+        setParam("letter", "");
+        showIndex();
+      } else if (event.target.closest("[data-clear-filter]")) {
+        topic = faction = "";
+        setParam("topic", "");
+        setParam("faction", "");
+        showIndex();
+      }
+    });
+    document.getElementById("lore-search").addEventListener("input", (event) => {
+      query = event.target.value.trim().toLowerCase();
+      if (window.location.hash) window.history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
+      markTabs();
+      renderIndex();
+    });
+    window.addEventListener("hashchange", () => {
+      route();
+      const header = document.querySelector(".site-header");
+      window.scrollTo({ top: Math.max(0, root.getBoundingClientRect().top + window.scrollY - (header?.offsetHeight || 0) - 12) });
+    });
+    window.addEventListener("popstate", route);
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => redrawExplore?.(), 150);
+    });
+    route();
+  } catch (error) {
+    root.innerHTML = '<div class="card"><p>The encyclopedia could not be loaded.</p></div>';
+    console.error(error);
+  }
+};
 
 const renderReports = () => renderArchiveBrowser({ rootId: "reports", types: ["session-record", "newspaper"], noun: "Reports",
   categories: [["", "All"], ["session-record", "Expedition Reports"], ["newspaper", "Bulletins"]], searchLabel: "Search reports and bulletins",
@@ -3119,7 +3248,7 @@ const PAGE_ENTRIES = [
   ["Gates", "gates.html", "Every Gate on record, with its poster, Resources and expeditions"], ["Lore", "lore.html", "History, religion, culture and folklore"],
   ["Discoveries", "discoveries.html", "Resources, Functions, Domains and spell Forms"], ["Marketplace", "marketplace.html", "Equipment for sale"],
   ["Characters", "characters.html", "Expeditioners and known figures"], ["Rules & News", "game.html", "Announcements and rules"],
-  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"],
+  ["Factions", "factions.html", "Countries, powers and sponsors of the wider world"], ["What's Changed", "changes.html", "Updates per release version changelog what to re-read new edited"],
   ["Onboarding", "game.html#onboarding", "start here the essential rules new players read first reading path"], ["Create a character", "sheet.html?new", "make build start a new character Expeditioner on a blank sheet"],
 ];
 let searchIndexPromise = null;
@@ -3251,8 +3380,132 @@ const renderFooterMap = () => {
     ${column("The world", [["Outpost", "outpost.html"], ["Factions", "factions.html"], ["Gates", "gates.html"], ["Lore", "lore.html"], ["Discoveries", "discoveries.html"], ["Marketplace", "marketplace.html"]])}
     ${column("Expeditions", [["Job Board", "jobs.html"], ["Expedition Reports", "reports.html"], ["Characters", "characters.html"], ["Create a character", "sheet.html?new"], ["Name generator", "names.html"]])}
     ${column("Rules", [["Onboarding", "game.html#onboarding"], ["Learning paths", "game.html#post-game-listing"], ["Downtime", "game.html#post-downtime"], ["All rules", "game.html#rules"]])}
-    ${column("News", [["Announcements", "game.html#announcements"], ["Overview", "index.html"]])}
+    ${column("News", [["Announcements", "game.html#announcements"], ["What's changed", "changes.html"], ["Overview", "index.html"]])}
   </nav>`);
+};
+
+/* ---------- What's changed: the records each release added, edited or removed ---------- */
+
+// changes.json is written by the deploy workflow (.github/scripts/site_changelog.py) from the exported data of each
+// release, so it lists what changed for readers without anyone keeping notes. ?since=1.0.9 folds every release after
+// 1.0.9 into one list: what someone who last read 1.0.9 should re-read.
+const CHANGE_WORDS = { added: "New", updated: "Edited", removed: "Removed" };
+
+// Two changes to one record, older first, as one: new then edited is still new, new then removed never happened.
+const mergeChange = (older, newer) => {
+  if (older.change === "added" && newer.change === "removed") return null;
+  if (older.change === "added" || newer.change === "removed") return { ...newer, change: older.change === "added" ? "added" : "removed", fields: undefined };
+  if (older.change === "removed") return { ...newer, change: "updated", fields: undefined };
+  const fields = new Map((older.fields || []).map((field) => [field.field, { ...field, sections: [...(field.sections || [])] }]));
+  (newer.fields || []).forEach((field) => {
+    const merged = fields.get(field.field);
+    if (!merged) { fields.set(field.field, field); return; }
+    const sections = new Map(merged.sections.map((section) => [section.title, section]));
+    (field.sections || []).forEach((section) => {
+      const before = sections.get(section.title);
+      if (before?.change === "added" && section.change === "removed") sections.delete(section.title);
+      else sections.set(section.title, before?.change === "added" ? before : section);
+    });
+    merged.sections = [...sections.values()];
+  });
+  return { ...newer, previousTitle: older.previousTitle || newer.previousTitle, fields: [...fields.values()] };
+};
+
+const renderChanges = async () => {
+  const root = document.getElementById("changes-root");
+  if (!root) return;
+  let changelog = null;
+  try {
+    const response = await fetch("changes.json", { cache: "no-cache" });
+    if (response.ok) changelog = await response.json();
+  } catch {
+    // A local preview has no changes.json: the deploy writes it.
+  }
+  if (!changelog) {
+    root.innerHTML = '<p class="empty-state">The list of changes is written when the site is deployed, so a local preview has none.</p>';
+    return;
+  }
+  const releases = changelog.releases || [];
+  if (!releases.length) {
+    root.innerHTML = `<p class="empty-state">Changes are listed from version ${escapeHtml(changelog.from || "")} onwards, and nothing has been released since then yet.</p>`;
+    return;
+  }
+  const sectionRank = new Map((changelog.sectionOrder || []).map((name, index) => [name, index]));
+  const releaseLabel = (release) => `v${release.version}${release.date ? ` · ${formatDate(release.date)}` : ""}`;
+
+  const changeRow = (item) => {
+    // Long texts name the sections to re-read, one line each; other changed fields share a line.
+    const withSections = (item.fields || []).filter((field) => field.sections?.length);
+    const others = (item.fields || []).filter((field) => !field.sections?.length).map((field) => escapeHtml(field.field));
+    const fields = [
+      ...withSections.map((field) => `<li><span class="change-field">${escapeHtml(field.field)}:</span>${field.sections.map((section) =>
+        `<span class="change-section is-${section.change}">§ ${escapeHtml(section.title)}${section.change === "updated" ? "" : ` <em>(${section.change === "added" ? "new" : "removed"})</em>`}</span>`).join("")}</li>`),
+      ...(others.length ? [`<li><span class="change-field">${withSections.length ? "Also" : "Changed"}:</span>${others.join(", ")}</li>`] : []),
+    ];
+    const title = item.href && item.change !== "removed" ? `<a href="${escapeHtml(item.href)}">${escapeHtml(item.title)}</a>` : escapeHtml(item.title);
+    return `<li class="change-row">
+      <span class="change-badge is-${escapeHtml(item.change)}">${CHANGE_WORDS[item.change] || escapeHtml(item.change)}</span>
+      <div>
+        <p class="change-title">${title} <span class="muted">${escapeHtml(item.label)}</span>${item.previousTitle ? ` <span class="muted">· was ${escapeHtml(item.previousTitle)}</span>` : ""}</p>
+        ${fields.length ? `<ul class="change-fields">${fields.join("")}</ul>` : ""}
+      </div></li>`;
+  };
+
+  // Grouped by site section. Reading material is always open; a long batch of anything else (Gear, Functions) starts folded.
+  const READING_SECTIONS = new Set(["Rules", "News", "Lore", "Gates", "Factions", "Expedition Reports"]);
+  const changeGroups = (changes) => {
+    const groups = new Map();
+    [...changes].sort((left, right) => (sectionRank.get(left.section) ?? 99) - (sectionRank.get(right.section) ?? 99))
+      .forEach((item) => groups.set(item.section, [...(groups.get(item.section) || []), item]));
+    return [...groups].map(([section, items]) => `
+      <details class="change-group"${items.length > 12 && !READING_SECTIONS.has(section) ? "" : " open"}>
+        <summary><span>${escapeHtml(section)}</span> <span class="muted">${items.length}</span></summary>
+        <ul class="change-list">${items.map(changeRow).join("")}</ul>
+      </details>`).join("");
+  };
+  const counts = (changes) => ["added", "updated", "removed"].map((kind) => [kind, changes.filter((item) => item.change === kind).length])
+    .filter(([, count]) => count).map(([kind, count]) => `${count} ${CHANGE_WORDS[kind].toLowerCase()}`).join(" · ") || "No records changed";
+
+  const render = () => {
+    const since = new URLSearchParams(window.location.search).get("since") || "";
+    const sinceIndex = releases.findIndex((release) => release.version === since);
+    const picker = `<label class="changes-since"><span class="kicker">Changes since</span>
+      <select id="changes-since">
+        <option value="">Every release, one by one</option>
+        ${releases.slice(1).map((release) => `<option value="${escapeHtml(release.version)}"${release.version === since ? " selected" : ""}>I last read ${escapeHtml(releaseLabel(release))}</option>`).join("")}
+      </select></label>`;
+    let body;
+    if (sinceIndex > 0) {
+      // releases are newest first: fold the newer ones in from oldest to newest.
+      const merged = new Map();
+      releases.slice(0, sinceIndex).reverse().forEach((release) => release.changes.forEach((item) => {
+        const result = merged.has(item.key) ? mergeChange(merged.get(item.key), item) : item;
+        if (result) merged.set(item.key, result);
+        else merged.delete(item.key);
+      }));
+      const changes = [...merged.values()];
+      body = `<article class="change-release">
+        <header><h2>Since v${escapeHtml(since)}</h2><p class="muted">${releases.slice(0, sinceIndex).length} releases up to ${escapeHtml(releaseLabel(releases[0]))} · ${counts(changes)}</p></header>
+        ${changes.length ? changeGroups(changes) : '<p class="muted">Nothing to re-read.</p>'}</article>`;
+    } else {
+      body = releases.map((release) => `<article class="change-release" id="v${escapeHtml(release.version)}">
+        <header><h2>${escapeHtml(releaseLabel(release))}</h2><p class="muted">${counts(release.changes)}${safeUrl(release.url)
+          ? ` · <a href="${escapeHtml(release.url)}" target="_blank" rel="noopener">Release notes</a>` : ""}</p></header>
+        ${release.changes.length ? changeGroups(release.changes) : '<p class="muted">Site improvements only; no rules or records changed.</p>'}</article>`).join("");
+    }
+    root.innerHTML = `${picker}<div class="change-releases">${body}</div>`;
+    root.querySelector("#changes-since").addEventListener("change", (event) => {
+      const url = new URL(window.location.href);
+      if (event.target.value) url.searchParams.set("since", event.target.value);
+      else url.searchParams.delete("since");
+      url.hash = "";
+      history.replaceState(null, "", url);
+      render();
+    });
+  };
+  render();
+  const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+  if (target) target.scrollIntoView();
 };
 
 /* ---------- Factions: the powers Expeditioners come from and deal with ---------- */
@@ -3396,7 +3649,7 @@ const renderFactions = async () => {
           ${section(studied.length ? "Connected reading" : "In the Archive", connected.length ? `
             ${studied.length ? '<p class="study-intro">Other records that touch them: shared histories, Gates and reports.</p>' : ""}
             <ul class="faction-entries">${connected.map(entryRow).join("")}</ul>` : "", "faction-connected")}
-        </div>` : section("Study guide", '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
+        </div>` : section("Study guide", `<p class="muted">Everything general about ${escapeHtml(faction.shortName || faction.name)} is on this page. More detailed entries get added to the Archive as your backstories and expeditions bring them up.</p>`, "faction-archive")}
       </article>`;
   };
 
@@ -3414,7 +3667,7 @@ const renderFactions = async () => {
 };
 
 const PAGE_RENDERERS = { game: renderGame, jobs: renderJobBoard, archive: renderArchiveRedirect, lore: renderLore, reports: renderReports, gates: renderGates,
-  marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries, factions: renderFactions };
+  marketplace: renderMarketplace, characters: renderCharacterRoster, discoveries: renderDiscoveries, factions: renderFactions, changes: renderChanges };
 
 document.addEventListener("DOMContentLoaded", async () => {
   setActiveNav();

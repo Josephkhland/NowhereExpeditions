@@ -1,0 +1,33 @@
+{
+  "id": "valeor",
+  "type": "lore",
+  "title": "Valeor, Maera and Endros",
+  "subtitle": "The myth of the Old Scholastic Coast that named the Ruins and the settlement",
+  "summary": "A god who lifted the Sky from the Sea, the mortal seafarer he loved, and their son who sailed into the unknown and never came back. A myth preserved in Verna, and the source of the names Valeoran and Endros.",
+  "content": "> *Valeor lifted the Sky away from the Sea, so that mortals could live between them.*\n\n**Valeor, Maera and Endros** are the three figures of a myth from the Old Scholastic Coast, carried to [Verna](factions.html#verna) by the scholars who fled the Silencing of the Schools. What survives is partly a reconstruction, and scholars disagree on how old it is and where its oldest form came from; some manuscripts may survive only in Kharadi collections.\n\nIn the myth, the Sea and the Sky once pressed so close together that nothing could live between them. **Valeor**, an ancient divine figure, raised the Sky and held the two apart, and in the space he opened there was room for land, weather and mortal life. Little else about him is agreed.\n\n**Maera** was mortal and a seafarer in her own right, who knew ships, winds and currents. Valeor loved her, and they had a son, **Endros**, divine through his father and mortal through his mother, who belonged entirely to neither world. Stories credit him with many deeds and don't agree on a list. In the end he sailed into the unknown to find his father. Where he went, and whether he died, was lost, or found Valeor, no version settles. The myth ends in uncertainty, and every serious retelling leaves it there.\n\nA line people often take for ancient is modern, as far as anyone knows: *\"Valeor gave Endros the blood of the divine. Maera taught him how to sail.\"*\n\nSince the [[valeoran-ruins|Ruins]] were found, the three turn up everywhere in [[endros|Endros]]: Valeor for engineers and anyone holding danger apart, Maera for sailors and crews, Endros for Expeditioners, whose last voyage reads as heroic, tragic or foolish depending on who's telling it. None of this makes the myth history. Nothing suggests Maera or Endros were real, or that the myth remembers the Ruins.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Valeor",
+    "Maera",
+    "Endros",
+    "myth",
+    "Old Scholastic Coast",
+    "Raising of the Sky",
+    "Last Voyage"
+  ],
+  "topics": [
+    "Folklore"
+  ],
+  "participantIds": [],
+  "factionIds": [
+    "verna"
+  ],
+  "details": {
+    "kind": "folklore",
+    "startStep": null
+  }
+}

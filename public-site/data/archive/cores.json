@@ -1,0 +1,29 @@
+{
+  "id": "cores",
+  "type": "lore",
+  "title": "Cores",
+  "subtitle": "The white spheres inside the Gates, and the one rule about them",
+  "summary": "A Core is the floating white sphere found inside a Gate. Nobody knows what it is; the one established fact is that removing it through its Gate makes the Gate collapse.",
+  "content": "> *\"Did you touch the Core?\"*\n> — the question every returning crew is asked\n\nA **Core** is the object found inside a [[gates|Gate]]. Every Gate investigated so far contains one, or is believed to.\n\nEvery known Core looks the same: a huge, nearly perfect white sphere about the size of a small automobile, smooth and strongly iridescent, its colour shifting with the angle of view. Around it hang drifting curtains and arcs of coloured light, like an aurora, that behave like neither flame nor vapour nor electrical discharge. Nothing holds it up. It floats.\n\nThe name is historical, not descriptive. It came into use after a crew hauled the Core of [[white-expanse|Gate One]] out through the threshold and the Gate closed behind them, and it records a belief that the sphere is essential to a Gate's stability. Only one thing is actually established:\n\n> **Removing a Core through its Gate causes the Gate to collapse.**\n\nHence the oldest rule in Gate work: no Core is moved without explicit authorization. One Core has been recovered and sits in secured storage. What it is remains one of the open questions of the age, and so does a second one: whether taking a Core takes something essential from another world.\n\n## Related Entries\n\n- [[gate-evaluation-doctrine|The Gate Evaluation Doctrine]]: the rules that followed.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Core",
+    "Cores",
+    "Gate One",
+    "collapse",
+    "white sphere"
+  ],
+  "topics": [
+    "Technology"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": null
+  }
+}

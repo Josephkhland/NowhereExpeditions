@@ -1701,6 +1701,72 @@ class ContentStoreTests(unittest.TestCase):
         finally:
             stop()
 
+    def lore(self, entry_id: str) -> dict:
+        return next(entry for entry in self.store.state()["archive"] if entry["id"] == entry_id)
+
+    def test_edits_keep_history_and_proposals_leave_the_record_alone(self) -> None:
+        entry = self.store.save_record("archive", None, {"type": "lore", "title": "The Crowned Sun", "published": True,
+                                                          "content": "Old text."})["id"]
+        self.store.save_record("archive", entry, {**self.lore(entry), "published": False})
+        self.assertEqual(self.store.revisions("archive", entry), [])  # publishing alone is not a content change
+        self.store.save_record("archive", entry, {**self.lore(entry), "content": "Edited text.", "published": True})
+        [history] = self.store.revisions("archive", entry)
+        self.assertEqual((history["kind"], history["record"]["content"]), ("history", "Old text."))
+
+        proposal = self.store.propose_revision("archive", entry, {"label": "Shorter", "record": {**self.lore(entry), "content": "New."}})["id"]
+        self.assertEqual(self.lore(entry)["content"], "Edited text.")
+        self.assertEqual([r["kind"] for r in self.store.state()["revisions"]], ["proposed", "history"])
+        with self.assertRaises(ManagerError):
+            self.store.propose_revision("archive", entry, {"record": {"type": "lore", "title": ""}})
+        with self.assertRaises(ManagerError):
+            self.store.propose_revision("archive", "missing", {"record": self.lore(entry)})
+
+        self.store.sync_site_data()
+        self.assertFalse(any("New." in path.read_text(encoding="utf-8") for path in self.data_dir.rglob("*.json")))
+        self.store.apply_revision(proposal)
+        applied = self.lore(entry)
+        self.assertEqual((applied["content"], applied["published"]), ("New.", True))
+        kinds = [(r["kind"], r["record"].get("content")) for r in self.store.revisions("archive", entry)]
+        self.assertEqual(kinds, [("history", "Edited text."), ("history", "Old text.")])
+
+        oldest = self.store.revisions("archive", entry)[-1]["id"]
+        self.store.apply_revision(oldest)  # restoring keeps the history entry
+        self.assertEqual(self.lore(entry)["content"], "Old text.")
+        self.assertEqual(len(self.store.revisions("archive", entry)), 3)
+        self.store.import_site()
+        self.assertEqual(len(self.store.state()["revisions"]), 3)
+        self.store.delete_revision(oldest)
+        with self.assertRaises(ManagerError):
+            self.store.apply_revision(oldest)
+
+    def test_history_is_capped_and_deleted_with_the_record(self) -> None:
+        entry = self.store.save_record("archive", None, {"type": "lore", "title": "Notes", "content": "0"})["id"]
+        for number in range(1, 35):
+            self.store.save_record("archive", entry, {**self.lore(entry), "content": str(number)})
+        history = self.store.revisions("archive", entry)
+        self.assertEqual(len(history), 30)
+        self.assertEqual(history[0]["record"]["content"], "33")
+        self.store.delete_record("archive", entry)
+        self.assertEqual(self.store.state()["revisions"], [])
+
+    def test_revision_routes(self) -> None:
+        entry = self.store.save_record("archive", None, {"type": "lore", "title": "Routes", "content": "Live."})["id"]
+        send, stop = self.serve()
+        try:
+            before = self.store.sync_status()
+            proposal = send(f"/api/revisions/archive/{entry}", {"data": {"label": "Draft", "record": {**self.lore(entry), "content": "Draft."}}})["id"]
+            self.assertEqual(self.store.sync_status(), before)  # a proposal is not a site change
+            [listed] = send(f"/api/revisions/archive/{entry}", method="GET")["revisions"]
+            self.assertEqual((listed["label"], listed["record"]["content"]), ("Draft", "Draft."))
+            send(f"/api/revision/{proposal}/apply", {})
+            self.assertEqual(self.lore(entry)["content"], "Draft.")
+            self.assertNotEqual(self.store.sync_status()["lastChangeAt"], before["lastChangeAt"])  # applying is a site change
+            history = self.store.revisions("archive", entry)[0]["id"]
+            send(f"/api/revision/{history}", method="DELETE")
+            self.assertEqual(self.store.revisions("archive", entry), [])
+        finally:
+            stop()
+
 
 class LegacyMigrationTests(unittest.TestCase):
     """A schema v3 database (Island, Gates, Expeditions, Reports) is converted in place on startup."""

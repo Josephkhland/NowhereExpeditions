@@ -1,6 +1,7 @@
 {
   "tagPrefix": "v",
   "firstVersion": "1.0.0",
+  "changelogFrom": "1.0.9",
   "timezone": "UTC",
   "major": {
     "markers": ["[major]"],
