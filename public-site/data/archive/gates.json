@@ -1,0 +1,37 @@
+{
+  "id": "gates",
+  "type": "lore",
+  "title": "Gates",
+  "subtitle": "Doors into other worlds that form among the Valeoran Ruins",
+  "summary": "A Gate is an opening among the Valeoran Ruins into another world. What they are is unknown; each is classified by the Gate Evaluation Committee, and each holds, or is believed to hold, a Core.",
+  "content": "A **Gate** is a portal into another world that forms among the [[valeoran-ruins|Valeoran Ruins]]: some years after the Ruins were found, researchers saw parts of them begin to move and gather together, and where they met, a way through opened. Beyond one there might be a frozen plain, an enclosed jungle, a red forest or an amber wetland. Crews cross the **threshold**, explore, and bring things back. Before the Gates, the world had no magic at all; nearly everything magical in [[endros|Endros]] came through one.\n\nWhat the Gates are, who or what made them, and why they form is unknown. Every Gate investigated so far holds, or is believed to hold, a [[cores|Core]], and taking a Core out through its Gate makes the Gate collapse.\n\nEach Gate has a **designation** (G-01, G-02…) and a **classification** set by the [[gate-evaluation-committee|Gate Evaluation Committee]]: *emerging*, *active*, *restricted*, *quarantined*, *dormant*, *collapsed*, *sealed* or *lost*. The classification decides who may cross, with what, and what may come back. Every notice of classification ends with the same line:\n\n> *A classification describes what is known at the date of issue. It is not a statement of safety.*\n\nExpeditioners read it as a joke the first time and as advice afterwards. Each known Gate has its own record on the [Gates](gates.html) page.\n\n## Related Entries\n\n- [[cores|Cores]], and the [[gate-evaluation-doctrine|Gate Evaluation Doctrine]] that grew out of the first four Gates.\n- The [Expeditions](game.html#post-expeditions) rule.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Gate",
+    "Gates",
+    "classification",
+    "emerging",
+    "active",
+    "restricted",
+    "quarantined",
+    "dormant",
+    "collapsed",
+    "sealed",
+    "lost",
+    "threshold"
+  ],
+  "topics": [
+    "Technology",
+    "Institutions"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": 3
+  }
+}

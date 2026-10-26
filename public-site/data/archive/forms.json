@@ -1,0 +1,32 @@
+{
+  "id": "forms",
+  "type": "lore",
+  "title": "Forms",
+  "subtitle": "Learned techniques that use a Word to produce one defined effect",
+  "summary": "A Form is a learned technique of gestures, markings and procedure that uses a magical Word to produce one defined effect. The first three were Effect Glowing, Simple Sauna and Kinetic Shove.",
+  "content": "A **Form** is a learned technique that uses a magical [[words|Word]] to produce one defined effect. It's physical: gestures, stances and sometimes markings, which the caster has to be free to perform. Each Form is its own discovery, and knowing one that uses `Move` doesn't let anyone improvise every kind of movement magic. The Word comes from a [[runes-of-the-gates|Rune]] or from the caster's [[base-form|Base Form]].\n\nThe first three Forms turned scattered laboratory results into a science:\n\n- **Effect Glowing** (`Glow`) makes an object shed light. Professor [Manhattan R. Wylde](characters.html#manhattan-wylde) of the University of Verna demonstrated it with painted wrist markings, a Rune on the far side of the bench and a pearl that lit up so brightly half the room looked away, and then published the method. Repetition was the breakthrough: a person could produce a magical effect on purpose and explain how.\n- **Simple Sauna** (`Heat`) warms a room around a symbol drawn on the floor. A Vardic team in the University's Endros facilities found it independently (*\"Trial forty-one. The first forty didn't work.\"*), which proved more than one group could discover Forms.\n- **Kinetic Shove** (`Move`) shoves a target hard, and was built on the published Glowing method, which proved discoveries could build on each other.\n\nAll three still carry steps that may not be needed. Effect Glowing's wrist paint is widely expected to be unnecessary; nobody has proved it yet. The known Forms are in [Discoveries](discoveries.html#forms), and the rules in [Forms](game.html#post-forms).",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Form",
+    "Forms",
+    "First Form",
+    "Effect Glowing",
+    "Simple Sauna",
+    "Kinetic Shove",
+    "Manhattan R. Wylde"
+  ],
+  "topics": [
+    "Technology",
+    "History"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": null
+  }
+}

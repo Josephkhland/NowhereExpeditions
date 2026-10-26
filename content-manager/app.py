@@ -11,6 +11,7 @@ import shutil
 import sqlite3
 import tempfile
 import threading
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from dataclasses import dataclass
@@ -66,7 +67,7 @@ LORE_TOPICS = ("History", "Folklore", "Religion", "Politics", "Technology", "Cul
 MAX_TOPICS = 12
 # What kind of reading a lore entry is: one per entry, shown above its title. The order is also the default reading
 # order of a faction's study guide (who they are, how they live, what they believe, older stories, then the rest).
-LORE_KINDS = ("overview", "society", "faith", "folklore", "institution", "event", "endros")
+LORE_KINDS = ("overview", "society", "faith", "folklore", "institution", "place", "person", "event", "term", "endros")
 MAX_READING_PATH = 24
 SESSION_OUTCOMES = ("success", "partial", "failed", "aborted", "unknown")
 GEAR_CATEGORIES = ("weapon", "tactical", "exploration", "scientific", "communication", "protective", "medical", "supplies",
@@ -106,6 +107,13 @@ ISSUE_CATEGORIES = ("contradiction", "soft-spot", "gap", "mechanics", "consisten
 # How a resolved issue was settled: text edited through the issue, kept as intended, or fixed some other way.
 ISSUE_RESOLUTIONS = ("edited", "intentional", "handled")
 MAX_ISSUE_SIDES = 16
+# Record revisions: earlier versions of a record ("history", kept automatically whenever a save changes its content)
+# and alternative versions waiting for review ("proposed", e.g. a rewrite of a published lore entry). They live only
+# in the database: never synced to the site, and kept when site data is imported.
+REVISION_KINDS = ("proposed", "history")
+MAX_HISTORY_REVISIONS = 30
+# Fields that don't count as a content change, so publishing or re-saving an unchanged record keeps no history.
+REVISION_IGNORED_FIELDS = ("updatedAt", "published", "sample")
 
 # The shared vocabulary of Resources, Projects and Spellcasting: Resource Functions, manifested as Words.
 # The GM manages it in the content manager (stored in metadata); this is only the starting vocabulary.
@@ -1589,6 +1597,15 @@ class ContentStore:
                     id TEXT PRIMARY KEY,
                     data TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS record_revisions (
+                    id TEXT PRIMARY KEY,
+                    collection TEXT NOT NULL,
+                    record_id TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    data TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS revisions_record ON record_revisions(collection, record_id);
                 CREATE INDEX IF NOT EXISTS archive_type ON archive_entries(type);
                 CREATE INDEX IF NOT EXISTS jobs_session_record ON jobs(session_record_id);
                 CREATE INDEX IF NOT EXISTS stash_gear ON character_stash(gear_id);
@@ -2069,7 +2086,7 @@ class ContentStore:
                     return
         connection.execute("DELETE FROM media WHERE filename = ?", (filename,))
 
-    def save_record(self, name: str, record_id: str | None, data: Any) -> dict[str, str]:
+    def save_record(self, name: str, record_id: str | None, data: Any, history_label: str = "Before an edit") -> dict[str, str]:
         spec = self._spec(name)
         if not isinstance(data, dict):
             raise ManagerError(f"{spec.label} data must be an object.")
@@ -2164,6 +2181,8 @@ class ContentStore:
             clean["sample"] = bool(data["sample"]) if "sample" in data else bool(existing and existing.get("sample"))
             clean["updatedAt"] = now_iso()
             record = {**clean, "id": chosen_id}
+            if existing and self._content_changed(existing, record):
+                self._keep_history(connection, name, chosen_id, existing, history_label)
             self._write_record(connection, name, chosen_id, record, insert=existing is None)
             for field in spec.image_fields if existing else ():
                 for path in set(image_paths(existing.get(field))) - set(image_paths(clean.get(field))):
@@ -2338,6 +2357,7 @@ class ContentStore:
                     f"{'; '.join(blockers)}. Update or delete those records first."
                 )
             connection.execute(f"DELETE FROM {spec.table} WHERE id = ?", (record_id,))
+            connection.execute("DELETE FROM record_revisions WHERE collection = ? AND record_id = ?", (name, record_id))
             for field in spec.image_fields:
                 for path in image_paths(existing.get(field)):
                     self._prune_media(connection, path)
@@ -2518,6 +2538,7 @@ class ContentStore:
         result["sync"] = self.sync_status()
         result["learningPaths"] = self.learning_paths()
         result["issues"] = self.issues()
+        result["revisions"] = self.revision_summaries()
         vocabulary = self.function_vocabulary()
         result["vocabulary"] = {"functionGroups": {group["name"]: [fn["name"] for fn in group["functions"]] for group in vocabulary},
                                 "functions": vocabulary, "interactions": self.function_interactions(), "interactionKinds": INTERACTION_KINDS,
@@ -3058,6 +3079,91 @@ class ContentStore:
 
     # --- Continuity issues ----------------------------------------------------------------------------------------
 
+    # --- Record revisions ------------------------------------------------------------------------------
+
+    @staticmethod
+    def _content_changed(before: dict[str, Any], after: dict[str, Any]) -> bool:
+        def content(record: dict[str, Any]) -> dict[str, Any]:
+            return {key: value for key, value in record.items() if key not in REVISION_IGNORED_FIELDS}
+        return content(before) != content(after)
+
+    def _insert_revision(self, connection: sqlite3.Connection, name: str, record_id: str, kind: str,
+                         record: dict[str, Any], label: str, note: str = "") -> str:
+        revision_id = uuid.uuid4().hex[:12]
+        data = {"label": label, "note": note, "record": record}
+        connection.execute("INSERT INTO record_revisions (id, collection, record_id, kind, created_at, data) VALUES (?, ?, ?, ?, ?, ?)",
+                           (revision_id, name, record_id, kind, now_iso(), json.dumps(data, ensure_ascii=False)))
+        return revision_id
+
+    def _keep_history(self, connection: sqlite3.Connection, name: str, record_id: str, record: dict[str, Any], label: str) -> None:
+        self._insert_revision(connection, name, record_id, "history", record, label)
+        old = connection.execute("SELECT id FROM record_revisions WHERE collection = ? AND record_id = ? AND kind = 'history' "
+                                 "ORDER BY created_at DESC, rowid DESC LIMIT -1 OFFSET ?", (name, record_id, MAX_HISTORY_REVISIONS)).fetchall()
+        connection.executemany("DELETE FROM record_revisions WHERE id = ?", [(row["id"],) for row in old])
+
+    @staticmethod
+    def _revision_row(row: sqlite3.Row, with_record: bool) -> dict[str, Any]:
+        data = json.loads(row["data"])
+        result = {"id": row["id"], "collection": row["collection"], "recordId": row["record_id"], "kind": row["kind"],
+                  "createdAt": row["created_at"], "label": data.get("label", ""), "note": data.get("note", "")}
+        if with_record:
+            result["record"] = data.get("record") or {}
+        return result
+
+    def revision_summaries(self) -> list[dict[str, Any]]:
+        """Every revision without its record copy: enough for banners and counts."""
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM record_revisions ORDER BY created_at DESC, rowid DESC").fetchall()
+        return [self._revision_row(row, with_record=False) for row in rows]
+
+    def revisions(self, name: str, record_id: str) -> list[dict[str, Any]]:
+        """A record's proposed and earlier versions, newest first, with full copies to compare."""
+        self._spec(name)
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM record_revisions WHERE collection = ? AND record_id = ? "
+                                      "ORDER BY kind = 'history', created_at DESC, rowid DESC", (name, record_id)).fetchall()
+        return [self._revision_row(row, with_record=True) for row in rows]
+
+    def propose_revision(self, name: str, record_id: str, data: Any) -> dict[str, str]:
+        """Store an alternative version of an existing record for review, without touching the record itself."""
+        spec = self._spec(name)
+        if not isinstance(data, dict) or not isinstance(data.get("record"), dict):
+            raise ManagerError("A proposed revision needs the record's new data.")
+        clean = spec.clean(data["record"])  # validate now, so applying it later can't fail on its own content
+        label = str(data.get("label") or "").strip() or "Proposed revision"
+        with self._connect() as connection:
+            existing = self._record(connection, name, record_id)
+            if not existing:
+                raise ManagerError(f"That {spec.label.lower()} no longer exists.")
+            record = {**clean, "id": record_id}
+            revision_id = self._insert_revision(connection, name, record_id, "proposed", record, label[:120],
+                                                str(data.get("note") or "").strip()[:2000])
+        return {"id": revision_id}
+
+    def apply_revision(self, revision_id: str) -> dict[str, str]:
+        """Replace a record's content with a revision. The record keeps its published and sample state, and the
+        version it replaces is kept as history. An applied proposal is removed; a restored history entry stays."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM record_revisions WHERE id = ?", (revision_id,)).fetchone()
+            if not row:
+                raise ManagerError("That revision no longer exists.")
+            revision = self._revision_row(row, with_record=True)
+            existing = self._record(connection, revision["collection"], revision["recordId"])
+        if not existing:
+            raise ManagerError("The record this revision belongs to no longer exists.")
+        data = {**revision["record"], "published": existing.get("published", False), "sample": existing.get("sample", False)}
+        verb = "applying" if revision["kind"] == "proposed" else "restoring"
+        self.save_record(revision["collection"], revision["recordId"], data, history_label=f"Before {verb}: {revision['label']}")
+        if revision["kind"] == "proposed":
+            with self._connect() as connection:
+                connection.execute("DELETE FROM record_revisions WHERE id = ?", (revision_id,))
+        return {"collection": revision["collection"], "id": revision["recordId"]}
+
+    def delete_revision(self, revision_id: str) -> None:
+        with self._connect() as connection:
+            if not connection.execute("DELETE FROM record_revisions WHERE id = ?", (revision_id,)).rowcount:
+                raise ManagerError("That revision no longer exists.")
+
     def _issue_rows(self, connection: sqlite3.Connection) -> dict[str, dict[str, Any]]:
         return {row["id"]: json.loads(row["data"]) for row in connection.execute("SELECT id, data FROM continuity_issues ORDER BY id")}
 
@@ -3307,6 +3413,17 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
             try:
                 if method == "GET" and path == "/api/state":
                     self._send_json(200, store.state())
+                elif collection == "revisions" and record_id and "/" in record_id and method in ("GET", "POST"):
+                    target, target_id = record_id.split("/", 1)
+                    if method == "GET":
+                        self._send_json(200, {"revisions": store.revisions(target, target_id)})
+                    else:
+                        self._send_json(201, store.propose_revision(target, target_id, self._read_body().get("data")))
+                elif collection == "revision" and method == "POST" and record_id and record_id.endswith("/apply"):
+                    self._send_json(200, store.apply_revision(record_id.removesuffix("/apply")))
+                elif collection == "revision" and method == "DELETE" and record_id:
+                    store.delete_revision(record_id)
+                    self._send_json(200, {"deleted": True})
                 elif method == "GET" and collection == "media" and record_id:
                     media = store.media(record_id)
                     if media:
@@ -3370,7 +3487,8 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     return False
                 if method == "POST" and path in ("/api/sync", "/api/export", "/api/import"):
                     store.mark("lastSyncAt")
-                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media") and not (collection == "issues" and not path.endswith(("/resolve", "/reopen"))):
+                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media") and not (collection == "issues" and not path.endswith(("/resolve", "/reopen"))) \
+                        and collection != "revisions" and not (collection == "revision" and not path.endswith("/apply")):
                     store.mark("lastChangeAt")
             except ManagerError as error:
                 self._send_json(400, {"error": str(error)})

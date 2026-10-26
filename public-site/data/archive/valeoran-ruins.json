@@ -1,0 +1,30 @@
+{
+  "id": "valeoran-ruins",
+  "type": "lore",
+  "title": "The Valeoran Ruins",
+  "subtitle": "The impossible structures above the still ocean, where the Gates form",
+  "summary": "Enormous ancient structures suspended between Sea and Sky far from any shore, held up by nothing anyone can explain. The Gates form among them.",
+  "content": "> *\"Valeoran is a designation, not an identification.\"*\n> — a Vernan archaeologist's habitual correction\n\nThe **Valeoran Ruins** are enormous ancient structures suspended above a still ocean, far from any trade route, shore or explored land, and held in place by nothing anyone can explain. They're the reason [[endros|Endros]] exists, and the place where the [[gates|Gates]] form.\n\nThey were found eleven years ago by a University of Verna vessel taking oceanographic measurements, far beyond any charted horizon, which is why nobody had seen them before. Its scholars thought of an old myth at once, of [[valeor|Valeor]] lifting the Sky away from the Sea, and called them Valeoran. The name means *reminiscent of Valeor*. It doesn't mean Valeor built them, and nothing suggests the builders had anything to do with the myth. Vernan archaeologists have spent years explaining this. (*\"There was a poet on the survey team.\"*)\n\nWho built them, what they are and how they stay up is unknown. A few Vardic enthusiasts tie them to the Nameless King of their folklore, Tianzhao scholars read them through the Spirit Realm, and taverns in Endros have plenty of other theories. None of it is established.\n\nThe Ruins themselves are the business of the University of Verna's **Department of Archaeology**. Any work on, under or against a Valeoran structure needs its written approval, and its notices end:\n\n> *If you are unsure whether something is part of the Ruins, it is.*\n\n## Related Entries\n\n- [[endros|Endros]]: the settlement around and beneath them.\n- [[gates|Gates]]: what forms among them.\n- [[valeor|Valeor, Maera and Endros]]: the myth behind the name.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Valeoran Ruins",
+    "Ruins",
+    "Department of Archaeology",
+    "first survey",
+    "Valeoran"
+  ],
+  "topics": [
+    "History",
+    "Institutions"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "place",
+    "startStep": 1
+  }
+}

@@ -69,6 +69,13 @@ The character's **Active Pack** sets their Carry Limit, plus the character's **C
 
 Public data layout: `data/{gear,characters,archive,jobs}/index.json` manifests plus one `<id>.json` per record, alongside `outpost.json` and `game.json` (all Game posts in one file). Record IDs are stable slugs and double as public URL fragments (`archive.html#g-03`, `jobs.html#e-17`, `marketplace.html#gear-rope`, `characters.html#varga`). The old pages `island.html`, `gates.html`, `expeditions.html`, and `rules.html` redirect to their replacements, keeping the record ID.
 
+## Versions
+
+- Every save that changes a record keeps the version it replaced (the latest 30 per record). Publishing, unpublishing or re-saving without changes keeps nothing.
+- A record can also carry **proposed revisions**: alternative versions waiting for review, e.g. a rewrite loaded with `lore_tool.py load <ids> --propose`. The live record, and the site, stay unchanged until one is applied. Records with a proposal show a banner and appear under Home → Needs attention.
+- **Versions** on a record's form lists both kinds. **Compare** shows the current and the other version side by side (removed words struck out, new words highlighted). **Apply** / **Restore** replaces the record's content, keeps its Published and Sample state, and keeps the replaced version as an earlier one. **Discard** / **Delete** removes a version.
+- Versions live only in the database (`record_revisions`): never synced or exported, and kept when site data is imported. Deleting a record deletes its versions. API: `GET`/`POST /api/revisions/<collection>/<id>`, `POST /api/revision/<id>/apply`, `DELETE /api/revision/<id>`.
+
 ## Site & launch
 
 **Site & launch** (last in the sidebar) holds the site-wide settings, published as `data/site.json`:

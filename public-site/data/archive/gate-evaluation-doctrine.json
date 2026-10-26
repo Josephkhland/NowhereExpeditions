@@ -1,0 +1,32 @@
+{
+  "id": "gate-evaluation-doctrine",
+  "type": "lore",
+  "title": "The Gate Evaluation Doctrine",
+  "subtitle": "Ten working assumptions, learned the hard way at the first four Gates",
+  "summary": "The ten working assumptions under which the Gate Evaluation Committee approaches every Gate, drafted by Anselm Hartree after the quarantine of Gate Four. Every Expeditioner hears them at their first briefing.",
+  "content": "> *\"Please notice the word* believes*.\"*\n> — Anselm Hartree, opening the first briefing\n\nThe **Gate Evaluation Doctrine** is the set of ten working assumptions under which the [[gate-evaluation-committee|Gate Evaluation Committee]] approaches every [[gates|Gate]]. Its Senior Evaluator, [Anselm Hartree](characters.html#anselm-hartree), drafted it after the quarantine of Gate Four, setting out what the first four Gates had taught one assumption at a time. Every Expeditioner hears it at their first briefing.\n\n1. A Gate may remain stable indefinitely if its Core remains beyond the threshold.\n2. No Core is to be moved without explicit authorization.\n3. Initial environmental safety does not imply long-term safety.\n4. Permanent structures may alter local conditions.\n5. Native life may react differently to repeated human presence.\n6. Returned materials may remain hazardous after crossing the threshold.\n7. All recovered substances are treated as [[specimens|Specimens]] until properly evaluated.\n8. A Specimen becomes a formal Resource only after useful anomalous properties are confirmed.\n9. Unknown material should not be assumed worthless.\n10. Unknown material should also not be assumed safe.\n\nEach one traces back to something that went right or wrong: the collapse of [[white-expanse|Gate One]] when its [[cores|Core]] was removed (1 and 2), the long occupation of [[green-vault|Gate Two]] (1), the evacuated station in [[red-forest|Gate Three]] (3 to 5), and the contamination at [[yellow-mire|Gate Four]] (6). Hartree's favourite phrase about all of it is *evidence, not proof*, and Expeditioners say it back to him.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Gate Evaluation Doctrine",
+    "Doctrine",
+    "Anselm Hartree",
+    "evidence, not proof",
+    "first four Gates",
+    "Specimen",
+    "Resource"
+  ],
+  "topics": [
+    "Institutions",
+    "History"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": 5
+  }
+}

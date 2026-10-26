@@ -1360,7 +1360,7 @@ const archiveTypeLabel = (type) => ARCHIVE_TYPE_LABELS[type] || humanize(type);
 
 // What kind of reading a lore entry is, set in the manager. The order is also a faction's default reading order.
 const LORE_KINDS = { overview: "Overview", society: "Society", faith: "Faith", folklore: "Folklore", institution: "Institution",
-  event: "Event", endros: "Endros & the Gates" };
+  place: "Place", person: "Person", event: "Event", term: "Term", endros: "Endros & the Gates" };
 const LORE_KIND_KEYS = Object.keys(LORE_KINDS);
 const loreKind = (entry) => entry?.type === "lore" ? LORE_KINDS[entry.details?.kind] || "" : "";
 const archiveEntryKind = (entry) => entry.type === "lore" ? loreKind(entry) || "Lore" : archiveTypeLabel(entry.type);
@@ -3519,7 +3519,7 @@ const renderFactions = async () => {
           ${section(studied.length ? "Connected reading" : "In the Archive", connected.length ? `
             ${studied.length ? '<p class="study-intro">Other records that touch them: shared histories, Gates and reports.</p>' : ""}
             <ul class="faction-entries">${connected.map(entryRow).join("")}</ul>` : "", "faction-connected")}
-        </div>` : section("Study guide", '<p class="muted">No Archive entries about them yet.</p>', "faction-archive")}
+        </div>` : section("Study guide", `<p class="muted">Everything general about ${escapeHtml(faction.shortName || faction.name)} is on this page. More detailed entries get added to the Archive as your backstories and expeditions bring them up.</p>`, "faction-archive")}
       </article>`;
   };
 

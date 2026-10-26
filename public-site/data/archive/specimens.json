@@ -1,0 +1,31 @@
+{
+  "id": "specimens",
+  "type": "lore",
+  "title": "Specimens",
+  "subtitle": "What everything brought back from a Gate is, until a laboratory says otherwise",
+  "summary": "A Specimen is anything a crew brings back through a Gate, until it has been evaluated. After analysis it is filed as discarded material, a research specimen, an artifact, a Resource candidate or a confirmed Resource.",
+  "content": "A **Specimen** is anything a crew brings back through a [[gates|Gate]]: plants, water, stone, soil, shells, bone, residue, machinery, fragments of built things. Under the [[gate-evaluation-doctrine|Gate Evaluation Doctrine]], all of it is treated as a Specimen until it's properly evaluated, however obvious it seems.\n\n> **At the Specimen intake counter, the morning after a return**\n>\n> \"It's Redbark. Everyone knows it's Redbark.\"\n>\n> \"Everyone knows *Redbark* is Redbark.\" The clerk tied the tag to the jar. \"This is a piece of bark you say came off a Redbark tree. When the laboratory agrees, it can be Redbark too. Next.\"\n\nAfter analysis, a Specimen is filed as one of:\n\n- **Discarded Material**: nothing useful or anomalous found;\n- **Research Specimen**: scientifically interesting, not yet useful;\n- **Artifact**: a made object, or something like one, that needs its own study;\n- **Resource Candidate**: evidence of an exploitable anomalous property;\n- **Confirmed Resource**: at least one Function identified, and entered in the [Resource catalogue](discoveries.html#resources).\n\nNone of the first four is final. Something every new Expeditioner collects and every laboratory ignores can turn out, after the right research, to matter a great deal. The [Research](game.html#post-research) rule covers how hidden properties come to light.",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Specimen",
+    "Specimens",
+    "Resource",
+    "Resource Candidate",
+    "Artifact",
+    "intake counter"
+  ],
+  "topics": [
+    "Technology",
+    "Institutions"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": null
+  }
+}

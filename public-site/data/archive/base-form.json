@@ -1,0 +1,30 @@
+{
+  "id": "base-form",
+  "type": "lore",
+  "title": "Base Form",
+  "subtitle": "How a caster manifests a Word without a Rune",
+  "summary": "Base Form is the method by which a person manifests a single Word themselves, without a Rune: a hard calculation in the head, then the right sound. It was the last great discovery of the Era of Magic, and it is why casters carry spellbooks.",
+  "content": "> *\"The first revolution taught us to use the Words. The second taught us to say them.\"*\n> — a common way of putting it in the laboratories\n\n**Base Form** is the method by which a person manifests a [[words|Word]] **themselves**, without a [[runes-of-the-gates|Rune]] to supply it. It came last in the [[the-era-of-magic|Era of Magic]], after the first [[forms|Forms]] and the Words, which is why it's *base* as in foundation, never *basic*. For many casters it's the hardest thing they learn. Who first demonstrated it, and when, isn't recorded.\n\nThere's no single Base Form: each one manifests one specific Word and is learned separately, so one caster may manifest `Move` and nothing else while another knows a dozen Forms and no Base Form at all.\n\nIt doesn't look like reciting a spell. It looks like doing very difficult mathematics without paper. The caster works through a derivation in their head using things like the positions of celestial bodies, angles, distances and the time, gets the answer for this moment and place, and then makes the required sound. Why the universe answers a correct derivation is unknown. That it does is the foundation of modern casting.\n\nThat's why casters carry **spellbooks**, which look like an astronomy handbook crossed with a laboratory notebook: equations, star charts, lookup tables, pronunciation marks and years of corrections in the margins. Lose the book or your voice and the Word stays out of reach. A manifested Word doesn't last; it holds only so much, and fades when used up or after a while. The rules: [Base Forms](game.html#post-base-forms).",
+  "author": "",
+  "publishedAt": "",
+  "eventDate": "",
+  "image": null,
+  "imageCaption": "",
+  "tags": [
+    "Base Form",
+    "spellbook",
+    "derivation",
+    "Word",
+    "manifest"
+  ],
+  "topics": [
+    "Technology",
+    "History"
+  ],
+  "participantIds": [],
+  "factionIds": [],
+  "details": {
+    "kind": "term",
+    "startStep": null
+  }
+}

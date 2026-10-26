@@ -2,7 +2,7 @@
 
 A single-file summary of the whole project for people, tools and AI agents that need to catch up quickly: what the campaign is, how the repository is built, which tools exist, how the rules work, and what lore has been established so far.
 
-- **Snapshot:** 6 October 2026 (pre-launch; Factions added the same day), brought fully up to date on 14 October 2026 (repository, site, rules and lore; v1.0.8 content). The first session is planned for **6 November 2026**.
+- **Snapshot:** 6 October 2026 (pre-launch; Factions added the same day), brought fully up to date on 14 October 2026 (repository, site, rules and lore; v1.0.8 content). Lore restructured on 21 October 2026: faction pages are the central overviews, and the Archive holds short one-subject entries. The first session is planned for **6 November 2026**.
 - **Player-facing only.** This file holds only what players can already see on the public site. It deliberately leaves out GM-only material: GM notes, Hidden Functions, harvesting issues, unpublished drafts and anything about the true nature of the Gates, Cores or ruins. The repository is public, so keep it that way.
 - **Sources of truth:** the content manager's database (`content-manager/content.db`, not in Git) for content, `instructions.md` for design principles, and the code itself. When this file disagrees with them, they win. Regenerate this file rather than editing facts by hand.
 
@@ -81,11 +81,11 @@ Plain HTML, CSS and vanilla JavaScript: no framework and no build step. Every pa
 | Page | What it shows |
 | --- | --- |
 | `index.html`, the **Overview** | Hero carousel, the newest **pinned announcement** featured as a card, a three-step *Start here* (read Onboarding, create a character, find a job), the launch roadmap and countdown (in the visitor's local time), and section tiles. |
-| `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance, Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations, then a **Study guide** (its lore as a numbered reading path with kind, subtitle and reading time; the GM's order or, by default, by kind) beside **Connected reading** (other records that name the faction). On phones the essentials and sponsorship come first. |
+| `factions.html`, **Factions** | The countries and powers of the wider world. A card grid you can scan in under a minute (flag, homeland image, short descriptor, core values, Sponsor Extra), then a detail view per faction (`factions.html#<id>`): hero, At a glance (government, known for, values, Gate attitude, visuals), Sponsorship, Beliefs & folklore, History, Visual identity (artwork), Relations. **The faction page is the faction's central overview**: everything general about it is there. Below it, a **Study guide** lists Archive entries about the faction as a numbered reading path (kind, subtitle, reading time; the GM's order or, by default, by kind) beside **Connected reading** (other records that name the faction); while there are none, it says that more detailed entries get added as backstories and expeditions bring them up. On phones the essentials and sponsorship come first. |
 | `outpost.html`, the **Outpost Sheet** | The settlement as a Fate character: High Concept, Trouble, Aspects, six Capabilities with ratings and dice rolls, Stress, Consequences, the Facilities table (filterable by Capability) and ongoing Outpost Projects with Complications. |
 | `jobs.html`, the **Job Board** | Open listings (objective, briefing, schedule, crew size, who posted it), filterable by type, plus closed jobs linked to their Session Records. |
 | `gates.html`, **Gates** | Built from the Factions page's own components, so the two read as siblings. Index: a card grid (painting banner with the designation badge; name, significance, Domain, Status and Core; "Explore Gate"), filterable by status. A Gate page (`gates.html#<id>`): a hero over the painting (designation, status, name, significance, summary); a main column with At a glance (Status, Core, Access, Domain), Environment, the record text and glossary-style Known traits/locations/creatures; a side column with **The painting** (whole, with caption), **Known hazards** as the highlighted panel and the **Resources** as small cards (square icon, name, availability, Functions); then **On record** (jobs, reports and lore about the Gate). |
-| `lore.html`, **Lore** | All lore, arranged as reading paths. Each entry has one **kind** (Overview, Society, Faith, Folklore, Institution, Event, Endros & the Gates) shown above its title, with its subtitle in every list. The page opens with a **Start here** path for new players (entries with a Start here step), then one shelf per faction in reading order and a shelf for lore about no faction. An opened entry shows its step ("Step 3 of 5") and Previous/Next links; `lore.html?path=<faction-id|start>#<id>` keeps the reader on a path. Lore entries also carry **topics** (History, Folklore, Religion, Politics…), and an entry can have several. Search, a **topic filter** (`lore.html?topic=<name>`), a **shelf filter** (`lore.html?faction=<id>`, or `?faction=world` for the Endros & the Gates shelf), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view (`lore.html#explore/archive/<id>`). |
+| `lore.html`, **Lore** | The encyclopedia, arranged as reading paths. **Each entry covers exactly one subject** (a term, person, place or historical event), says in its first sentence what that is, and links to other entries instead of changing topic. Each entry has one **kind** (Place, Person, Event, Term, Institution, Faith, Folklore; the older Overview, Society and Endros & the Gates still exist) shown above its title, with its subtitle in every list. The page opens with a **Start here** path for new players (entries with a Start here step), then one shelf per faction in reading order and a shelf for lore about no faction. An opened entry shows its step ("Step 3 of 5") and Previous/Next links; `lore.html?path=<faction-id|start>#<id>` keeps the reader on a path. Lore entries also carry **topics** (History, Folklore, Religion, Politics…), and an entry can have several. Search, a **topic filter** (`lore.html?topic=<name>`), a **shelf filter** (`lore.html?faction=<id>`, or `?faction=world` for the Endros & the Gates shelf), cross-links, "Referenced In" backlinks, links to the factions an entry is about, and an **Explore connections** graph view (`lore.html#explore/archive/<id>`). |
 | `reports.html`, **Expedition Reports** | Session records ("Expedition Reports") and newspapers ("Bulletins"), newest first, each with its session date, outcome, job, crew and Gate(s). |
 | `discoveries.html`, **Discoveries** | Four tabs: **Resources** (searchable catalogue; each card shows a 44px square icon, the crop of the painting chosen in the manager's **Icon framing** editor), **Functions** (look up a Word, combine two, random Resource, a 30×30 interaction grid), **Domains**, and **Spell Forms**. |
 | `marketplace.html`, the **Marketplace** | Featured Gear carousel and the full price list (grid or list view), with prices in Coins, weights and availability. |
@@ -119,7 +119,7 @@ The content manager is desktop-only.
 
 A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:8001>.
 - **Tech:** Python standard library only, with SQLite storage (`content.db`, gitignored, schema v13). Its tests live in `content-manager/tests/` (run with `python -m unittest discover -s tests`).
-- **Code:** `app.py` (server, storage, validation, export) and `static/` (`manager.js`, `generators.js`, `continuity.js`, `icon-framing.js`, `manager.css`).
+- **Code:** `app.py` (server, storage, validation, export) and `static/` (`manager.js`, `generators.js`, `continuity.js`, `revisions.js`, `icon-framing.js`, `manager.css`).
 
 ### Collections (record types)
 
@@ -151,6 +151,7 @@ A local web app: `python content-manager/app.py`, then open <http://127.0.0.1:80
 
 - **Navigation and editing:** a dashboard home, grouped sidebar, Ctrl+K jump and back navigation, plus an unsaved-changes guard and bulk publish.
 - **Status:** sync status and a live site preview.
+- **Versions** (`revisions.js`, table `record_revisions`, database-only): every save that changes a record keeps the version it replaced (latest 30), and a record can carry **proposed revisions** (e.g. a lore rewrite loaded with `lore_tool.py load --propose`) that leave the live record alone until applied. A record's **Versions** dialog compares any version with the current one side by side (word diff) and applies, restores or discards it; applying never changes the Published state. Records with a proposal get a banner and appear under Home → Needs attention.
 - **Character sheets:** batch import of sheet files.
 - **Vocabulary editor:** Functions, interactions and Domains.
 - **Images:** a form can hold several image controls and image lists. Uploads larger than 1280px are scaled down and re-encoded as WebP in the browser, so published pages stay light.
@@ -457,7 +458,7 @@ The settlement's sheet, played as a shared Fate character:
 
 ### The Gates on record
 
-Endros has **one recovered Core, one closed Gate, one occupied Gate, one hostile Gate and one quarantined Gate**, and no explanation of what the Gates are. Each taught a lesson, summed up in the lore entry *Four Gates, Four Lessons*.
+Endros has **one recovered Core, one closed Gate, one occupied Gate, one hostile Gate and one quarantined Gate**, and no explanation of what the Gates are. Each taught a lesson; the lore entry *The Gate Evaluation Doctrine* traces each working assumption back to them.
 
 | Gate | Domain | Status · Core | What happened |
 | --- | --- | --- | --- |
@@ -529,7 +530,7 @@ Still open: why Words work at all, what a Rune is, whether a used Rune is finish
 
 ### Factions
 
-Six world factions are published on the Factions page, and the five major powers have Recruitment Faction rules (Verna's sponsor is the University). Their content comes from the *Factions Site Integration Guide*, expanded since by the lore entries below. The artwork in `artwork/` (gitignored) supplies their flags, homelands and clothing references. The art files say `valdic-holds`, but the canonical name is **Vardic Holds**.
+Six world factions are published on the Factions page, and the five major powers have Recruitment Faction rules (Verna's sponsor is the University). Their content comes from the *Factions Site Integration Guide*, expanded since by lore that is now summarised on each faction's page (history, government, beliefs and folklore, visual identity). The artwork in `artwork/` (gitignored) supplies their flags, homelands and clothing references. The art files say `valdic-holds`, but the canonical name is **Vardic Holds**.
 
 | Faction | Identity | Recruitment Extra |
 | --- | --- | --- |
@@ -544,24 +545,28 @@ Religions cross faction lines: the Faith of the First Light is shared by Aurelia
 
 ### The lore library
 
-33 Archive entries are published: 4 Gate Records and 29 lore entries. The lore page's **Start here** path runs:
-1. *Why We Call Them the Valeoran Ruins*
-2. *Who Runs Endros?*
-3. *The University of Verna*
-4. *Four Gates, Four Lessons*
+The lore was restructured on 21 October 2026 (GM decision), because it had spread over too many long entries and readers got lost:
 
-| Shelf | Entries (kind) |
-| --- | --- |
-| **Endros & the Gates** | Four Gates, Four Lessons; Who Runs Endros?; Runes (endros) · The Gate Evaluation Committee (institution) · The Era of Magic (overview) · The First Three Forms; The Vocabulary Breakthrough; The Discovery of Base Form (event) |
-| **Vardic Holds** | The Vardic Holds: from the Age of Oars to the Compact of Nine Anchors (overview) · Iron, Timber, and Names (society) · The Old Gods of the Holds: Fate, Making, Memory, the Great Weave, the Nameless King (faith) |
-| **Aurelian Empire** | The Aurelian Empire: the empire of systems that holds the straits (overview) · The Imperial Standard (society) · The Crowned Sun: Aurelion the Light Enthroned, the Three Duties, the Shadow Behind the Crown (faith) · Before the Crowned Sun (folklore) |
-| **Vesper Republic** | The Vesper Republic: the House of Solenne, the Year of Ash, the Charter, Celeste Marin's open archive (overview) · Posters, Glass, and Argument (society) · The Sacred Flame: the Spark, Vespara, Talien, Marenne, the Crownless God, the Ashen King (faith) · Stories from Before the Republic (folklore) |
-| **Kharad Compact** | The Kharad Compact: the Seven Tables, the Assembly, the Glass Compass (overview) · Markets Under Painted Glass (society) · The Covenant of the One: Measure, the Messengers, Nahira, the Final Account (faith) |
-| **Tianzhao Mandate** | The Tianzhao Mandate: the Mandate of Heaven, the Registry of gods, the Closed Centuries (overview) · Under Heaven, Under Ink (society) · The Ten Thousand Offices of Heaven (faith) |
-| **Verna** | Verna and the University (overview) · The Republic of Verna (society) · The University of Verna (institution) · Why We Call Them the Valeoran Ruins (folklore) |
-| **Shared** | The Faith of the First Light: one root, two communions (faith; Aurelia, Vesper, Holds, Verna) · The Silencing of the Schools: the older Kharadi regime closes the Old Scholastic Coast, and its scholars flee to Verna (event; Kharad, Verna) |
+- **Faction pages are the central overviews.** Each faction's page (about 1,000–1,200 words) carries everything general about it: history, government, beliefs and folklore, visual identity and relations.
+- **The Archive is an encyclopedia of one-subject entries.** Each entry's title is one term, person, place or historical event, and its text explains exactly that (usually 150–350 words, at most one short scene).
+- **Detail grows from play.** The 31 earlier long entries (faction histories, societies, faiths and folklore, the Silencing of the Schools, the Gate and magic histories) are unpublished drafts in the manager; their canon now lives on the faction pages and in the entries below. New detail entries are written when players' backstories or expeditions need them.
 
-For anything beyond these summaries, read the entries themselves in `public-site/data/archive/`.
+Lore entries about the world outside the factions:
+
+| Entry | Kind | What it is |
+| --- | --- | --- |
+| **The Valeoran Ruins** | Place | The suspended ancient structures where the Gates form; the Department of Archaeology's authority; why the name is a designation, not an identification. |
+| **Endros** | Place | The settlement around the Ruins, named for Valeor's son, run in practice by nobody. |
+| **Valeor, Maera and Endros** | Folklore | The Old Scholastic Coast myth behind both names. |
+| **Gates** | Term | Portals into other worlds formed by moving parts of the Ruins; designations and classifications. |
+| **Cores** | Term | The floating white spheres inside Gates; removing one collapses its Gate. |
+| **Specimens** | Term | Everything brought back, until evaluated; the five filing categories. |
+| **The Gate Evaluation Doctrine** | Term | The ten working assumptions, and which Gate taught each. |
+| **The Gate Evaluation Committee** | Institution | The six-power body that classifies Gates and clears expeditions. |
+| **The Era of Magic** | Event | The few years since magic began, and the order of discovery. |
+| **Runes** · **Words** · **Forms** · **Base Form** | Term | The four building blocks of spellcasting: Gate artifacts that supply a Word; the underlying elements (the same as Functions); learned techniques (the first three: Effect Glowing, Simple Sauna, Kinetic Shove); manifesting a Word without a Rune. |
+
+The four Gate Records (G-01 to G-04) sit beside them. For anything beyond these summaries, read the published records themselves in `public-site/data/`.
 
 ---
 
@@ -576,7 +581,7 @@ The database still holds **sample** records used to test layouts. They are hidde
 - **In rules text:** example characters (Mira, Tomas, Ines, Nell, Odile, Yusra) and their projects are illustrations, not established world facts. Example materials in rules always use Resources that exist in Discoveries, with their public Functions only (checked 13 Oct 2026).
 
 **Published real content (14 Oct 2026):**
-- **Records:** 4 Gates, 27 Resources, 3 spell Forms, about 95 Gear items, 8 Expedition Packs, 6 factions and 29 lore entries.
+- **Records:** 4 Gates, 27 Resources, 3 spell Forms, about 95 Gear items, 8 Expedition Packs, 6 factions (each with its central lore overview) and 13 one-subject lore entries (from 21 Oct 2026; replacing 29 longer ones).
 - **Characters:** 3 (Palava Bansz and two Known Figures).
 - **Not yet published:** Jobs and Projects.
 
@@ -598,6 +603,7 @@ The database still holds **sample** records used to test layouts. They are hidde
 
 - **Read `instructions.md` first.** The site is **player-facing**: never put GM secrets into `public-site/` or this file. When unsure whether something is public, ask.
 - **Don't invent lore or mechanics.** Distinguish standard Fate, established house rules, proposals and examples. Mark undefined things as undefined.
+- **Lore format:** general faction lore goes on the faction page; an Archive lore entry covers exactly one term, person, place or event. Rewrites of existing records go in as proposed revisions (Versions) for the GM to review, never straight over the live text.
 - **Content lives in the database.** Don't hand-edit `public-site/data/*.json`. Change content in the content manager, then Sync.
 - **Keep the site simple:** static files, vanilla JS, no build step. Pages must work on phones. The content manager only needs to work on a desktop.
 - **Run the tests** after changing `content-manager/app.py`, and restart the manager to pick up code changes.

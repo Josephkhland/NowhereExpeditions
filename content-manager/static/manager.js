@@ -29,7 +29,9 @@ const archiveTypeLabel = (type) => (ARCHIVE_TYPES.find(([key]) => key === type) 
 const LORE_KINDS = [["overview", "Overview", "Who they are and how they got here: history and politics."],
   ["society", "Society", "Daily life, dress, places and the look of things."], ["faith", "Faith", "Religion, gods, the dead."],
   ["folklore", "Folklore", "Older stories, customs and superstitions."], ["institution", "Institution", "An organisation and how it works."],
-  ["event", "Event", "One moment in history and what it changed."], ["endros", "Endros & the Gates", "The Outpost, the Ruins and the Gates."]];
+  ["place", "Place", "One place: what and where it is."], ["person", "Person", "One person and what they are known for."],
+  ["event", "Event", "One moment in history and what it changed."], ["term", "Term", "One term or concept and exactly what it means."],
+  ["endros", "Endros & the Gates", "The Outpost, the Ruins and the Gates."]];
 const loreKindLabel = (kind) => (LORE_KINDS.find(([key]) => key === kind) || [])[1] || "";
 const loreKindRank = (entry) => { const index = LORE_KINDS.findIndex(([key]) => key === entry.details?.kind); return index < 0 ? LORE_KINDS.length : index; };
 // A faction's study guide when the GM has not set one: its lore by kind, its own entries before shared ones.
@@ -2337,6 +2339,10 @@ function renderHome() {
       .map((character) => ["characters", character, "has 8 Downtime (full)"]),
     ...state.issues.filter((issue) => issue.status === "open" && issue.severity !== "minor")
       .map((issue) => ["issues", issue, `${issue.severity} continuity issue`]),
+    ...[...new Map((state.revisions || []).filter((revision) => revision.kind === "proposed")
+      .map((revision) => [`${revision.collection}/${revision.recordId}`, revision])).values()]
+      .map((revision) => [revision.collection, findRecord(revision.collection, revision.recordId), "has a proposed revision to review"])
+      .filter(([, record]) => record),
   ];
   const sync = state.sync || {};
   const when = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "never";
@@ -2916,6 +2922,7 @@ async function loadState() {
   state.sync = loaded.sync || {};
   state.learningPaths = loaded.learningPaths || [];
   state.issues = loaded.issues || [];
+  state.revisions = loaded.revisions || [];
   renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
   updateNavigation();
@@ -3296,6 +3303,7 @@ function recordForm(key, record) {
           <div class="editor-actions">
             ${record ? '<button type="button" class="button button-danger" data-action="delete-record">Delete</button>' : ""}
             ${record ? '<button type="button" class="button button-secondary" data-action="issue-flag" title="Record a continuity issue about this record. Select the passage in a text box first to quote it.">⚑ Flag issue</button>' : ""}
+            ${record ? `<button type="button" class="button button-secondary" data-revision-action="open" title="Proposed and earlier versions of this record: compare, apply or restore">Versions${revisionCount(key, record.id) ? ` (${revisionCount(key, record.id)})` : ""}</button>` : ""}
             <button type="button" class="button button-secondary" data-action="open-preview" title="See this record on the site, including unsaved changes">Preview</button>
             <button type="submit" class="button button-primary">Save ${singular}</button>
           </div>
@@ -3306,6 +3314,7 @@ function recordForm(key, record) {
           <label class="publish-toggle field full"><input type="checkbox" name="published" ${published ? "checked" : ""} /><span><strong>Published</strong><span class="helper">When unchecked, Sync data and Export to site leave this record out of the public site.</span></span></label>
           ${state.settings.includeSamples ? `<label class="publish-toggle field full sample-flag"><input type="checkbox" name="sample" ${record?.sample ? "checked" : ""} /><span><strong>Sample content</strong><span class="helper">Preview data, not campaign canon. While <em>Show sample content</em> is off, it is hidden here and left out of Sync data and Export.</span></span></label>` : ""}
           ${recordIssueBanner(key, record)}
+          ${recordRevisionBanner(key, record)}
           ${record ? "" : field("ID / URL slug", "recordId", "", { full: true, help: `Optional. ${config.idHelp} It cannot be changed later.` })}
           ${config.fields(record || {})}
           ${record && config.related ? config.related(record) : ""}

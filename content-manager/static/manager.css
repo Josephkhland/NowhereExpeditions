@@ -618,6 +618,26 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .issue-side-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; }
 .issue-banner { padding: 9px 12px; border-left: 3px solid var(--amber); background: #fff7e6; font-size: 12px; }
 
+/* ---------- Record revisions: proposed and earlier versions, compared side by side ---------- */
+.revision-banner { border-left-color: #3d6fa8; background: #eef4fb; }
+.revision-chip { display: inline-flex; gap: 6px; align-items: baseline; margin-right: 10px; }
+.versions-dialog { width: min(1180px, calc(100vw - 32px)); }
+#versions-body { display: grid; gap: 14px; padding: 18px 20px 20px; font-size: 13px; overflow: auto; max-height: calc(100vh - 140px); }
+#versions-body p { margin: 0; }
+.versions-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.version-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.version-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); }
+.version-label { display: grid; gap: 2px; }
+.version-kind { padding: 2px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; border: 1px solid var(--line); }
+.version-proposed { color: #24527f; background: #eef4fb; border-color: #9cbbe0; }
+.diff-field h3 { margin: 0 0 8px; font-size: 12px; font-weight: 750; letter-spacing: .5px; text-transform: uppercase; }
+.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.diff-text { margin-top: 4px; padding: 10px 12px; border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; font-size: 12.5px; max-height: 60vh; overflow: auto; }
+mark.diff-removed { background: #fbe1df; color: #8a1f17; text-decoration: line-through; }
+mark.diff-added { background: #dff3e4; color: #1d5b2e; }
+@media (max-width: 760px) { .diff-grid, .version-row { grid-template-columns: 1fr; } }
+
+
 
 /* ---------- Resource icon framing: a crop square on the painting ---------- */
 .framing-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px; }
