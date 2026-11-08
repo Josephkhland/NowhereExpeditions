@@ -7,7 +7,7 @@
 
 "use strict";
 
-const { ipcMain, shell } = require("electron");
+const { ipcMain, shell } = require("./native-host");
 const { execFile } = require("node:child_process");
 const path = require("node:path");
 

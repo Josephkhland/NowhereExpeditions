@@ -1,7 +1,7 @@
 // The Git tab's only bridge to the app: named actions (see git.js), the output log, the GitHub Actions page.
 "use strict";
 
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer } = window.desktopBridge;
 
 contextBridge.exposeInMainWorld("gitApi", {
   run: (name, args) => ipcRenderer.invoke("git:run", name, args),

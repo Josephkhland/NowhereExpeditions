@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' file: data:; media-src file:">
+  <title>Marketing</title>
+  <link rel="stylesheet" href="marketing.css">
+</head>
+<body>
+  <header class="toolbar">
+    <nav class="views" role="tablist">
+      <button type="button" data-view="plan" role="tab">Plan</button>
+      <button type="button" data-view="steps" role="tab">Next steps <span id="count-steps" class="count"></span></button>
+      <button type="button" data-view="content" role="tab">Content <span id="count-content" class="count"></span></button>
+    </nav>
+    <span id="summary" class="summary"></span>
+    <span class="spacer"></span>
+    <button type="button" id="new-post" title="A new Discord post in drafts/, from a template">＋ New post</button>
+    <button type="button" id="new-reel" title="A storyboard for a reel or video in drafts/reels/, with a folder for its clips">＋ New reel plan</button>
+    <button type="button" id="export-plan" title="The whole plan as a PDF agenda">Export plan (PDF)</button>
+    <button type="button" id="open-folder" title="Open marketing_promotion/ in Explorer">Open folder</button>
+  </header>
+
+  <form id="new-form" class="new-form" hidden>
+    <span id="new-kind"></span>
+    <input id="new-title" type="text" autocomplete="off" placeholder="Title" aria-label="Title">
+    <button type="submit" class="primary">Create</button>
+    <button type="button" id="new-cancel">Cancel</button>
+  </form>
+  <div id="notice" class="notice" hidden></div>
+
+  <main class="body">
+    <section id="view-plan" class="view">
+      <div id="next-up" class="next-up"></div>
+      <div class="plan-layout">
+        <div class="panel calendar-panel">
+          <div id="legend" class="legend"></div>
+          <div id="calendar" class="calendar"></div>
+        </div>
+        <aside id="plan-detail" class="panel detail"></aside>
+      </div>
+    </section>
+
+    <section id="view-steps" class="view" hidden>
+      <div class="steps-bar">
+        <label><input type="checkbox" id="show-done"> Show done</label>
+        <span class="hint">Ticking writes to action-items.md (or the plan's open questions).</span>
+      </div>
+      <div id="steps" class="steps"></div>
+    </section>
+
+    <section id="view-content" class="view" hidden>
+      <div class="content-layout">
+        <aside class="panel library">
+          <input id="search" type="search" placeholder="Search content" aria-label="Search content">
+          <div id="library" class="library-list"></div>
+        </aside>
+        <div class="panel viewer">
+          <div id="viewer-bar" class="viewer-bar"></div>
+          <div id="viewer" class="viewer-body"><p class="placeholder">Pick a post, reel plan, image or video.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Filled just before a PDF export: printing shows only this. -->
+  <div id="print-area" class="print-area"></div>
+
+  <script src="marketing-render.js"></script>
+  <script src="marketing-video.js"></script>
+  <script src="marketing-page.js"></script>
+</body>
+</html>

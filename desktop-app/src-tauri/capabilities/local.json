@@ -1,0 +1,14 @@
+{
+  "identifier": "local-pages",
+  "description": "Events for trusted application pages only; no remote origins.",
+  "local": true,
+  "webviews": [
+    "main",
+    "terminal",
+    "git",
+    "marketing"
+  ],
+  "permissions": [
+    "core:event:default"
+  ]
+}

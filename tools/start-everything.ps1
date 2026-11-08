@@ -4,7 +4,7 @@
 #   - Table insights    http://127.0.0.1:8002 (private transcript stats and moments review)
 #   - Discord bot       (through run_bot.py, so the dashboard's Restart button works;
 #                        the bot hands its dashboard, with the key, to the app: http://127.0.0.1:8766)
-# With the Nowhere Expeditions desktop app installed (npm install in desktop-app/), the app runs them
+# With the Tauri desktop app built (npm install and npm run build in desktop-app/), the app runs them
 # all itself, in its Terminal tab, and shows each in its own tab; running this again just brings that
 # window to the front. Without the app (or with -Browser), each starts in its own PowerShell window
 # and the pages open in the browser.
@@ -23,8 +23,11 @@ $root = Split-Path -Parent $PSScriptRoot
 $botFolder = Join-Path $root "discord_server\bot"
 $botPython = Join-Path $botFolder ".venv\Scripts\python.exe"
 $appFolder = Join-Path $root "desktop-app"
-$electron = Join-Path $appFolder "node_modules\electron\dist\electron.exe"
-$useApp = (-not $Browser) -and (Test-Path $electron)
+$tauriApp = Join-Path $appFolder "src-tauri\target\release\nowhere-expeditions.exe"
+if (-not (Test-Path -LiteralPath $tauriApp)) {
+    $tauriApp = Join-Path $appFolder "src-tauri\target\debug\nowhere-expeditions.exe"
+}
+$useApp = (-not $Browser) -and (Test-Path -LiteralPath $tauriApp)
 
 function Test-Port([int]$port) {
     $client = New-Object System.Net.Sockets.TcpClient
@@ -47,11 +50,13 @@ function Start-Window([string]$title, [string]$folder, [string]$command) {
 
 # The app starts the servers and the bot itself. A second launch only focuses the window that's already open.
 if ($useApp) {
-    $appArgs = @("`"$appFolder`"")
+    $appArgs = @()
     if ($OpenOnly) { $appArgs += "--open-only" }
     if ($NoBot) { $appArgs += "--no-bot" }
     if ($NoInsights) { $appArgs += "--no-insights" }
-    Start-Process -FilePath $electron -ArgumentList $appArgs -WorkingDirectory $appFolder
+    $launchOptions = @{ FilePath = $tauriApp; WorkingDirectory = $appFolder }
+    if ($appArgs.Count -gt 0) { $launchOptions.ArgumentList = $appArgs }
+    Start-Process @launchOptions
     return
 }
 

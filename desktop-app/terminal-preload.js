@@ -1,7 +1,7 @@
 // The Terminal tab's only bridge to the app: keystrokes in, output out, size, clipboard, start/stop/restart.
 "use strict";
 
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer } = window.desktopBridge;
 
 contextBridge.exposeInMainWorld("terminalApi", {
   ready: () => ipcRenderer.send("term:ready"),
@@ -23,5 +23,6 @@ contextBridge.exposeInMainWorld("terminalApi", {
   onData: (callback) => ipcRenderer.on("term:data", (_event, id, data) => callback(id, data)),
   onReplay: (callback) => ipcRenderer.on("term:replay", (_event, id, data) => callback(id, data)),
   onState: (callback) => ipcRenderer.on("term:state", (_event, sessions) => callback(sessions)),
+  onLimits: (callback) => ipcRenderer.on("term:limits", (_event, limits) => callback(limits)),
   onShow: (callback) => ipcRenderer.on("term:show", (_event, id) => callback(id)),
 });

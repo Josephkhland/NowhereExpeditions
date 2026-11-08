@@ -203,6 +203,62 @@ folderInput.addEventListener("blur", () => {
   if (s && folderInput.value.trim() !== s.folder) folderInput.value = s.folder; // not kept unless you pressed Enter
 });
 
+// --- session and weekly limits (statusline.js saves them after each Claude Code reply) ------------
+
+const limitsBox = document.getElementById("limits");
+let limits = null;
+
+function resetText(epoch, weekly) {
+  const at = new Date(epoch * 1000);
+  const time = at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return weekly ? `${at.toLocaleDateString([], { weekday: "short" })} ${time}` : time;
+}
+
+function renderLimits() {
+  limitsBox.replaceChildren();
+  const now = Date.now() / 1000;
+  const windows = [
+    ["Session", limits?.five_hour, false],
+    ["Week", limits?.seven_day, true],
+  ].filter(([, w]) => w);
+  if (!windows.length) {
+    const empty = document.createElement("span");
+    empty.className = "limits-empty";
+    empty.textContent = "Limits show after Claude Code's first reply";
+    empty.title = "Claude Code reports your session (5-hour) and weekly limits after each reply (Pro and Max plans).";
+    return limitsBox.append(empty);
+  }
+  for (const [label, w, weekly] of windows) {
+    const over = w.resets_at && w.resets_at < now; // that window has reset since
+    const pct = over ? 0 : Math.max(0, Math.min(100, w.used_percentage));
+    const item = document.createElement("span");
+    item.className = `limit ${pct >= 85 ? "high" : pct >= 60 ? "mid" : "low"}`;
+    const name = document.createElement("span");
+    name.className = "limit-name";
+    name.textContent = label;
+    const bar = document.createElement("span");
+    bar.className = "limit-bar";
+    const fill = document.createElement("span");
+    fill.style.width = `${pct}%`;
+    bar.append(fill);
+    const value = document.createElement("span");
+    value.className = "limit-value";
+    value.textContent = over ? "reset" : `${Math.round(pct)}%`;
+    item.append(name, bar, value);
+    const updated = limits.updated ? new Date(limits.updated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "?";
+    item.title = `${label === "Session" ? "Session (5-hour)" : "Weekly"} limit: ${over ? "has reset" : `${Math.round(pct)}% used`}` +
+      (w.resets_at && !over ? `, resets ${resetText(w.resets_at, weekly)}` : "") + `\nAs of Claude Code's last reply, ${updated}`;
+    limitsBox.append(item);
+  }
+}
+
+api.onLimits((value) => {
+  limits = value;
+  renderLimits();
+});
+setInterval(renderLimits, 60_000); // windows that reset show it without a new reply
+renderLimits();
+
 // --- Claude Code actions (claude-actions.json) ---------------------------------------------------
 
 const actionsBox = document.getElementById("actions");
