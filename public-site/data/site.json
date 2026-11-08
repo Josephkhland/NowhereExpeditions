@@ -30,22 +30,16 @@
       "date": "2026-10-26"
     },
     {
-      "title": "Players Recruited",
-      "detail": "",
-      "status": "in-progress",
-      "date": "2026-11-01"
-    },
-    {
       "title": "Characters Created",
       "detail": "Sheets built, sent in, and imported.",
-      "status": "todo",
-      "date": "2026-11-05"
+      "status": "in-progress",
+      "date": "2026-11-14"
     },
     {
       "title": "Opening Event and First Session on Discord",
       "detail": "The first expedition sets out.",
       "status": "todo",
-      "date": "2026-11-06"
+      "date": "2026-11-14"
     }
   ],
   "discordUrl": "https://discord.gg/TxcudTj",

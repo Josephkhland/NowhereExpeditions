@@ -92,16 +92,16 @@
     ],
     "stunts": [
       {
-        "name": "Wikipedia",
-        "description": "Palava can use an arcane eldritch knowledge book to look up information on nearly any topic in the world. It gains access to any mundane and unprotected books passively and these can be looked up if the name or general topic is known. For rare and complicated bits of knowledge or those in protected tomes- roll lore against difficulty set by DM."
+        "name": "Persistent Learner",
+        "description": "Reroll a progress roll on downtime actions involving magic.\nOnce per Downtimes gained (refreshed)"
       },
       {
-        "name": "Magic User",
-        "description": "Palava can learn and cast spells with incantations - their secrets often appear in her eldritch knowledge book. Learn Dancing Lights and any 2 other harmless cantrips in the style of DnD. Magic is cast using Lore"
+        "name": "Manifest: Loop",
+        "description": "One of the stranger functions learned not from any resource but the moving gates themselves.\nHaving read deeply into the lore on them- she was able to follow their patterns and eventually work out Loop manifestation."
       },
       {
-        "name": "Magical Fluency",
-        "description": "Learn four cantrips and three 1st level spells in the style of DnD"
+        "name": "Forms Researcher",
+        "description": "Double all progress towards a new form after Palava spends downtime researching with it.\nOnce per Downtime gained."
       }
     ],
     "refresh": 3,
@@ -140,7 +140,7 @@
         "aspect": ""
       }
     ],
-    "extras": "Recruitment Faction: University of Verna\nInstitutional Access: Once between expeditions, when you make a Research Project Action, gain +1 additional Progress if the University's laboratories, archives, specialists or equipment could reasonably assist you.\n\nSpell List:\nCantrips-\n- Create Bonfire (Fill up a 5ft cube with fire instantaneously - can damage)\n- Mending\n- Thaumaturgy - scary prestidigitation \n- Prestidigitation\n- Fire Bolt \n- Message\n\n1st level spells:\n- Shield\n- Burning Hands\n- Feather Fall"
+    "extras": "Recruitment Faction: University of Verna\nInstitutional Access: Once between expeditions, when you make a Research Project Action, gain +1 additional Progress if the University's laboratories, archives, specialists or equipment could reasonably assist you."
   },
   "stash": [],
   "coins": 1,

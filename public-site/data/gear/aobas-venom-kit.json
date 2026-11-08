@@ -1,0 +1,29 @@
+{
+  "id": "aobas-venom-kit",
+  "name": "Aoba's Venom Kit",
+  "category": "special",
+  "description": "Aoba Toiyama's personal venom kit, holding three premade doses and one Antidote. It also contains the tools required to concoct poison doses and antidotes using Crafts. It takes up no carrying space on an Expedition.\n\nAntidote: it clears a poison aspect, from a consequence slot or anywhere else.\n\nPoison aspects in this kit:\n\nWeakened Body: a coating poison, applied to a blade or ammunition.\n\nDoping poisons are taken as one dose, by yourself or by a willing target. The target takes a 1-shift Physical hit and absorbs it however they like. Either way, they gain the poison's aspect, as if an advantage had been created on them, with no free invoke. They gain the bonus below for the scene or until an Antidote clears the aspect. If they absorb the hit with a consequence, the doping instead lasts until that consequence is recovered or an Antidote clears it. Bonuses stack. Doping poisons can't coat a weapon.\n\nIron in the Blood: +1 to Physique.\n\nQuicksilver Veins: +1 to Athletics.\n\nScorpion's Temper: +1 to Fight.",
+  "price": 0,
+  "weight": 0,
+  "availability": "unavailable",
+  "image": null,
+  "tags": [
+    "Consumable"
+  ],
+  "featured": false,
+  "promoLabel": "",
+  "discount": null,
+  "projectId": null,
+  "marketplaceVisible": false,
+  "contents": [
+    {
+      "gearId": "venom-dose",
+      "quantity": 3
+    },
+    {
+      "gearId": "antidote",
+      "quantity": 1
+    }
+  ],
+  "armorBoxes": 0
+}
