@@ -1,6 +1,8 @@
 [
   "air-supply.json",
   "alarm-kit.json",
+  "antidote.json",
+  "aobas-venom-kit.json",
   "bandage-kit.json",
   "bandage.json",
   "baton.json",
@@ -90,6 +92,7 @@
   "thermometer-kit.json",
   "tripflare-kit.json",
   "tripflare.json",
+  "venom-dose.json",
   "waterproof-case.json",
   "wire-reel.json",
   "wire-snare.json",

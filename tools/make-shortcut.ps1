@@ -1,20 +1,50 @@
-# Puts a "Nowhere Expeditions" shortcut (with its icon) on the desktop of whoever runs this.
-#
-#   powershell -ExecutionPolicy Bypass -File tools\make-shortcut.ps1
-#
-# The shortcut runs tools\start-everything.ps1: content manager, public site, table insights and the Discord bot.
+# Creates the desktop shortcut and updates an existing taskbar pin to launch Tauri directly.
+# Run: & .\tools\make-shortcut.ps1
+# Does not pin/unpin apps, restart Explorer, or change execution/antivirus policy.
+[CmdletBinding()]
+param([string]$BackupDirectory)
 
+$ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$desktop = [Environment]::GetFolderPath("Desktop")
-$path = Join-Path $desktop "Nowhere Expeditions.lnk"
+$appFolder = Join-Path $root 'desktop-app'
+$executable = Join-Path $appFolder 'src-tauri\target\release\nowhere-expeditions.exe'
+if (-not (Test-Path -LiteralPath $executable)) {
+    throw 'Build the Tauri release first: run npm run build in desktop-app.'
+}
 
-$shell = New-Object -ComObject WScript.Shell
-$link = $shell.CreateShortcut($path)
-$link.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-$link.Arguments = "-ExecutionPolicy Bypass -WindowStyle Minimized -File `"$root\tools\start-everything.ps1`""
-$link.WorkingDirectory = $root
-$link.IconLocation = "$root\tools\nowhere-expeditions.ico,0"
-$link.Description = "Start the content manager, public site, table insights and Discord bot (with its dashboard)"
-$link.Save()
+$desktop = [Environment]::GetFolderPath('Desktop')
+$desktopLink = Join-Path $desktop 'Nowhere Expeditions.lnk'
+$taskbarFolder = Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'
+$taskbarLink = Join-Path $taskbarFolder 'Nowhere Expeditions.lnk'
+$targets = @(@{ Path = $desktopLink; Name = 'desktop' })
+if (Test-Path -LiteralPath $taskbarLink) {
+    $targets += @{ Path = $taskbarLink; Name = 'taskbar' }
+}
+if ($BackupDirectory) {
+    New-Item -ItemType Directory -Path $BackupDirectory -Force | Out-Null
+}
 
-Write-Host "Shortcut created: $path"
+$shortcutShell = New-Object -ComObject WScript.Shell
+foreach ($target in $targets) {
+    if ($BackupDirectory -and (Test-Path -LiteralPath $target.Path)) {
+        $backup = Join-Path $BackupDirectory ($target.Name + '-before-tauri.lnk')
+        if (-not (Test-Path -LiteralPath $backup)) {
+            Copy-Item -LiteralPath $target.Path -Destination $backup
+        }
+    }
+    $link = $shortcutShell.CreateShortcut($target.Path)
+    $link.TargetPath = $executable
+    $link.Arguments = ''
+    $link.WorkingDirectory = $appFolder
+    $link.IconLocation = "$root\tools\nowhere-expeditions.ico,0"
+    $link.Description = 'Nowhere Expeditions toolkit (Tauri)'
+    $link.WindowStyle = 1
+    $link.Save()
+
+    $verified = $shortcutShell.CreateShortcut($target.Path)
+    if ($verified.TargetPath -ne $executable -or $verified.Arguments -ne '') {
+        throw "Shortcut verification failed: $($target.Path)"
+    }
+    Write-Host "Updated $($target.Name): $($target.Path)"
+    Write-Host "  Target: $($verified.TargetPath)"
+}

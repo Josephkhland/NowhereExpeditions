@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Nowhere Expeditions",
+  "version": "1.0.0",
+  "identifier": "com.nowhere-expeditions.toolkit",
+  "build": {
+    "beforeDevCommand": "npm run build:assets",
+    "beforeBuildCommand": "npm run build:assets",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src asset: http://asset.localhost blob:; connect-src ipc: http://ipc.localhost 'self' data: blob:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPDATA/com.nowhere-expeditions.toolkit/**"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

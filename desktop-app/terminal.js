@@ -10,7 +10,7 @@
 
 "use strict";
 
-const { ipcMain, clipboard } = require("electron");
+const { ipcMain, clipboard } = require("./native-host");
 const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
@@ -99,6 +99,27 @@ function isFolder(folder) {
 // onChange(): something's status changed. onServerUp(id): a server answers on its port again after (re)starting.
 // onOpenTab(id): an action asked for another tab. settingsFile: where Claude Code's folder is remembered.
 function createSessions({ onChange, onServerUp, onOpenTab, settingsFile }) {
+  // Session and weekly limits: Claude Code gives them to its status line (statusline.js, passed with --settings
+  // so your own settings stay as they are), which saves them here for the folder bar.
+  const dataDir = path.dirname(settingsFile);
+  const limitsFile = path.join(dataDir, "claude-limits.json");
+  const claudeSettings = path.join(dataDir, "claude-app-settings.json");
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    const script = path.join(__dirname, "statusline.js").replace(/\\/g, "/");
+    fs.writeFileSync(claudeSettings, JSON.stringify({ statusLine: { type: "command", command: `node "${script}"` } }, null, 2));
+  } catch {
+    // Claude Code then runs without the app's status line; the limits just don't show.
+  }
+  const readLimits = () => {
+    try {
+      return JSON.parse(fs.readFileSync(limitsFile, "utf8"));
+    } catch {
+      return null;
+    }
+  };
+  fs.watchFile(limitsFile, { interval: 2000 }, () => send("term:limits", readLimits()));
+
   let contents = null; // the terminal page, once open
   let size = { cols: 120, rows: 30 };
   let probe = null;
@@ -149,12 +170,17 @@ function createSessions({ onChange, onServerUp, onOpenTab, settingsFile }) {
 
   function spawn(session, resume = false) {
     const { def } = session;
-    const command = resume && def.resume ? def.resume : def.command;
+    let command = resume && def.resume ? def.resume : def.command;
+    const env = shellEnv();
+    if (def.id === "claude" && command) {
+      command += ` --settings '${claudeSettings.replace(/'/g, "''")}'`; // the status line that reports the limits
+      env.NE_APP_LIMITS_FILE = limitsFile;
+    }
     const args = def.shell
       ? ["-NoLogo", "-NoExit", ...(command ? ["-Command", command] : [])]
       : ["-NoLogo", "-ExecutionPolicy", "Bypass", "-Command", def.command]; // exits with the server, so a crash shows
     // useConptyDll: node-pty's bundled ConPTY, whose kill doesn't need a helper process (that one fails under Electron).
-    const shell = pty.spawn(SHELL, args, { name: "xterm-256color", cwd: session.folder, env: shellEnv(), useConptyDll: true, ...size });
+    const shell = pty.spawn(SHELL, args, { name: "xterm-256color", cwd: session.folder, env, useConptyDll: true, ...size });
     session.shell = shell;
     session.exitCode = null;
     output(session, grey(`${resume ? "Resumed" : "Started"} ${new Date().toLocaleTimeString()}`));
@@ -257,6 +283,7 @@ function createSessions({ onChange, onServerUp, onOpenTab, settingsFile }) {
 
   const handlers = {
     "term:ready": () => {
+      send("term:limits", readLimits());
       send("term:state", list());
       for (const session of sessions.values()) if (session.replay) send("term:replay", session.def.id, session.replay);
     },
@@ -336,6 +363,7 @@ function createSessions({ onChange, onServerUp, onOpenTab, settingsFile }) {
     },
     dispose() {
       clearInterval(probe);
+      fs.unwatchFile(limitsFile);
       for (const [channel, listener] of listeners) ipcMain.removeListener(channel, listener);
       ipcMain.removeHandler("term:paste");
       ipcMain.removeHandler("term:actions");

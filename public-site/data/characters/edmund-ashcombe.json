@@ -1,0 +1,201 @@
+{
+  "id": "edmund-ashcombe",
+  "name": "Charlotte Y. Fairweather",
+  "type": "player",
+  "status": "active",
+  "portrait": "https://i.pinimg.com/736x/df/27/cc/df27ccf29f330fb88d7207b28ef8f490.jpg",
+  "summary": "Lieutenant Charlotte Y. Fairweather, Aurelian Imperial Navy. Appointed naval liaison to Endros and attached to the Imperial delegation, with a brief covering shipping safety, surveying and the assessment of Gate discoveries with maritime applications.\n\nIn her early thirties, Charlotte is a working naval officer from a modest coastal family. Survey work, convoy duty and an awkwardly candid report about an unsafe supply depot preceded her posting to Endros. She considers the appointment a chance to do useful work; she is less certain whether her superiors consider it a reward.\n\nShe believes the Empire's standards save lives, and has seen enough preventable accidents to mean it. She also finds it increasingly difficult to treat the people she meets as entries in an assessment of Imperial interests. She wants to return from the Gates with reliable charts, practical discoveries and everyone she set out with.\n\nNeatly maintained uniform, weathered boots, a pocket notebook, and a habit of making tea before asking difficult questions. Dry humour emerges once introductions are over. She is curious about other people's trades and readily offers help with manifests, correspondence and practical preparations.",
+  "playerName": "",
+  "sheet": {
+    "aspects": {
+      "highConcept": "Imperial Naval Lieutenant on Detached Duty",
+      "trouble": "My Superiors Expect Influence; I Keep Making Friends",
+      "other": [
+        "I Stand by My Crew; They Stand by Me.",
+        "Old Eddie Is Mine to Command and Answer For",
+        "I never miss a dance"
+      ]
+    },
+    "skills": [
+      {
+        "name": "Notice",
+        "rating": 4
+      },
+      {
+        "name": "Drive",
+        "rating": 3
+      },
+      {
+        "name": "Rapport",
+        "rating": 3
+      },
+      {
+        "name": "Shoot",
+        "rating": 2
+      },
+      {
+        "name": "Will",
+        "rating": 2
+      },
+      {
+        "name": "Investigate",
+        "rating": 2
+      },
+      {
+        "name": "Athletics",
+        "rating": 1
+      },
+      {
+        "name": "Contacts",
+        "rating": 1
+      },
+      {
+        "name": "Physique",
+        "rating": 1
+      },
+      {
+        "name": "Resources",
+        "rating": 1
+      }
+    ],
+    "stunts": [
+      {
+        "name": "Steady, Everyone!",
+        "description": "Once per scene, when Charlotte takes charge of coordinating a willing group toward a shared task, create the aspect Under Charlotte’s Direction, with one shared 2-point Coordination Stress box.\n\nWhen a member would take Stress from an obstacle or opponent interfering with that task, the group may mark this box to absorb up to 2 shifts of that hit. Any remaining shifts affect the original target normally.\n\nAfter the box is marked, remove the aspect: Charlotte must regroup everyone before she can coordinate them effectively again. The box cannot be refreshed during the same scene."
+      },
+      {
+        "name": "An Officer and Her Detail",
+        "description": "On expeditions or official business, Charlotte may bring up to two trusted crew members. They act through her action and Skills, without extra actions or teamwork bonuses, and share two 1-point Stress boxes. See Naval Detail in Extras."
+      },
+      {
+        "name": "Follow My Lead",
+        "description": "+2 to Athletics when creating an advantage by guiding a willing partner through difficult footing or a moving crowd, provided they can follow Charlotte's movements."
+      }
+    ],
+    "refresh": 3,
+    "fatePoints": 3,
+    "stress": [
+      {
+        "name": "Physical",
+        "boxes": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Mental",
+        "boxes": [
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Naval Detail",
+        "boxes": [
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Coordination",
+        "boxes": [
+          false
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "label": "Mild",
+        "shift": 2,
+        "aspect": ""
+      },
+      {
+        "label": "Moderate",
+        "shift": 4,
+        "aspect": ""
+      },
+      {
+        "label": "Severe",
+        "shift": 6,
+        "aspect": ""
+      }
+    ],
+    "extras": "Aurelian Empire - Properly Provisioned: Once per session, bring one item from your Personal Stash into action without paying the normal Stress or Fate Point cost.\n\nNaval Detail - An Officer and Her Detail\nCharlotte may be accompanied by up to two trusted members of Old Eddie's crew on expeditions or official business. The rest of the ship's company remains aboard. The following names and personalities are provisional.\n\nPetty Officer Beatrice Thorne - Coxswain. An experienced sailor who handles boats, practical preparations and the detail's arrangements. Loyal, dry-humoured and comfortable questioning Charlotte in private; she notices when the lieutenant is promising more than their supplies can support.\n\nMarine Felix Crane - Escort. A younger naval marine who provides security and covering fire. Earnest and inquisitive, he volunteers for Gate duty to see something beyond the next harbour. He is still learning when a question is better left until after introductions.\n\nActions: the detail shares Charlotte's action, using her Skills for their combined effort or an instructed task within a companion's established abilities. They grant no extra actions or automatic teamwork bonuses. Splitting up does not create extra turns or independent rolls; genuinely separate scenes are handled by the GM.\n\nDetail Stress: two shared 1-point boxes, tracked under Stress. One or both may be marked against a hit, absorbing 1 shift per box. When present and able to intervene, the detail may absorb shifts from a physical hit against Charlotte; remaining shifts affect her normally. Hits against the detail use the same track. If a hit against them cannot be fully absorbed, they are taken out of the scene: scattered, pinned down, injured or otherwise unable to assist, as the fiction warrants. They have no separate Consequence slots. Their boxes clear after a scene when they can regroup; being taken out may require further recovery in the fiction.\n\nSteady, Everyone! uses a separate, scene-limited Coordination box for whichever willing group Charlotte is directing. Detail Stress does not refresh that box. Each shift can be absorbed only once. Their presence does not extend coordination to absent companions.\n\nCost: one stunt slot. Charlotte has three starting stunts and Refresh 3. These are proposed companion rules for review with the session's GM."
+  },
+  "stash": [],
+  "coins": 1,
+  "downtime": 0,
+  "sponsorId": "faction-aurelian-empire",
+  "packs": [
+    {
+      "id": "pack-1",
+      "packId": "aurelian-empire-pack",
+      "active": true,
+      "contents": [
+        {
+          "gearId": "lantern",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "lantern-oil",
+          "quantity": 3,
+          "capacity": 3
+        },
+        {
+          "gearId": "ration",
+          "quantity": 5,
+          "capacity": 5
+        },
+        {
+          "gearId": "bedroll",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "canteen",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "expedition-compass",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "ear-plugs",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "rope",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "field-notebook",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "kettle",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "mug",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "tea-leaves",
+          "quantity": 3,
+          "capacity": 3
+        }
+      ]
+    }
+  ],
+  "carryModifier": 0
+}

@@ -1,0 +1,254 @@
+{
+  "id": "aoba-toiyama",
+  "name": "Aoba Toiyama",
+  "type": "player",
+  "status": "active",
+  "portrait": "https://i.pinimg.com/736x/53/06/00/5306001a713880c3a2ecb8709b859cf1.jpg",
+  "summary": "Aoba was a renowned scout  back in his prime, there was nearly no place he couldn't infiltrate , or no information he couldn't gather. His success rate of bring back useful information even on suicide  missions , was the stuff  of legend and The Tianzhaon valued him greatly. That is until he was fooled",
+  "playerName": "Havik",
+  "sheet": {
+    "aspects": {
+      "highConcept": "Tianzhaon Venom Specialist",
+      "trouble": "Drunken Bastard",
+      "other": [
+        "Back in my day...",
+        "Exiled  Scout",
+        "Old ways Disciple"
+      ]
+    },
+    "skills": [
+      {
+        "name": "Notice",
+        "rating": 4
+      },
+      {
+        "name": "Athletics",
+        "rating": 3
+      },
+      {
+        "name": "Fight",
+        "rating": 3
+      },
+      {
+        "name": "Physique",
+        "rating": 2
+      },
+      {
+        "name": "Shoot",
+        "rating": 2
+      },
+      {
+        "name": "Stealth",
+        "rating": 2
+      },
+      {
+        "name": "Crafts",
+        "rating": 1
+      },
+      {
+        "name": "Deceive",
+        "rating": 1
+      },
+      {
+        "name": "Provoke",
+        "rating": 1
+      },
+      {
+        "name": "Will",
+        "rating": 1
+      },
+      {
+        "name": "Burglary",
+        "rating": 0
+      },
+      {
+        "name": "Contacts",
+        "rating": 0
+      },
+      {
+        "name": "Drive",
+        "rating": 0
+      },
+      {
+        "name": "Empathy",
+        "rating": 0
+      },
+      {
+        "name": "Investigate",
+        "rating": 0
+      },
+      {
+        "name": "Lore",
+        "rating": 0
+      },
+      {
+        "name": "Rapport",
+        "rating": 0
+      },
+      {
+        "name": "Resources",
+        "rating": 0
+      }
+    ],
+    "stunts": [
+      {
+        "name": "Aoba Venom kit",
+        "description": "Your personal venom kit (Aoba's Venom Kit in your stash) with 3 premade-doses and 1 Antidote. This same stunt lets you start each Expedition with one such kit without it counting towards your carrying capacity.  The kit contains the tools required to concoct poison doses and antidotes using Crafts."
+      },
+      {
+        "name": "Venom Strike",
+        "description": "Before making an Attack Action with a blade or ammunition, you may use one Venom Dose from Aoba's Venom Kit to coat it. On a success, in addition to whatever else the attack does, apply a poison aspect included in your kit to the target. You gain 1 free invoke on it. Hit or miss, the coating expires."
+      },
+      {
+        "name": "Drunken swagger",
+        "description": "Once per scene, while poisoned or under the influence of alcohol, you may fully dodge a physical source of harm, taking no stress from it."
+      },
+      {
+        "name": "Venom Doping",
+        "description": "After taking it so often over the years, your body has learned to carry it. You gain an extra Mild Consequence slot that can only be used for poisoning. When you take a doping poison from Aoba's Venom Kit, you may write its aspect in this slot instead of taking the 1-shift hit; the doping then lasts until that consequence is recovered or an Antidote clears it."
+      }
+    ],
+    "refresh": 2,
+    "fatePoints": 2,
+    "stress": [
+      {
+        "name": "Physical",
+        "boxes": [
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Mental",
+        "boxes": [
+          false,
+          false
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "label": "Mild",
+        "shift": 2,
+        "aspect": ""
+      },
+      {
+        "label": "Mild (Poison)",
+        "shift": 2,
+        "aspect": ""
+      },
+      {
+        "label": "Moderate",
+        "shift": 4,
+        "aspect": ""
+      },
+      {
+        "label": "Severe",
+        "shift": 6,
+        "aspect": ""
+      }
+    ],
+    "extras": "Recruitment Faction: Vardic Holds\nBuilt to Endure: Once per session, when you Create an Advantage using Crafts by repairing, reinforcing, modifying or improvising equipment, you may treat a tie as a success with one free invoke instead."
+  },
+  "stash": [
+    {
+      "gearId": "heavy-leather-coat",
+      "quantity": 1,
+      "broughtIntoAction": true,
+      "armorMarked": 1
+    },
+    {
+      "gearId": "chemical-test-kit",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "rope",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "knife-set",
+      "quantity": 1,
+      "broughtIntoAction": false
+    },
+    {
+      "gearId": "bolt-action-rifle",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "sabre",
+      "quantity": 1,
+      "broughtIntoAction": true
+    },
+    {
+      "gearId": "aobas-venom-kit",
+      "quantity": 1,
+      "broughtIntoAction": true
+    }
+  ],
+  "coins": 0,
+  "downtime": 0,
+  "sponsorId": "faction-vardic-holds",
+  "packs": [
+    {
+      "id": "pack-1",
+      "packId": "vardic-holds-pack",
+      "active": true,
+      "contents": [
+        {
+          "gearId": "lantern",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "lantern-oil",
+          "quantity": 3,
+          "capacity": 3
+        },
+        {
+          "gearId": "ration",
+          "quantity": 5,
+          "capacity": 5
+        },
+        {
+          "gearId": "bedroll",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "canteen",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "expedition-compass",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "ear-plugs",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "rope",
+          "quantity": 2,
+          "capacity": 2
+        },
+        {
+          "gearId": "knife",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "flint-and-steel",
+          "quantity": 1,
+          "capacity": 1
+        }
+      ]
+    }
+  ],
+  "carryModifier": 0
+}

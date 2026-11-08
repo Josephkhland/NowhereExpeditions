@@ -7,7 +7,7 @@
 
 "use strict";
 
-const { ipcMain } = require("electron");
+const { ipcMain } = require("./native-host");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
