@@ -1,0 +1,21 @@
+{
+  "id": "j-hanging-pools-escort",
+  "designation": "",
+  "title": "Escort to the Hanging Pools",
+  "type": "escort",
+  "status": "open",
+  "summary": "A Greenhouse researcher has to run a test in place on a growth that can't be moved. Get them there and back.",
+  "objective": "Keep the researcher safe until the test is done.",
+  "briefing": "Gate: [[green-vault]]\n\nReward: 2 Coins each.",
+  "postedBy": "Verna Forward Laboratory",
+  "organizerId": null,
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "crewCount": 0,
+  "crewMin": 2,
+  "crewMax": 4,
+  "participantIds": [],
+  "requirements": [],
+  "sessionRecordId": null,
+  "gateId": "green-vault"
+}

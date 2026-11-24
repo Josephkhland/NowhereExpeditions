@@ -1,0 +1,208 @@
+{
+  "id": "shenyuan-xingzhe",
+  "name": "Shenyuan Xingzhe",
+  "type": "player",
+  "status": "active",
+  "portrait": null,
+  "summary": "",
+  "playerName": "DaHo",
+  "sheet": {
+    "aspects": {
+      "highConcept": "Leviathan-eating Sushi Chef",
+      "trouble": "Too vast to worry",
+      "other": [
+        "Crab-like mutations",
+        "\"Is it tasty?\"",
+        "Expert Preparation"
+      ]
+    },
+    "skills": [
+      {
+        "name": "Crafts",
+        "rating": 4
+      },
+      {
+        "name": "Investigate",
+        "rating": 3
+      },
+      {
+        "name": "Resources",
+        "rating": 3
+      },
+      {
+        "name": "Fight",
+        "rating": 2
+      },
+      {
+        "name": "Rapport",
+        "rating": 2
+      },
+      {
+        "name": "Will",
+        "rating": 2
+      },
+      {
+        "name": "Athletics",
+        "rating": 1
+      },
+      {
+        "name": "Contacts",
+        "rating": 1
+      },
+      {
+        "name": "Empathy",
+        "rating": 1
+      },
+      {
+        "name": "Physique",
+        "rating": 1
+      },
+      {
+        "name": "Burglary",
+        "rating": 0
+      },
+      {
+        "name": "Deceive",
+        "rating": 0
+      },
+      {
+        "name": "Drive",
+        "rating": 0
+      },
+      {
+        "name": "Lore",
+        "rating": 0
+      },
+      {
+        "name": "Notice",
+        "rating": 0
+      },
+      {
+        "name": "Provoke",
+        "rating": 0
+      },
+      {
+        "name": "Shoot",
+        "rating": 0
+      },
+      {
+        "name": "Stealth",
+        "rating": 0
+      }
+    ],
+    "stunts": [
+      {
+        "name": "Heavenly Feast",
+        "description": "At the start of an expedition, can cook a powerfull meal for the expeditioners to partake in. Make a Craft roll with difficulty 2, on a success, everyone who ate gains the \"Fed on Heavenly Feast\" aspect for the remainer of the session. This aspect has 2 shared free invokes anyone can use."
+      },
+      {
+        "name": "Neverending Ingredients",
+        "description": "When taking a downtime action to research a new ingredient out of an existing resource, gain +2 extra progress."
+      },
+      {
+        "name": "The Bestest Spice",
+        "description": "Can use ingredient resources to add their Functions to a dish. Only a max of 3 Functions can be added to one dish. Each trait provides an extra as noted below (when new ingredients with new traits get discovered, add them to the list):\n- Regenerate: Gives the one eating a +1 on their next downtime action to recover from injury\n- Reinforce: Gives the one eating an extra 1 Slot Stress Box for the next expedition."
+      }
+    ],
+    "refresh": 3,
+    "fatePoints": 3,
+    "stress": [
+      {
+        "name": "Physical",
+        "boxes": [
+          false,
+          false
+        ]
+      },
+      {
+        "name": "Mental",
+        "boxes": [
+          false,
+          false
+        ]
+      }
+    ],
+    "consequences": [
+      {
+        "label": "Mild",
+        "shift": 2,
+        "aspect": ""
+      },
+      {
+        "label": "Moderate",
+        "shift": 4,
+        "aspect": ""
+      },
+      {
+        "label": "Severe",
+        "shift": 6,
+        "aspect": ""
+      }
+    ],
+    "extras": "Recruitment Faction: Tianzhao Mandate\nRestorative Care: Once between expeditions, when you make progress on a Recovery Project for one of your own Consequences, gain +1 additional Progress."
+  },
+  "stash": [],
+  "coins": 3,
+  "downtime": 0,
+  "sponsorId": "faction-tianzhao-mandate",
+  "packs": [
+    {
+      "id": "pack-1",
+      "packId": "tianzhao-mandate-pack",
+      "active": true,
+      "contents": [
+        {
+          "gearId": "lantern",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "lantern-oil",
+          "quantity": 3,
+          "capacity": 3
+        },
+        {
+          "gearId": "ration",
+          "quantity": 5,
+          "capacity": 5
+        },
+        {
+          "gearId": "bedroll",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "canteen",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "expedition-compass",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "ear-plugs",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "bandage",
+          "quantity": 10,
+          "capacity": 10
+        },
+        {
+          "gearId": "knife",
+          "quantity": 1,
+          "capacity": 1
+        },
+        {
+          "gearId": "field-notebook",
+          "quantity": 1,
+          "capacity": 1
+        }
+      ]
+    }
+  ],
+  "carryModifier": 0
+}
