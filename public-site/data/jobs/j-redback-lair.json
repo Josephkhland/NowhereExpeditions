@@ -1,0 +1,23 @@
+{
+  "id": "j-redback-lair",
+  "designation": "",
+  "title": "Clear the Redback Lair",
+  "type": "bounty",
+  "status": "open",
+  "summary": "Redback sightings near the Threshold Redoubt are rising. Find the lair and clear it.",
+  "objective": "Locate the Redback lair and make the route to the Forked Marker Tree safe.",
+  "briefing": "Gate: [[red-forest]]\n\nReward: 3 Coins each, plus 1 Coin for each verified lair report.",
+  "postedBy": "Gate Evaluation Committee",
+  "organizerId": null,
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "crewCount": 0,
+  "crewMin": 3,
+  "crewMax": 5,
+  "participantIds": [],
+  "requirements": [
+    "Expedition clearance is granted for this job."
+  ],
+  "sessionRecordId": null,
+  "gateId": "red-forest"
+}

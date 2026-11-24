@@ -1701,6 +1701,70 @@ class ContentStoreTests(unittest.TestCase):
         finally:
             stop()
 
+    def gate_map(self, **changes) -> dict:
+        nodes = [{"id": "threshold", "name": "Threshold", "x": 0, "y": 0, "aspects": ["Cold Draught"], "dangers": ["Loose rock"],
+                  "resourceIds": ["no-such-resource"], "gateId": "g-03", "arrival": "Grey water laps at the steps.",
+                  "specimens": "Silt Shell: a ribbed grey shell\n\n"},
+                 {"id": "pool", "name": "Silt Pool", "x": 250, "y": 40, "state": "rumoured", "gateId": "no-such-gate"},
+                 {"id": "vent", "name": "Hidden Vent", "x": 500, "y": 40, "state": "unknown"}]
+        edges = [{"id": "r-1", "from": "threshold", "to": "pool", "skill": "Athletics", "difficulty": 2, "requirement": "",
+                  "travel": "An hour", "oneWay": True}]
+        return {"title": "Silt Choir", "kind": "gate", "gateId": "g-03", "nodes": nodes, "edges": edges, **changes}
+
+    def test_gm_maps_are_validated_and_stay_out_of_the_site(self) -> None:
+        map_id = self.store.save_map(None, self.gate_map())["id"]
+        self.assertEqual(map_id, "g-03")
+        saved = self.store.state()["maps"][0]
+        self.assertEqual(saved["nodes"][0]["resourceIds"], [])  # a reference to a missing record is dropped, not an error
+        self.assertEqual(saved["nodes"][1]["state"], "rumoured")
+        self.assertEqual(saved["nodes"][2]["state"], "unknown")
+        self.assertEqual(saved["nodes"][0]["gateId"], "g-03")  # a Gate at this location
+        self.assertEqual(saved["nodes"][1]["gateId"], "")  # a Gate that doesn't exist is dropped
+        self.assertEqual(saved["nodes"][0]["specimens"], ["Silt Shell: a ribbed grey shell"])
+        self.assertEqual(saved["nodes"][0]["arrival"], "Grey water laps at the steps.")
+        self.assertEqual(saved["edges"][0]["difficulty"], 2)
+        self.assertTrue(saved["edges"][0]["oneWay"])
+        with self.assertRaisesRegex(ManagerError, "already has a map"):
+            self.store.save_map(None, self.gate_map())
+        with self.assertRaisesRegex(ManagerError, "not on the map"):
+            self.store.save_map(map_id, self.gate_map(edges=[{"id": "r-1", "from": "threshold", "to": "nowhere"}]))
+        with self.assertRaisesRegex(ManagerError, "not a skill"):
+            self.store.save_map(map_id, self.gate_map(edges=[{"id": "r-1", "from": "threshold", "to": "pool", "skill": "Sailing"}]))
+        with self.assertRaisesRegex(ManagerError, "share an id"):
+            self.store.save_map(map_id, self.gate_map(nodes=[{"id": "a", "name": "A"}, {"id": "a", "name": "B"}], edges=[]))
+        with self.assertRaisesRegex(ManagerError, "No Gate|no Gate|There is no Gate"):
+            self.store.save_map(None, self.gate_map(gateId="missing"))
+        # A difficulty without a skill means nothing, so it is cleared.
+        self.store.save_map(map_id, self.gate_map(edges=[{"id": "r-1", "from": "threshold", "to": "pool", "difficulty": 3}]))
+        self.assertIsNone(self.store.state()["maps"][0]["edges"][0]["difficulty"])
+        endros = self.store.save_map(None, {"title": "Endros", "kind": "settlement", "gateId": "g-03",
+                                            "nodes": [{"id": "docks", "name": "Docks", "mapId": map_id}]})["id"]
+        self.assertEqual(next(item for item in self.store.state()["maps"] if item["id"] == endros)["gateId"], "")
+        with self.assertRaisesRegex(ManagerError, "GM map"):
+            self.store.delete_record("archive", "g-03")
+        self.store.sync_site_data()
+        self.assertFalse(any("Cold Draught" in file.read_text(encoding="utf-8") for file in self.data_dir.rglob("*.json")))
+        self.store.import_site()
+        self.assertEqual(len(self.store.state()["maps"]), 2)
+        self.store.delete_map(map_id)  # the Endros location that opened it simply stops doing so
+        self.assertEqual(self.store.state()["maps"][0]["nodes"][0]["mapId"], "")
+
+    def test_gm_map_routes(self) -> None:
+        send, stop = self.serve()
+        try:
+            before = self.store.sync_status()
+            map_id = send("/api/maps", {"data": self.gate_map()})["id"]
+            self.assertEqual(self.store.sync_status(), before)  # GM notes are not a site change
+            send(f"/api/maps/{map_id}", {"data": self.gate_map(title="Renamed")}, "PUT")
+            self.assertEqual(self.store.state()["maps"][0]["title"], "Renamed")
+            with self.assertRaises(HTTPError) as caught:
+                send("/api/maps", {"data": {"title": ""}})
+            self.assertEqual(caught.exception.code, 400)
+            send(f"/api/maps/{map_id}", method="DELETE")
+            self.assertEqual(self.store.state()["maps"], [])
+        finally:
+            stop()
+
     def lore(self, entry_id: str) -> dict:
         return next(entry for entry in self.store.state()["archive"] if entry["id"] == entry_id)
 
@@ -1766,6 +1830,23 @@ class ContentStoreTests(unittest.TestCase):
             self.assertEqual(self.store.revisions("archive", entry), [])
         finally:
             stop()
+
+
+class ManagerScriptTests(unittest.TestCase):
+    """The manager's scripts are classic <script> tags sharing one global scope: a top-level name declared twice
+    (const/let/function/class) is a SyntaxError that stops the later script, and with it the whole manager."""
+
+    def test_scripts_do_not_redeclare_each_others_top_level_names(self) -> None:
+        import re
+        static = Path(__file__).resolve().parents[1] / "static"
+        scripts = re.findall(r'<script src="/static/([\w.-]+\.js)"', (static / "index.html").read_text(encoding="utf-8"))
+        self.assertIn("manager.js", scripts)
+        declared: dict[str, str] = {}
+        for script in scripts:
+            text = (static / script).read_text(encoding="utf-8")
+            for name in re.findall(r"^(?:const|let|class|(?:async\s+)?function\*?)\s+([A-Za-z_$][\w$]*)", text, re.MULTILINE):
+                self.assertNotIn(name, declared, f"“{name}” is declared at the top level of both {declared.get(name)} and {script}")
+                declared[name] = script
 
 
 class LegacyMigrationTests(unittest.TestCase):

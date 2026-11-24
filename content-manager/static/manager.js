@@ -2148,7 +2148,7 @@ let formSnapshot = null;
 
 const SPECIAL_VIEWS = {
   home: "Home", outpost: "Outpost Sheet", site: "Site & Launch", tools: "CM Tools · Generators",
-  vocabulary: "CM Tools · Vocabulary", readingpath: "Learning Paths", issues: "CM Tools · Continuity",
+  vocabulary: "CM Tools · Vocabulary", readingpath: "Learning Paths", issues: "CM Tools · Continuity", maps: "Session Maps (GM only)",
 };
 const viewTitle = () => SPECIAL_VIEWS[activeView]
   || (activeView === "archive" ? (activePreset === "gates" ? "Gates" : "Archive (lore)") : collections[activeView]?.title || activeView);
@@ -2176,6 +2176,7 @@ function hasUnsavedChanges() {
   }
   if (activeView === "tools") return Boolean(toolView.resource || toolView.gate);
   if (activeView === "issues") return issueView.dirty;
+  if (activeView === "maps") return mapView.dirty;
   return formSnapshot !== null && draftSnapshot() !== formSnapshot;
 }
 
@@ -2196,6 +2197,7 @@ function navigateTo(view, id = null, options = {}) {
     if (navHistory.length > 20) navHistory.shift();
   }
   if (view !== activeView) { vocabDraft = null; domainDraft = null; interactionDraft = null; pathEditor = null; bulkSelection = new Set(); }
+  if (view !== activeView || view === "maps") Object.assign(mapView, { draft: null, dirty: false, selected: null, connecting: null });
   // Flagging an issue from a record opens the new-issue form already filled in; any other way in shows the issue.
   if (!issueView.prefill) issueView.editing = null;
   issueView.dirty = false;
@@ -2922,6 +2924,7 @@ async function loadState() {
   state.sync = loaded.sync || {};
   state.learningPaths = loaded.learningPaths || [];
   state.issues = loaded.issues || [];
+  state.maps = loaded.maps || [];
   state.revisions = loaded.revisions || [];
   renderSampleSwitch();
   document.getElementById("database-indicator").textContent = "SQLite database connected";
@@ -2938,6 +2941,7 @@ function updateNavigation() {
   document.getElementById("gates-count").textContent = gates;
   document.getElementById("lore-count").textContent = state.archive.length - gates;
   document.getElementById("issues-count").textContent = openIssueCount();
+  document.getElementById("maps-count").textContent = (state.maps || []).length;
   document.querySelectorAll(".nav-item").forEach((button) => {
     const active = button.dataset.view === activeView && (button.dataset.preset || "") === activePreset;
     button.classList.toggle("active", active);
@@ -2981,6 +2985,7 @@ function renderContent() {
   else if (activeView === "vocabulary") renderVocabularyEditor();
   else if (activeView === "readingpath") renderReadingPathView();
   else if (activeView === "issues") renderIssues();
+  else if (activeView === "maps") renderMaps();
   else renderCollection(activeView);
   afterRender();
   if (preview.open) schedulePreview(0);

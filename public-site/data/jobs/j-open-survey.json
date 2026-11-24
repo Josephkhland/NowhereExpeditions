@@ -1,0 +1,21 @@
+{
+  "id": "j-open-survey",
+  "designation": "",
+  "title": "Open Survey",
+  "type": "expedition",
+  "status": "open",
+  "summary": "Explore any open Gate. Bring back what you find.",
+  "objective": "",
+  "briefing": "- 1 Coin per new Specimen the lab files as a Resource Candidate or better.\n- 1 Coin per verified report of a new location or lair.",
+  "postedBy": "Gate Evaluation Committee",
+  "organizerId": null,
+  "scheduledAt": "",
+  "expectedDuration": "",
+  "crewCount": 0,
+  "crewMin": null,
+  "crewMax": null,
+  "participantIds": [],
+  "requirements": [],
+  "sessionRecordId": null,
+  "gateId": null
+}

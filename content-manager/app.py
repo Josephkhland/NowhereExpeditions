@@ -107,6 +107,19 @@ ISSUE_CATEGORIES = ("contradiction", "soft-spot", "gap", "mechanics", "consisten
 # How a resolved issue was settled: text edited through the issue, kept as intended, or fixed some other way.
 ISSUE_RESOLUTIONS = ("edited", "intentional", "handled")
 MAX_ISSUE_SIDES = 16
+# GM maps: one graph per Gate, plus maps of places such as Endros, to run sessions from. Nodes are locations with their
+# Aspects, Resources, dangers and notes; edges are the routes between them, with the check or condition each needs.
+# They live only in the database: never synced to the site, and kept when site data is imported.
+MAP_KINDS = ("gate", "settlement")
+# known: surveyed or visited; rumoured: reported but unconfirmed; unexplored: known to exist, nobody has been;
+# unknown: on no record at all, so only the GM knows it is there until a crew finds it.
+MAP_NODE_STATES = ("known", "rumoured", "unexplored", "unknown")
+MAP_SKILLS = ("Athletics", "Burglary", "Contacts", "Crafts", "Deceive", "Drive", "Empathy", "Fight", "Investigate", "Lore",
+              "Notice", "Physique", "Provoke", "Rapport", "Resources", "Shoot", "Stealth", "Will")
+MAP_DIFFICULTIES = (-2, 8)
+MAX_MAP_NODES = 200
+MAX_MAP_EDGES = 400
+MAP_ID_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,79}")
 # Record revisions: earlier versions of a record ("history", kept automatically whenever a save changes its content)
 # and alternative versions waiting for review ("proposed", e.g. a rewrite of a published lore entry). They live only
 # in the database: never synced to the site, and kept when site data is imported.
@@ -1163,6 +1176,96 @@ def clean_issue(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def clean_map_id(value: Any, label: str) -> str:
+    value = str(value or "").strip()
+    if not MAP_ID_RE.fullmatch(value):
+        raise ManagerError(f"{label} needs an id of lowercase letters, digits and hyphens.")
+    return value
+
+
+def clean_map_coordinate(value: Any, label: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ManagerError(f"{label} must be a number.") from error
+    if not -100000 <= number <= 100000:  # also refuses NaN
+        raise ManagerError(f"{label} is off the map.")
+    return round(number, 1)
+
+
+def clean_map_node(data: Any, index: int) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ManagerError(f"Location {index + 1} must be an object.")
+    name = clean_text(data, "name", f"Location {index + 1}'s name")
+    return {
+        "id": clean_map_id(data.get("id"), f"Location “{name}”"),
+        "name": name,
+        "x": clean_map_coordinate(data.get("x", 0), f"Location “{name}”'s position"),
+        "y": clean_map_coordinate(data.get("y", 0), f"Location “{name}”'s position"),
+        "state": clean_choice(data, "state", MAP_NODE_STATES, "known"),
+        "summary": clean_text(data, "summary"),
+        # What the crew sees on arrival, to read or paraphrase at the table: what can be picked up, the ways on, threats.
+        "arrival": clean_text(data, "arrival"),
+        "aspects": clean_list(data, "aspects"),
+        # Things a crew can pick up here as Specimens, one per line ("Name: what it looks like"); some may later prove to be Resources.
+        "specimens": clean_list(data, "specimens"),
+        # A Gate whose threshold is at this location.
+        "gateId": clean_text(data, "gateId"),
+        "resourceIds": clean_ids(data, "resourceIds", f"Location “{name}”'s Resources"),
+        "facilityIds": clean_ids(data, "facilityIds", f"Location “{name}”'s Facilities"),
+        "dangers": clean_list(data, "dangers"),
+        "notes": clean_text(data, "notes"),
+        "mapId": clean_text(data, "mapId"),
+    }
+
+
+def clean_map_edge(data: Any, index: int) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ManagerError(f"Route {index + 1} must be an object.")
+    skill = clean_text(data, "skill")
+    if skill and skill not in MAP_SKILLS:
+        raise ManagerError(f"Route {index + 1}: “{skill}” is not a skill.")
+    low, high = MAP_DIFFICULTIES
+    return {
+        "id": clean_map_id(data.get("id"), f"Route {index + 1}"),
+        "from": clean_text(data, "from", f"Route {index + 1}'s start"),
+        "to": clean_text(data, "to", f"Route {index + 1}'s end"),
+        "skill": skill,
+        "difficulty": clean_int(data.get("difficulty"), f"Route {index + 1}'s difficulty", low, high, allow_none=True) if skill else None,
+        "requirement": clean_text(data, "requirement"),
+        "travel": clean_text(data, "travel"),
+        "notes": clean_text(data, "notes"),
+        "oneWay": bool(data.get("oneWay")),
+    }
+
+
+def clean_map(data: dict[str, Any]) -> dict[str, Any]:
+    nodes, edges = data.get("nodes") or [], data.get("edges") or []
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        raise ManagerError("Locations and routes must be lists.")
+    if len(nodes) > MAX_MAP_NODES or len(edges) > MAX_MAP_EDGES:
+        raise ManagerError(f"A map can hold at most {MAX_MAP_NODES} locations and {MAX_MAP_EDGES} routes.")
+    clean_nodes = [clean_map_node(node, index) for index, node in enumerate(nodes)]
+    clean_edges = [clean_map_edge(edge, index) for index, edge in enumerate(edges)]
+    node_ids = [node["id"] for node in clean_nodes]
+    if len(set(node_ids)) != len(node_ids):
+        raise ManagerError("Two locations share an id.")
+    if len({edge["id"] for edge in clean_edges}) != len(clean_edges):
+        raise ManagerError("Two routes share an id.")
+    names = {node["id"]: node["name"] for node in clean_nodes}
+    for edge in clean_edges:
+        if edge["from"] not in names or edge["to"] not in names:
+            raise ManagerError("A route leads to a location that is not on the map.")
+        if edge["from"] == edge["to"]:
+            raise ManagerError(f"A route from “{names[edge['from']]}” leads back to itself.")
+    kind = clean_choice(data, "kind", MAP_KINDS, "gate")
+    gate_id = clean_text(data, "gateId") if kind == "gate" else ""
+    if kind == "gate" and not gate_id:
+        raise ManagerError("A Gate map needs its Gate.")
+    return {"title": clean_text(data, "title", "A map title"), "kind": kind, "gateId": gate_id,
+            "summary": clean_text(data, "summary"), "notes": clean_text(data, "notes"), "nodes": clean_nodes, "edges": clean_edges}
+
+
 def path_parts(field: str) -> list[str | int]:
     """A field path such as "content", "details.environment" or "relations.0.text"."""
     return [int(part) if part.isdigit() else part for part in field.split(".") if part]
@@ -1594,6 +1697,10 @@ class ContentStore:
                     data TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS continuity_issues (
+                    id TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS gm_maps (
                     id TEXT PRIMARY KEY,
                     data TEXT NOT NULL
                 );
@@ -2053,6 +2160,9 @@ class ContentStore:
                 entry = json.loads(row["data"])
                 if record_id in ((entry.get("details") or {}).get("gateIds") or []):
                     blockers.append(f"Archive entry “{entry.get('title') or row['id']}” (Gates)")
+            for row in connection.execute("SELECT id, data FROM gm_maps"):
+                if json.loads(row["data"]).get("gateId") == record_id:
+                    blockers.append(f"GM map “{json.loads(row['data']).get('title') or row['id']}”")
         if name == "gear":
             for row in connection.execute(
                 "SELECT c.id, c.data FROM character_stash s JOIN characters c ON c.id = s.character_id WHERE s.gear_id = ?",
@@ -2538,6 +2648,7 @@ class ContentStore:
         result["sync"] = self.sync_status()
         result["learningPaths"] = self.learning_paths()
         result["issues"] = self.issues()
+        result["maps"] = self.maps()
         result["revisions"] = self.revision_summaries()
         vocabulary = self.function_vocabulary()
         result["vocabulary"] = {"functionGroups": {group["name"]: [fn["name"] for fn in group["functions"]] for group in vocabulary},
@@ -2549,6 +2660,8 @@ class ContentStore:
         result["vocabulary"].update({"gearCategories": GEAR_CATEGORIES, "gearTagGroups": GEAR_TAG_GROUPS, "maxArmorBoxes": MAX_ARMOR_BOXES})
         result["vocabulary"].update({"issueStatuses": ISSUE_STATUSES, "issueSeverities": ISSUE_SEVERITIES,
                                      "issueCategories": ISSUE_CATEGORIES, "issueResolutions": ISSUE_RESOLUTIONS})
+        result["vocabulary"].update({"mapKinds": MAP_KINDS, "mapNodeStates": MAP_NODE_STATES, "mapSkills": MAP_SKILLS,
+                                     "mapDifficulties": list(MAP_DIFFICULTIES)})
         return result
 
     # --- The Function vocabulary (Resource Functions / spell Words) ---------------------------------------
@@ -3244,6 +3357,62 @@ class ContentStore:
             if not connection.execute("DELETE FROM continuity_issues WHERE id = ?", (issue_id,)).rowcount:
                 raise ManagerError("That issue no longer exists.")
 
+    # --- GM maps ------------------------------------------------------------------------------------------
+
+    def maps(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute("SELECT id, data FROM gm_maps ORDER BY id").fetchall()
+        return [{**json.loads(row["data"]), "id": row["id"]} for row in rows]
+
+    def save_map(self, map_id: str | None, data: Any) -> dict[str, str]:
+        """Store a map. References to Resources, Facilities or other maps that no longer exist are dropped, so a
+        deleted record never makes a map unsaveable; the Gate itself must exist (deleting it is guarded)."""
+        if not isinstance(data, dict):
+            raise ManagerError("Map data must be an object.")
+        clean = clean_map(data)
+        with self._connect() as connection:
+            stored = {row["id"]: json.loads(row["data"]) for row in connection.execute("SELECT id, data FROM gm_maps")}
+            if map_id and map_id not in stored:
+                raise ManagerError("That map no longer exists.")
+            if clean["gateId"]:
+                gate = self._record(connection, "archive", clean["gateId"])
+                if not gate or gate.get("type") != "gate-record":
+                    raise ManagerError(f"There is no Gate with the id “{clean['gateId']}”.")
+                other = next((key for key, value in stored.items() if value.get("gateId") == clean["gateId"] and key != map_id), None)
+                if other:
+                    raise ManagerError(f"That Gate already has a map (“{stored[other].get('title') or other}”).")
+            resources = {row["id"] for row in connection.execute("SELECT id FROM resources")}
+            facilities = {row["id"] for row in connection.execute("SELECT id FROM facilities")}
+            gates = {row["id"] for row in connection.execute("SELECT id FROM archive_entries WHERE type = 'gate-record'")}
+            if not map_id:
+                base = slugify(clean["gateId"] or clean["title"])[:60] or "map"
+                map_id, counter = base, 2
+                while map_id in stored:
+                    map_id, counter = f"{base}-{counter}", counter + 1
+            for node in clean["nodes"]:
+                node["resourceIds"] = [item for item in node["resourceIds"] if item in resources]
+                node["facilityIds"] = [item for item in node["facilityIds"] if item in facilities]
+                if node["gateId"] not in gates:
+                    node["gateId"] = ""
+                if node["mapId"] not in stored or node["mapId"] == map_id:
+                    node["mapId"] = ""
+            record = {**clean, "createdAt": (stored.get(map_id) or {}).get("createdAt") or now_iso(), "updatedAt": now_iso()}
+            connection.execute("INSERT OR REPLACE INTO gm_maps (id, data) VALUES (?, ?)", (map_id, json.dumps(record, ensure_ascii=False)))
+        return {"id": map_id}
+
+    def delete_map(self, map_id: str) -> None:
+        """Delete a map; locations on other maps that opened it simply stop doing so."""
+        with self._connect() as connection:
+            if not connection.execute("DELETE FROM gm_maps WHERE id = ?", (map_id,)).rowcount:
+                raise ManagerError("That map no longer exists.")
+            for row in connection.execute("SELECT id, data FROM gm_maps").fetchall():
+                record = json.loads(row["data"])
+                if any(node.get("mapId") == map_id for node in record.get("nodes", [])):
+                    for node in record["nodes"]:
+                        if node.get("mapId") == map_id:
+                            node["mapId"] = ""
+                    connection.execute("UPDATE gm_maps SET data = ? WHERE id = ?", (json.dumps(record, ensure_ascii=False), row["id"]))
+
     def _apply_text_edits(self, edits: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Replace exact excerpts in record fields: [{collection, recordId, field, find, replace}]. Every edit is checked
         (the text must occur exactly once, the edited record must still be valid) before anything is saved."""
@@ -3476,6 +3645,13 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                 elif collection == "issues" and method == "DELETE" and record_id:
                     store.delete_issue(record_id)
                     self._send_json(200, {"deleted": True})
+                elif collection == "maps" and method == "POST" and not record_id:
+                    self._send_json(201, store.save_map(None, self._read_body().get("data")))
+                elif collection == "maps" and method == "PUT" and record_id:
+                    self._send_json(200, store.save_map(record_id, self._read_body().get("data")))
+                elif collection == "maps" and method == "DELETE" and record_id:
+                    store.delete_map(record_id)
+                    self._send_json(200, {"deleted": True})
                 elif collection in COLLECTIONS and method == "POST" and not record_id:
                     self._send_json(201, store.save_record(collection, None, self._read_body().get("data")))
                 elif collection in COLLECTIONS and method == "PUT" and record_id:
@@ -3487,7 +3663,7 @@ def create_handler(store: ContentStore) -> type[BaseHTTPRequestHandler]:
                     return False
                 if method == "POST" and path in ("/api/sync", "/api/export", "/api/import"):
                     store.mark("lastSyncAt")
-                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media") and not (collection == "issues" and not path.endswith(("/resolve", "/reopen"))) \
+                elif method in ("POST", "PUT", "DELETE") and path not in ("/api/preview", "/api/media") and not (collection == "issues" and not path.endswith(("/resolve", "/reopen"))) and collection != "maps" \
                         and collection != "revisions" and not (collection == "revision" and not path.endswith("/apply")):
                     store.mark("lastChangeAt")
             except ManagerError as error:
