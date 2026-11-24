@@ -11,6 +11,7 @@
   <script src="/static/continuity.js" defer></script>
   <script src="/static/revisions.js" defer></script>
   <script src="/static/icon-framing.js" defer></script>
+  <script src="/static/maps.js" defer></script>
   <script src="/static/manager.js" defer></script>
 </head>
 <body>
@@ -39,6 +40,12 @@
           <button type="button" class="nav-item" data-view="jobs"><span class="nav-symbol" aria-hidden="true">✎</span>Job Board<span class="nav-count" id="jobs-count">0</span></button>
           <button type="button" class="nav-item" data-view="archive" data-preset="gates"><span class="nav-symbol" aria-hidden="true">◎</span>Gates<span class="nav-count" id="gates-count">0</span></button>
           <button type="button" class="nav-item" data-view="resources"><span class="nav-symbol" aria-hidden="true">◆</span>Resources<span class="nav-count" id="resources-count">0</span></button>
+        </nav>
+      </div>
+      <div class="nav-group" data-nav-group="map">
+        <button type="button" class="nav-group-toggle" aria-expanded="true" data-nav-toggle="map">Map<span class="nav-caret" aria-hidden="true">▾</span></button>
+        <nav class="primary-nav" aria-label="Map">
+          <button type="button" class="nav-item" data-view="maps" title="GM only: never synced to the site"><span class="nav-symbol" aria-hidden="true">⌖</span>Session Maps<span class="nav-count" id="maps-count">0</span></button>
         </nav>
       </div>
       <div class="nav-group" data-nav-group="people">
